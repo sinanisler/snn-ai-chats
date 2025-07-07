@@ -24,10 +24,9 @@ class SNN_AI_Chat {
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'frontend_enqueue_scripts'));
         add_action('wp_ajax_snn_ai_chat_api', array($this, 'handle_chat_api'));
-        add_action('wp_action_nopriv_snn_ai_chat_api', array($this, 'handle_chat_api')); // Corrected action hook for non-logged-in users
+        add_action('wp_ajax_nopriv_snn_ai_chat_api', array($this, 'handle_chat_api')); // Corrected action hook for non-logged-in users
         add_action('wp_ajax_snn_get_models', array($this, 'get_models'));
         add_action('wp_ajax_snn_get_model_details', array($this, 'get_model_details'));
-        // Removed: add_action('wp_ajax_snn_save_chat_settings', array($this, 'save_chat_settings')); // No longer AJAX for chat settings save
         add_action('wp_ajax_snn_delete_chat', array($this, 'delete_chat')); // Keep delete as AJAX
         add_action('wp_footer', array($this, 'render_frontend_chats'));
 
@@ -207,6 +206,12 @@ class SNN_AI_Chat {
             'global_openai_api_key' => $global_settings['openai_api_key'],
             'global_openrouter_model' => $global_settings['openrouter_model'],
             'global_openai_model' => $global_settings['openai_model'],
+            // New API settings for localization
+            'global_temperature' => $global_settings['temperature'],
+            'global_max_tokens' => $global_settings['max_tokens'],
+            'global_top_p' => $global_settings['top_p'],
+            'global_frequency_penalty' => $global_settings['frequency_penalty'],
+            'global_presence_penalty' => $global_settings['presence_penalty'],
         ));
 
         // If on the preview page, also load frontend styles for an accurate preview.
@@ -315,7 +320,7 @@ class SNN_AI_Chat {
             
             <!-- Chat History (formerly Recent Activity) -->
             <div class="bg-white p-6 rounded-lg shadow recent-activity-block" id="snn-recent-activity-block">
-                <h2 class="text-xl font-semibold mb-4">Chat History</h2>
+                <h2 class="text-xl font-semibold mb-4">Recent Chat History</h2>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -329,7 +334,8 @@ class SNN_AI_Chat {
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <?php
-                            $recent_activities = $this->get_recent_activities();
+                            // Limit to 5 recent activities for dashboard
+                            $recent_activities = $this->get_recent_activities(5);
                             foreach ($recent_activities as $activity) {
                                 ?>
                                 <tr class="activity-row">
@@ -344,6 +350,11 @@ class SNN_AI_Chat {
                             ?>
                         </tbody>
                     </table>
+                </div>
+                <div class="text-center mt-4">
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-center quick-action-btn hover:bg-blue-700 transition-colors duration-200" id="snn-view-all-history-btn">
+                        View All Chat History
+                    </a>
                 </div>
             </div>
         </div>
@@ -415,6 +426,43 @@ class SNN_AI_Chat {
                         <div class="model-details text-gray-600 text-sm" id="openai-model-details"></div>
                     </div>
                 </div>
+
+                <!-- Shared API Settings -->
+                <div class="bg-white p-6 rounded-lg shadow mb-6" id="snn-shared-api-settings-block">
+                    <h2 class="text-xl font-semibold mb-4">Shared API Parameters</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="mb-4">
+                            <label for="temperature" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Controls randomness. Lower values mean more deterministic responses, higher values mean more creative responses. (0.0 - 2.0)">
+                                Temperature
+                            </label>
+                            <input type="number" step="0.1" min="0.0" max="2.0" id="temperature" name="temperature" value="<?php echo esc_attr($settings['temperature']); ?>" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="mb-4">
+                            <label for="max_tokens" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="The maximum number of tokens to generate in the chat completion.">
+                                Max Response Tokens
+                            </label>
+                            <input type="number" id="max_tokens" name="max_tokens" value="<?php echo esc_attr($settings['max_tokens']); ?>" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="mb-4">
+                            <label for="top_p" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. (0.0 - 1.0)">
+                                Top P
+                            </label>
+                            <input type="number" step="0.01" min="0.0" max="1.0" id="top_p" name="top_p" value="<?php echo esc_attr($settings['top_p']); ?>" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="mb-4">
+                            <label for="frequency_penalty" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Penalize new tokens based on their existing frequency in the text so far. ( -2.0 to 2.0)">
+                                Frequency Penalty
+                            </label>
+                            <input type="number" step="0.1" min="-2.0" max="2.0" id="frequency_penalty" name="frequency_penalty" value="<?php echo esc_attr($settings['frequency_penalty']); ?>" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="mb-4">
+                            <label for="presence_penalty" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Penalize new tokens based on whether they appear in the text so far. ( -2.0 to 2.0)">
+                                Presence Penalty
+                            </label>
+                            <input type="number" step="0.1" min="-2.0" max="2.0" id="presence_penalty" name="presence_penalty" value="<?php echo esc_attr($settings['presence_penalty']); ?>" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="bg-white p-6 rounded-lg shadow mb-6" id="snn-general-settings-block">
                     <h2 class="text-xl font-semibold mb-4">General Settings</h2>
@@ -482,10 +530,10 @@ class SNN_AI_Chat {
                                 <?php echo $this->get_chat_stats($chat->ID); ?>
                             </div>
                             <div class="space-x-2">
-                                <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $chat->ID)); ?>" class="text-blue-600 hover:text-blue-800 edit-chat-btn hover:underline transition-colors duration-200">
+                                <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $chat->ID)); ?>" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 edit-chat-btn transition-colors duration-200">
                                     Edit
                                 </a>
-                                <button class="text-red-600 hover:text-red-800 delete-chat-btn hover:underline transition-colors duration-200" data-chat-id="<?php echo esc_attr($chat->ID); ?>">
+                                <button class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 delete-chat-btn transition-colors duration-200" data-chat-id="<?php echo esc_attr($chat->ID); ?>">
                                     Delete
                                 </button>
                             </div>
@@ -557,7 +605,9 @@ class SNN_AI_Chat {
                                 <input type="text" id="model" name="model" value="<?php echo esc_attr($chat_settings['model']); ?>" list="chat_models" class="w-full p-2 border border-gray-300 rounded-md model-input focus:ring-blue-500 focus:border-blue-500">
                                 <datalist id="chat_models"></datalist>
                             </div>
-                            <div class="model-details text-gray-600 text-sm mb-4" id="chat-model-details"></div>
+                            <div class="model-details text-gray-600 text-sm mb-4" id="chat-model-details">
+                                <!-- Model details will be populated here by JavaScript -->
+                            </div>
 
                             <div class="mb-4">
                                 <label for="initial_message" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="The first message users will see when they start this chat">
@@ -841,6 +891,8 @@ class SNN_AI_Chat {
             // Sanitize based on the expected type of the setting
             if (is_int($default_value)) {
                 $settings[$key] = intval($value ?? 0); // Ensure intval gets a non-null
+            } elseif (is_float($default_value)) { // Handle float values for API parameters
+                $settings[$key] = floatval($value ?? 0.0);
             } elseif (str_contains((string)$key, '_color')) {
                 $settings[$key] = sanitize_hex_color($value ?? '#000000'); // Ensure a default color if null
             } elseif ($key === 'system_prompt' || $key === 'initial_message') {
@@ -952,7 +1004,7 @@ class SNN_AI_Chat {
         ?>
         <div class="wrap">
             <h1>Chat Session Details: <?php echo esc_html(substr($session_id, 0, 12)); ?>...</h1>
-            <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" class="button button-primary mb-4">← Back to Chat History</a>
+            <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-center quick-action-btn hover:bg-blue-700 transition-colors duration-200 mb-4 inline-block">← Back to Chat History</a>
 
             <div class="bg-white p-6 rounded-lg shadow mb-6">
                 <h2 class="text-xl font-semibold mb-4">Session Information</h2>
@@ -995,6 +1047,10 @@ class SNN_AI_Chat {
             .snn-ai-message-detail {
                 background-color: #e2e8f0; /* Light gray */
                 border-left: 4px solid #10b981; /* Green-500 */
+            }
+            /* Fix for view details button hover */
+            .view-history-btn:hover {
+                color: #ffffff !important; /* Ensure text remains white on hover */
             }
         </style>
         <?php
@@ -1080,11 +1136,11 @@ class SNN_AI_Chat {
             wp_send_json_error('Provider, model, or API key missing.');
         }
         
+        $details = [];
         if ($provider === 'openrouter') {
             // OpenRouter doesn't have a dedicated details endpoint per model like this
             // We can fetch all and filter
             $models = $this->fetch_openrouter_models($api_key);
-            $details = [];
             foreach($models as $m) {
                 if ($m['id'] === $model) {
                     $details = $m;
@@ -1172,11 +1228,20 @@ class SNN_AI_Chat {
             'content' => $message
         );
         
+        // Prepare API parameters
+        $api_params = [
+            'temperature' => floatval($api_settings['temperature']),
+            'max_tokens' => intval($api_settings['max_tokens']),
+            'top_p' => floatval($api_settings['top_p']),
+            'frequency_penalty' => floatval($api_settings['frequency_penalty']),
+            'presence_penalty' => floatval($api_settings['presence_penalty']),
+        ];
+
         // Send to AI API
         if ($api_provider === 'openrouter') {
-            $response = $this->send_to_openrouter($conversation_history, $model, $api_key, $chat_settings);
+            $response = $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params);
         } else {
-            $response = $this->send_to_openai($conversation_history, $model, $api_key, $chat_settings);
+            $response = $this->send_to_openai($conversation_history, $model, $api_key, $api_params);
         }
         
         if ($response && isset($response['content'])) {
@@ -1498,10 +1563,16 @@ class SNN_AI_Chat {
         return $stats;
     }
     
-    private function get_recent_activities() {
+    /**
+     * Retrieves recent chat activities.
+     *
+     * @param int $limit The maximum number of activities to retrieve. Defaults to 20.
+     * @return array An array of chat activity objects.
+     */
+    private function get_recent_activities($limit = 20) {
         global $wpdb;
         
-        return $wpdb->get_results("
+        return $wpdb->get_results($wpdb->prepare("
             SELECT s.*, 
                    COUNT(m.id) as message_count,
                    SUM(m.tokens_used) as total_tokens
@@ -1509,8 +1580,8 @@ class SNN_AI_Chat {
             LEFT JOIN {$wpdb->prefix}snn_chat_messages m ON s.session_id = m.session_id
             GROUP BY s.id
             ORDER BY s.created_at DESC
-            LIMIT 20
-        ");
+            LIMIT %d
+        ", $limit));
     }
     
     private function get_settings() {
@@ -1521,7 +1592,12 @@ class SNN_AI_Chat {
             'openai_api_key' => '',
             'openai_model' => 'gpt-4o-mini',
             'default_system_prompt' => 'You are a helpful assistant.',
-            'default_initial_message' => 'Hello! How can I help you today?'
+            'default_initial_message' => 'Hello! How can I help you today?',
+            'temperature' => 0.7, // New setting
+            'max_tokens' => 500, // New setting
+            'top_p' => 1.0, // New setting
+            'frequency_penalty' => 0.0, // New setting
+            'presence_penalty' => 0.0, // New setting
         ));
     }
     
@@ -1537,7 +1613,12 @@ class SNN_AI_Chat {
             'openai_api_key' => sanitize_text_field(wp_unslash($_POST['openai_api_key'] ?? '')),
             'openai_model' => sanitize_text_field(wp_unslash($_POST['openai_model'] ?? '')),
             'default_system_prompt' => sanitize_textarea_field(wp_unslash($_POST['default_system_prompt'] ?? '')),
-            'default_initial_message' => sanitize_text_field(wp_unslash($_POST['default_initial_message'] ?? ''))
+            'default_initial_message' => sanitize_text_field(wp_unslash($_POST['default_initial_message'] ?? '')),
+            'temperature' => floatval(wp_unslash($_POST['temperature'] ?? 0.7)), // Sanitize as float
+            'max_tokens' => intval(wp_unslash($_POST['max_tokens'] ?? 500)), // Sanitize as int
+            'top_p' => floatval(wp_unslash($_POST['top_p'] ?? 1.0)), // Sanitize as float
+            'frequency_penalty' => floatval(wp_unslash($_POST['frequency_penalty'] ?? 0.0)), // Sanitize as float
+            'presence_penalty' => floatval(wp_unslash($_POST['presence_penalty'] ?? 0.0)), // Sanitize as float
         );
         
         update_option('snn_ai_chat_settings', $settings);
@@ -1583,6 +1664,9 @@ class SNN_AI_Chat {
     }
     
     private function get_default_chat_settings() {
+        // Get global settings to use as defaults if not overridden
+        $global_settings = $this->get_settings();
+
         return array(
             'model' => '', // Now explicitly empty to use global by default
             'initial_message' => 'Hello! How can I help you today?',
@@ -1618,7 +1702,13 @@ class SNN_AI_Chat {
             'max_tokens_per_ip_daily' => 10000,
             'max_chats_per_ip_daily' => 50,
             'rate_limit_per_minute' => 10,
-            'collect_user_info' => 0
+            'collect_user_info' => 0,
+            // Inherit API parameters from global settings as defaults
+            'temperature' => $global_settings['temperature'],
+            'max_tokens' => $global_settings['max_tokens'],
+            'top_p' => $global_settings['top_p'],
+            'frequency_penalty' => $global_settings['frequency_penalty'],
+            'presence_penalty' => $global_settings['presence_penalty'],
         );
     }
     
@@ -1781,7 +1871,7 @@ class SNN_AI_Chat {
         return $history;
     }
     
-    private function send_to_openrouter($messages, $model, $api_key, $chat_settings) {
+    private function send_to_openrouter($messages, $model, $api_key, $api_params) {
         $response = wp_remote_post('https://openrouter.ai/api/v1/chat/completions', array(
             'headers' => array(
                 'Authorization' => 'Bearer ' . $api_key,
@@ -1790,7 +1880,11 @@ class SNN_AI_Chat {
             'body' => json_encode(array(
                 'model' => $model,
                 'messages' => $messages,
-                'max_tokens' => $chat_settings['max_tokens_per_session']
+                'temperature' => $api_params['temperature'],
+                'max_tokens' => $api_params['max_tokens'],
+                'top_p' => $api_params['top_p'],
+                'frequency_penalty' => $api_params['frequency_penalty'],
+                'presence_penalty' => $api_params['presence_penalty'],
             )),
             'timeout' => 30,
         ));
@@ -1814,7 +1908,7 @@ class SNN_AI_Chat {
         return false;
     }
     
-    private function send_to_openai($messages, $model, $api_key, $chat_settings) {
+    private function send_to_openai($messages, $model, $api_key, $api_params) {
         $response = wp_remote_post('https://api.openai.com/v1/chat/completions', array(
             'headers' => array(
                 'Authorization' => 'Bearer ' . $api_key,
@@ -1823,7 +1917,11 @@ class SNN_AI_Chat {
             'body' => json_encode(array(
                 'model' => $model,
                 'messages' => $messages,
-                'max_tokens' => $chat_settings['max_tokens_per_session']
+                'temperature' => $api_params['temperature'],
+                'max_tokens' => $api_params['max_tokens'],
+                'top_p' => $api_params['top_p'],
+                'frequency_penalty' => $api_params['frequency_penalty'],
+                'presence_penalty' => $api_params['presence_penalty'],
             )),
             'timeout' => 30,
         ));
@@ -1891,7 +1989,7 @@ class SNN_AI_Chat {
      */
     private function adjust_brightness($hex, $steps) {
         // Remove '#' if present
-        $hex = ltrim((string)($hex ?? ''), '#'); // Ensure string and handle null
+        $hex = ltrim((string)($hex ?? ''), '#');
         
         // Handle shorthand hex codes
         if (strlen((string)$hex) === 3) {
