@@ -820,12 +820,12 @@ class SNN_AI_Chat {
             wp_die(esc_html__('You do not have permission to save settings.'));
         }
 
-        if (!isset($_POST['snn_ai_chat_settings_nonce_field']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_ai_chat_settings_nonce_field'])), 'snn_ai_chat_settings_form')) {
+        if (!isset($_POST['snn_ai_chat_settings_nonce_field']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_ai_chat_settings_nonce_field'] ?? '')), 'snn_ai_chat_settings_form')) { // Ensure nonce is string
             wp_die(esc_html__('Nonce verification failed.'));
         }
 
         $chat_id_from_post = isset($_POST['chat_id']) ? intval($_POST['chat_id']) : 0;
-        $chat_name = isset($_POST['chat_name']) ? sanitize_text_field((string)$_POST['chat_name']) : 'New Chat';
+        $chat_name = sanitize_text_field($_POST['chat_name'] ?? 'New Chat');
 
         // Ensure we are working with the correct chat_id, especially for new chats
         if ($chat_id_from_post !== $chat_id) {
@@ -836,25 +836,20 @@ class SNN_AI_Chat {
         $defaults = $this->get_default_chat_settings();
 
         foreach ($defaults as $key => $default_value) {
-            if (isset($_POST[$key])) {
-                if (is_int($default_value)) {
-                    $settings[$key] = intval($_POST[$key]);
-                } elseif (str_contains((string)$key, '_color')) {
-                    $settings[$key] = sanitize_hex_color((string)$_POST[$key]);
-                } elseif ($key === 'system_prompt' || $key === 'initial_message') {
-                    $settings[$key] = sanitize_textarea_field((string)$_POST[$key]);
-                } elseif ($key === 'specific_pages' || $key === 'exclude_pages') {
-                    $ids = array_filter(array_map('intval', explode(',', (string)$_POST[$key])));
-                    $settings[$key] = implode(',', $ids);
-                } else {
-                    $settings[$key] = sanitize_text_field((string)$_POST[$key]);
-                }
+            $value = $_POST[$key] ?? null; // Get value, default to null if not set
+
+            // Sanitize based on the expected type of the setting
+            if (is_int($default_value)) {
+                $settings[$key] = intval($value ?? 0); // Ensure intval gets a non-null
+            } elseif (str_contains((string)$key, '_color')) {
+                $settings[$key] = sanitize_hex_color($value ?? '#000000'); // Ensure a default color if null
+            } elseif ($key === 'system_prompt' || $key === 'initial_message') {
+                $settings[$key] = sanitize_textarea_field($value ?? '');
+            } elseif ($key === 'specific_pages' || $key === 'exclude_pages') {
+                $ids = array_filter(array_map('intval', explode(',', $value ?? ''))); // Ensure explode gets a string
+                $settings[$key] = implode(',', $ids);
             } else {
-                if (in_array($key, ['keep_conversation_history', 'show_on_all_pages', 'show_on_home', 'show_on_front_page', 'show_on_posts', 'show_on_pages', 'show_on_categories', 'show_on_archives', 'collect_user_info'])) {
-                    $settings[$key] = 0;
-                } else {
-                    $settings[$key] = $default_value;
-                }
+                $settings[$key] = sanitize_text_field($value ?? '');
             }
         }
 
@@ -941,7 +936,7 @@ class SNN_AI_Chat {
             wp_die(esc_html__('Sorry, you are not allowed to access this page.'));
         }
 
-        $session_id = isset($_GET['session_id']) ? sanitize_text_field((string)$_GET['session_id']) : '';
+        $session_id = sanitize_text_field($_GET['session_id'] ?? '');
 
         if (empty($session_id)) {
             wp_die(esc_html__('No session ID provided.'));
@@ -1056,8 +1051,8 @@ class SNN_AI_Chat {
     public function get_models() {
         check_ajax_referer('snn_ai_chat_nonce', 'nonce');
         
-        $provider = isset($_POST['provider']) ? sanitize_text_field((string)$_POST['provider']) : ''; // Cast to string
-        $api_key = isset($_POST['api_key']) ? sanitize_text_field((string)$_POST['api_key']) : ''; // Cast to string
+        $provider = sanitize_text_field($_POST['provider'] ?? '');
+        $api_key = sanitize_text_field($_POST['api_key'] ?? '');
         
         if (empty($provider) || empty($api_key)) {
             wp_send_json_error('Provider or API key missing.');
@@ -1077,9 +1072,9 @@ class SNN_AI_Chat {
     public function get_model_details() {
         check_ajax_referer('snn_ai_chat_nonce', 'nonce');
         
-        $provider = !empty($_POST['provider']) ? sanitize_text_field((string)$_POST['provider']) : ''; // Cast to string
-        $model = !empty($_POST['model']) ? sanitize_text_field((string)$_POST['model']) : ''; // Cast to string
-        $api_key = !empty($_POST['api_key']) ? sanitize_text_field((string)$_POST['api_key']) : ''; // Cast to string
+        $provider = sanitize_text_field($_POST['provider'] ?? '');
+        $model = sanitize_text_field($_POST['model'] ?? '');
+        $api_key = sanitize_text_field($_POST['api_key'] ?? '');
         
         if (empty($provider) || empty($model) || empty($api_key)) {
             wp_send_json_error('Provider, model, or API key missing.');
@@ -1113,7 +1108,7 @@ class SNN_AI_Chat {
             wp_send_json_error('You do not have permission to delete chats.');
         }
 
-        $chat_id = isset($_POST['chat_id']) ? intval($_POST['chat_id']) : 0;
+        $chat_id = intval($_POST['chat_id'] ?? 0);
         
         if ($chat_id > 0 && get_post_type($chat_id) === 'snn_ai_chat') {
             wp_delete_post($chat_id, true); // true = force delete
@@ -1126,11 +1121,11 @@ class SNN_AI_Chat {
     public function handle_chat_api() {
         check_ajax_referer('snn_ai_chat_nonce', 'nonce');
         
-        $message = isset($_POST['message']) ? sanitize_text_field((string)$_POST['message']) : ''; // Cast to string
-        $session_id = isset($_POST['session_id']) ? sanitize_text_field((string)$_POST['session_id']) : ''; // Cast to string
-        $chat_id = isset($_POST['chat_id']) ? intval($_POST['chat_id']) : 0;
-        $user_name = isset($_POST['user_name']) ? sanitize_text_field((string)$_POST['user_name']) : ''; // Cast to string
-        $user_email = isset($_POST['user_email']) ? sanitize_email((string)$_POST['user_email']) : ''; // Cast to string
+        $message = sanitize_text_field($_POST['message'] ?? '');
+        $session_id = sanitize_text_field($_POST['session_id'] ?? '');
+        $chat_id = intval($_POST['chat_id'] ?? 0);
+        $user_name = sanitize_text_field($_POST['user_name'] ?? '');
+        $user_email = sanitize_email($_POST['user_email'] ?? '');
         
         if (empty($message) || empty($session_id) || empty($chat_id)) {
             wp_send_json_error('Missing required data.');
@@ -1531,18 +1526,18 @@ class SNN_AI_Chat {
     }
     
     private function save_settings() {
-        if (!isset($_POST['snn_ai_chat_settings_nonce']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_ai_chat_settings_nonce'])), 'snn_ai_chat_settings')) { // Cast to string
+        if (!isset($_POST['snn_ai_chat_settings_nonce']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_ai_chat_settings_nonce'] ?? '')), 'snn_ai_chat_settings')) { // Ensure nonce is string
             return;
         }
         
         $settings = array(
-            'api_provider' => isset($_POST['api_provider']) ? sanitize_text_field((string)wp_unslash($_POST['api_provider'])) : 'openrouter', // Cast to string
-            'openrouter_api_key' => isset($_POST['openrouter_api_key']) ? sanitize_text_field((string)wp_unslash($_POST['openrouter_api_key'])) : '', // Cast to string
-            'openrouter_model' => isset($_POST['openrouter_model']) ? sanitize_text_field((string)wp_unslash($_POST['openrouter_model'])) : '', // Cast to string
-            'openai_api_key' => isset($_POST['openai_api_key']) ? sanitize_text_field((string)wp_unslash($_POST['openai_api_key'])) : '', // Cast to string
-            'openai_model' => isset($_POST['openai_model']) ? sanitize_text_field((string)wp_unslash($_POST['openai_model'])) : '', // Cast to string
-            'default_system_prompt' => isset($_POST['default_system_prompt']) ? sanitize_textarea_field((string)wp_unslash($_POST['default_system_prompt'])) : '', // Cast to string
-            'default_initial_message' => isset($_POST['default_initial_message']) ? sanitize_text_field((string)wp_unslash($_POST['default_initial_message'])) : '' // Cast to string
+            'api_provider' => sanitize_text_field(wp_unslash($_POST['api_provider'] ?? 'openrouter')),
+            'openrouter_api_key' => sanitize_text_field(wp_unslash($_POST['openrouter_api_key'] ?? '')),
+            'openrouter_model' => sanitize_text_field(wp_unslash($_POST['openrouter_model'] ?? '')),
+            'openai_api_key' => sanitize_text_field(wp_unslash($_POST['openai_api_key'] ?? '')),
+            'openai_model' => sanitize_text_field(wp_unslash($_POST['openai_model'] ?? '')),
+            'default_system_prompt' => sanitize_textarea_field(wp_unslash($_POST['default_system_prompt'] ?? '')),
+            'default_initial_message' => sanitize_text_field(wp_unslash($_POST['default_initial_message'] ?? ''))
         );
         
         update_option('snn_ai_chat_settings', $settings);
@@ -1635,7 +1630,7 @@ class SNN_AI_Chat {
 
         // 1. Highest priority: Check for exclusion. If the page is excluded, never show the chat.
         if (!empty($settings['exclude_pages'])) {
-            $exclude_pages = array_map('intval', explode(',', (string)$settings['exclude_pages']));
+            $exclude_pages = array_map('intval', explode(',', (string)($settings['exclude_pages'] ?? ''))); // Ensure string
             if (in_array($post_id, $exclude_pages, true)) {
                 return false;
             }
@@ -1648,7 +1643,7 @@ class SNN_AI_Chat {
 
         // 3. Check for inclusion by specific page/post ID.
         if (!empty($settings['specific_pages'])) {
-            $specific_pages = array_map('intval', explode(',', (string)$settings['specific_pages']));
+            $specific_pages = array_map('intval', explode(',', (string)($settings['specific_pages'] ?? ''))); // Ensure string
             if (in_array($post_id, $specific_pages, true)) {
                 return true;
             }
@@ -1868,7 +1863,7 @@ class SNN_AI_Chat {
                     'session_id' => $session_id,
                     'user_name' => $user_name,
                     'user_email' => $user_email,
-                    'ip_address' => $_SERVER['REMOTE_ADDR']
+                    'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '' // Ensure IP address is string
                 ),
                 array('%d', '%s', '%s', '%s', '%s')
             );
@@ -1896,14 +1891,14 @@ class SNN_AI_Chat {
      */
     private function adjust_brightness($hex, $steps) {
         // Remove '#' if present
-        $hex = ltrim((string)$hex, '#'); // Added (string) cast defensively
-
+        $hex = ltrim((string)($hex ?? ''), '#'); // Ensure string and handle null
+        
         // Handle shorthand hex codes
-        if (strlen((string)$hex) === 3) { // Added (string) cast defensively
+        if (strlen((string)$hex) === 3) {
             $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
         }
 
-        $rgb = array_map('hexdec', str_split((string)$hex, 2)); // Added (string) cast defensively
+        $rgb = array_map('hexdec', str_split((string)$hex, 2));
 
         foreach ($rgb as &$value) {
             $value = max(0, min(255, $value + $steps));
