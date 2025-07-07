@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: SNN AI CHAT
-* Plugin URI: https://sinanisler.com
+ * Plugin URI: https://sinanisler.com
  * Description: Advanced AI Chat Plugin with OpenRouter and OpenAI support
  * Version: 0.2
  * Author: sinanisler
@@ -1085,12 +1085,18 @@ class SNN_AI_Chat {
         $defaults = $this->get_default_chat_settings();
         $chat_settings = wp_parse_args(is_array($chat_settings_raw) ? $chat_settings_raw : [], $defaults);
         
+        // Set a global title for the preview page to prevent deprecation warnings in admin-header.php
+        // This addresses the strip_tags(null) issue by ensuring a string is always available for the title.
+        global $admin_title;
+        $admin_title = 'SNN AI Chat Preview';
+
         ?>
         <!DOCTYPE html>
         <html <?php language_attributes(); ?>>
         <head>
             <meta charset="<?php bloginfo( 'charset' ); ?>">
             <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title><?php echo esc_html($admin_title); ?></title> <!-- Explicitly set title to avoid issues -->
             <?php 
             // Manually run actions to load enqueued scripts/styles for the preview
             wp_print_styles();
@@ -1100,7 +1106,7 @@ class SNN_AI_Chat {
         <body class="snn-ai-chat-preview-body">
             <?php 
             // Render the widget with its settings
-            $this->render_chat_widget($chat, $chat_settings); 
+            $this->render_chat_widget($chat, $chat_settings);
             
             // Manually run footer actions
             wp_print_footer_scripts();
