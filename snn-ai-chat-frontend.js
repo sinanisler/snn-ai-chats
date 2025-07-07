@@ -30,11 +30,8 @@ jQuery(document).ready(function($) {
             const messageClass = sender === 'user' ? 'snn-user-message' : 'snn-ai-message';
             const messageHtml = `
                 <div class="snn-chat-message ${messageClass}">
-                    <div class="snn-message-content">
-                        ${message}
-                    </div>
-                </div>
-            `;
+                    <div class="snn-message-content">${message}</div>
+                </div>`;
             chatMessages.append(messageHtml);
             chatMessages.scrollTop(chatMessages[0].scrollHeight); // Scroll to bottom
         }
