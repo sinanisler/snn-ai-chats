@@ -1107,7 +1107,8 @@ class SNN_AI_Chat {
         <head>
             <meta charset="<?php bloginfo( 'charset' ); ?>">
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>SNN AI Chat Preview</title> <!-- Hardcode title for this specific iframe page -->
+            <title>SNN AI Chat Preview</title> 
+            <style>#wpadminbar{display:none}</style>
             <?php 
             // Re-add wp_print_styles and wp_print_head_scripts to ensure all enqueued assets load in the iframe
             wp_print_styles();
