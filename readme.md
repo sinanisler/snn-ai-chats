@@ -2,7 +2,10 @@
 
 Create one or multiple chats for your WordPress site.
 
-![image](https://github.com/user-attachments/assets/459b89e6-efb3-4faa-9cbe-c19d4bf5d956)
+![image](https://github.com/user-attachments/assets/5f618621-824e-43ea-a0aa-971fddfcaf89)
+
+![image](https://github.com/user-attachments/assets/066a8f5a-d831-4f0b-a8c2-ab25d44063ec)
+
 
 
 SNN AI CHAT is an advanced WordPress plugin that seamlessly integrates AI-powered chat functionalities into your website. It supports both **OpenRouter** and **OpenAI** APIs, allowing you to choose your preferred AI model for intelligent and dynamic conversations with your users.
