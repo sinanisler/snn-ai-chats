@@ -1108,15 +1108,19 @@ class SNN_AI_Chat {
             <meta charset="<?php bloginfo( 'charset' ); ?>">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <title>SNN AI Chat Preview</title> <!-- Hardcode title for this specific iframe page -->
+            <?php 
+            // Re-add wp_print_styles and wp_print_head_scripts to ensure all enqueued assets load in the iframe
+            wp_print_styles();
+            wp_print_head_scripts();
+            ?>
         </head>
         <body class="snn-ai-chat-preview-body">
             <?php 
             // Render the widget with its settings
             $this->render_chat_widget($chat, $chat_settings);
             
-            // No need to call wp_print_styles() or wp_print_head_scripts() here.
-            // These are typically handled by admin-header.php, which is included by admin.php.
-            // Our frontend scripts are enqueued via admin_enqueue_scripts.
+            // Re-add wp_print_footer_scripts to ensure scripts enqueued for the footer are loaded
+            wp_print_footer_scripts();
             ?>
         </body>
         </html>
