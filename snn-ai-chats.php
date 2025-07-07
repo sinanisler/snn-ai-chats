@@ -24,11 +24,11 @@ class SNN_AI_Chat {
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'frontend_enqueue_scripts'));
         add_action('wp_ajax_snn_ai_chat_api', array($this, 'handle_chat_api'));
-        add_action('wp_ajax_nopriv_snn_ai_chat_api', array($this, 'handle_chat_api'));
+        add_action('wp_action_nopriv_snn_ai_chat_api', array($this, 'handle_chat_api')); // Corrected action hook for non-logged-in users
         add_action('wp_ajax_snn_get_models', array($this, 'get_models'));
         add_action('wp_ajax_snn_get_model_details', array($this, 'get_model_details'));
-        add_action('wp_ajax_snn_save_chat_settings', array($this, 'save_chat_settings'));
-        add_action('wp_ajax_snn_delete_chat', array($this, 'delete_chat'));
+        // Removed: add_action('wp_ajax_snn_save_chat_settings', array($this, 'save_chat_settings')); // No longer AJAX for chat settings save
+        add_action('wp_ajax_snn_delete_chat', array($this, 'delete_chat')); // Keep delete as AJAX
         add_action('wp_footer', array($this, 'render_frontend_chats'));
 
         register_activation_hook(__FILE__, array($this, 'activate'));
@@ -37,7 +37,6 @@ class SNN_AI_Chat {
 
     public function init() {
         $this->create_post_types();
-        // Moved table creation to activation hook to prevent running on every init
     }
 
     public function activate() {
@@ -160,6 +159,16 @@ class SNN_AI_Chat {
             'manage_options',
             'snn-ai-chat-history',
             array($this, 'chat_history_page')
+        );
+
+        // New hidden submenu page for viewing individual session history
+        add_submenu_page(
+            null, // This makes the page hidden from the menu
+            'Session History',
+            'Session History',
+            'manage_options',
+            'snn-ai-chat-session-history',
+            array($this, 'session_history_page')
         );
 
         // Hidden submenu page for the live preview
@@ -304,9 +313,9 @@ class SNN_AI_Chat {
                 </div>
             </div>
             
-            <!-- Recent Activity -->
+            <!-- Chat History (formerly Recent Activity) -->
             <div class="bg-white p-6 rounded-lg shadow recent-activity-block" id="snn-recent-activity-block">
-                <h2 class="text-xl font-semibold mb-4">Recent Activity</h2>
+                <h2 class="text-xl font-semibold mb-4">Chat History</h2>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -489,6 +498,16 @@ class SNN_AI_Chat {
     }
 
     public function render_chat_edit_form($chat_id) {
+        // Handle form submission for saving chat settings
+        if (isset($_POST['submit_chat_settings'])) {
+            $this->save_chat_settings_form_submit($chat_id);
+            // After saving, redirect to the edit page to show updated data and preview.
+            // This also prevents resubmission on refresh.
+            $redirect_url = admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $chat_id);
+            wp_redirect(esc_url_raw($redirect_url));
+            exit;
+        }
+
         $chat = null;
         $chat_settings_raw = array();
 
@@ -514,8 +533,8 @@ class SNN_AI_Chat {
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Settings Form -->
                 <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow chat-settings-form" id="snn-chat-settings-form">
-                    <form id="chat-settings-form" method="post">
-                        <?php wp_nonce_field('snn_ai_chat_nonce', 'snn_ai_chat_nonce_field'); ?>
+                    <form id="chat-settings-form" method="post" action="">
+                        <?php wp_nonce_field('snn_ai_chat_settings_form', 'snn_ai_chat_settings_nonce_field'); ?>
                         <input type="hidden" name="chat_id" value="<?php echo esc_attr($chat_id); ?>">
                         
                         <!-- Basic Information -->
@@ -767,7 +786,7 @@ class SNN_AI_Chat {
                         </div>
                         
                         <div class="flex space-x-4">
-                            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md save-chat-btn hover:bg-blue-700 transition-colors duration-200" id="snn-save-chat-btn">
+                            <button type="submit" name="submit_chat_settings" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md save-chat-btn hover:bg-blue-700 transition-colors duration-200" id="snn-save-chat-btn">
                                 Save Chat
                             </button>
                             <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats')); ?>" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md cancel-btn hover:bg-gray-700 transition-colors duration-200">
@@ -793,6 +812,77 @@ class SNN_AI_Chat {
             </div>
         </div>
         <?php
+    }
+
+    // New method to handle form submission for chat settings
+    private function save_chat_settings_form_submit($chat_id) {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to save settings.'));
+        }
+
+        if (!isset($_POST['snn_ai_chat_settings_nonce_field']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_ai_chat_settings_nonce_field'])), 'snn_ai_chat_settings_form')) {
+            wp_die(esc_html__('Nonce verification failed.'));
+        }
+
+        $chat_id_from_post = isset($_POST['chat_id']) ? intval($_POST['chat_id']) : 0;
+        $chat_name = isset($_POST['chat_name']) ? sanitize_text_field((string)$_POST['chat_name']) : 'New Chat';
+
+        // Ensure we are working with the correct chat_id, especially for new chats
+        if ($chat_id_from_post !== $chat_id) {
+            $chat_id = $chat_id_from_post;
+        }
+
+        $settings = [];
+        $defaults = $this->get_default_chat_settings();
+
+        foreach ($defaults as $key => $default_value) {
+            if (isset($_POST[$key])) {
+                if (is_int($default_value)) {
+                    $settings[$key] = intval($_POST[$key]);
+                } elseif (str_contains((string)$key, '_color')) {
+                    $settings[$key] = sanitize_hex_color((string)$_POST[$key]);
+                } elseif ($key === 'system_prompt' || $key === 'initial_message') {
+                    $settings[$key] = sanitize_textarea_field((string)$_POST[$key]);
+                } elseif ($key === 'specific_pages' || $key === 'exclude_pages') {
+                    $ids = array_filter(array_map('intval', explode(',', (string)$_POST[$key])));
+                    $settings[$key] = implode(',', $ids);
+                } else {
+                    $settings[$key] = sanitize_text_field((string)$_POST[$key]);
+                }
+            } else {
+                if (in_array($key, ['keep_conversation_history', 'show_on_all_pages', 'show_on_home', 'show_on_front_page', 'show_on_posts', 'show_on_pages', 'show_on_categories', 'show_on_archives', 'collect_user_info'])) {
+                    $settings[$key] = 0;
+                } else {
+                    $settings[$key] = $default_value;
+                }
+            }
+        }
+
+        $post_data = array(
+            'post_title' => $chat_name,
+            'post_type' => 'snn_ai_chat',
+            'post_status' => 'publish'
+        );
+
+        if ($chat_id > 0) {
+            $post_data['ID'] = $chat_id;
+            wp_update_post($post_data);
+        } else {
+            $chat_id = wp_insert_post($post_data);
+        }
+        
+        if ($chat_id && !is_wp_error($chat_id)) {
+            update_post_meta($chat_id, '_snn_chat_settings', $settings);
+            // Display success message
+            add_action('admin_notices', function() {
+                echo '<div class="notice notice-success is-dismissible"><p>Chat settings saved successfully!</p></div>';
+            });
+        } else {
+            // Display error message
+            add_action('admin_notices', function() {
+                echo '<div class="notice notice-error is-dismissible"><p>Failed to save chat settings.</p></div>';
+            });
+        }
     }
 
     public function chat_history_page() {
@@ -827,9 +917,9 @@ class SNN_AI_Chat {
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html(number_format($history->total_tokens)); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html(date('M j, Y H:i', strtotime($history->created_at))); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <button class="text-blue-600 hover:text-blue-800 view-history-btn hover:underline transition-colors duration-200" data-session-id="<?php echo esc_attr($history->session_id); ?>">
-                                            View
-                                        </button>
+                                        <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-session-history&session_id=' . $history->session_id)); ?>" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 view-history-btn transition-colors duration-200">
+                                            View Details
+                                        </a>
                                     </td>
                                 </tr>
                                 <?php
@@ -840,6 +930,78 @@ class SNN_AI_Chat {
                 </div>
             </div>
         </div>
+        <?php
+    }
+
+    /**
+     * New method to display detailed messages for a specific chat session.
+     */
+    public function session_history_page() {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('Sorry, you are not allowed to access this page.'));
+        }
+
+        $session_id = isset($_GET['session_id']) ? sanitize_text_field((string)$_GET['session_id']) : '';
+
+        if (empty($session_id)) {
+            wp_die(esc_html__('No session ID provided.'));
+        }
+
+        global $wpdb;
+        $session_info = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}snn_chat_sessions WHERE session_id = %s", $session_id));
+        $session_messages = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}snn_chat_messages WHERE session_id = %s ORDER BY created_at ASC", $session_id));
+
+        if (!$session_info) {
+            wp_die(esc_html__('Session not found.'));
+        }
+        ?>
+        <div class="wrap">
+            <h1>Chat Session Details: <?php echo esc_html(substr($session_id, 0, 12)); ?>...</h1>
+            <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" class="button button-primary mb-4">← Back to Chat History</a>
+
+            <div class="bg-white p-6 rounded-lg shadow mb-6">
+                <h2 class="text-xl font-semibold mb-4">Session Information</h2>
+                <p><strong>Chat Name:</strong> <?php echo esc_html(get_the_title($session_info->chat_id)); ?></p>
+                <p><strong>User Name:</strong> <?php echo esc_html($session_info->user_name ?: 'Anonymous'); ?></p>
+                <p><strong>User Email:</strong> <?php echo esc_html($session_info->user_email ?: 'N/A'); ?></p>
+                <p><strong>IP Address:</strong> <?php echo esc_html($session_info->ip_address); ?></p>
+                <p><strong>Started At:</strong> <?php echo esc_html(date('M j, Y H:i:s', strtotime($session_info->created_at))); ?></p>
+                <p><strong>Last Updated:</strong> <?php echo esc_html(date('M j, Y H:i:s', strtotime($session_info->updated_at))); ?></p>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4">Messages</h2>
+                <div class="space-y-4">
+                    <?php if (!empty($session_messages)) : ?>
+                        <?php foreach ($session_messages as $msg) : ?>
+                            <div class="snn-chat-message-detail <?php echo !empty($msg->message) ? 'snn-user-message-detail' : 'snn-ai-message-detail'; ?> p-3 rounded-lg shadow-sm">
+                                <?php if (!empty($msg->message)) : ?>
+                                    <p class="font-semibold text-blue-700">You:</p>
+                                    <p class="text-gray-800"><?php echo esc_html($msg->message); ?></p>
+                                <?php endif; ?>
+                                <?php if (!empty($msg->response)) : ?>
+                                    <p class="font-semibold text-green-700 mt-2">AI:</p>
+                                    <p class="text-gray-800"><?php echo esc_html($msg->response); ?></p>
+                                <?php endif; ?>
+                                <p class="text-xs text-gray-500 mt-1">Tokens: <?php echo esc_html($msg->tokens_used); ?> | Time: <?php echo esc_html(date('H:i:s', strtotime($msg->created_at))); ?></p>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else : ?>
+                        <p class="text-gray-600">No messages found for this session.</p>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <style>
+            .snn-user-message-detail {
+                background-color: #e0f2fe; /* Light blue */
+                border-left: 4px solid #3b82f6; /* Blue-500 */
+            }
+            .snn-ai-message-detail {
+                background-color: #e2e8f0; /* Light gray */
+                border-left: 4px solid #10b981; /* Green-500 */
+            }
+        </style>
         <?php
     }
 
@@ -943,68 +1105,7 @@ class SNN_AI_Chat {
         wp_send_json_success($details);
     }
 
-    public function save_chat_settings() {
-        check_ajax_referer('snn_ai_chat_nonce', 'snn_ai_chat_nonce_field');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('You do not have permission to save settings.');
-        }
-
-        $chat_id = isset($_POST['chat_id']) ? intval($_POST['chat_id']) : 0;
-        $chat_name = isset($_POST['chat_name']) ? sanitize_text_field((string)$_POST['chat_name']) : 'New Chat'; // Cast to string
-
-        // Explicitly define and sanitize each setting for security and correctness.
-        $settings = [];
-        $defaults = $this->get_default_chat_settings();
-
-        foreach ($defaults as $key => $default_value) {
-            if (isset($_POST[$key])) {
-                // Sanitize based on the expected type of the setting
-                if (is_int($default_value)) {
-                    $settings[$key] = intval($_POST[$key]);
-                } elseif (str_contains((string)$key, '_color')) { // PHP 8+ friendly str_contains, added (string) cast defensively
-                    $settings[$key] = sanitize_hex_color((string)$_POST[$key]); // Cast to string
-                } elseif ($key === 'system_prompt' || $key === 'initial_message') { // Also sanitize initial_message as it can be long
-                    $settings[$key] = sanitize_textarea_field((string)$_POST[$key]); // Cast to string
-                } elseif ($key === 'specific_pages' || $key === 'exclude_pages') {
-                    // Sanitize comma-separated IDs, ensuring they are integers
-                    $ids = array_filter(array_map('intval', explode(',', (string)$_POST[$key])));
-                    $settings[$key] = implode(',', $ids);
-                } else {
-                    $settings[$key] = sanitize_text_field((string)$_POST[$key]); // Cast to string
-                }
-            } else {
-                // Handle checkboxes which are not present in POST when unchecked
-                if (in_array($key, ['keep_conversation_history', 'show_on_all_pages', 'show_on_home', 'show_on_front_page', 'show_on_posts', 'show_on_pages', 'show_on_categories', 'show_on_archives', 'collect_user_info'])) {
-                    $settings[$key] = 0;
-                } else {
-                    // For other fields not in POST, use their default values
-                    $settings[$key] = $default_value;
-                }
-            }
-        }
-
-        $post_data = array(
-            'post_title' => $chat_name,
-            'post_type' => 'snn_ai_chat',
-            'post_status' => 'publish'
-        );
-
-        if ($chat_id > 0) {
-            $post_data['ID'] = $chat_id;
-            wp_update_post($post_data);
-        } else {
-            $chat_id = wp_insert_post($post_data);
-        }
-        
-        if ($chat_id && !is_wp_error($chat_id)) {
-            update_post_meta($chat_id, '_snn_chat_settings', $settings);
-            wp_send_json_success(array('chat_id' => $chat_id, 'redirect_url' => admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $chat_id)));
-        } else {
-            wp_send_json_error('Failed to save chat.');
-        }
-    }
-
+    // This AJAX function is now only for deletion. The saving logic moved to save_chat_settings_form_submit.
     public function delete_chat() {
         check_ajax_referer('snn_ai_chat_nonce', 'nonce');
         
@@ -1062,7 +1163,7 @@ class SNN_AI_Chat {
              $conversation_history[] = array(
                  'role' => 'system',
                  'content' => $chat_settings['system_prompt']
-               );
+                );
         }
 
         if (!empty($chat_settings['keep_conversation_history'])) {
