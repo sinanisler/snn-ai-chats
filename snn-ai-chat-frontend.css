@@ -144,9 +144,6 @@
     /* Background-color, Color are set via inline style from PHP */
 }
 
-.snn-user-info-form input::placeholder {
-    /* Color set via inline style from PHP */
-}
 
 .snn-user-info-form button.snn-start-chat-btn {
     /* Background-color, Color are set via inline style from PHP */
@@ -157,9 +154,6 @@
     transition: background-color 0.3s ease;
 }
 
-.snn-user-info-form button.snn-start-chat-btn:hover {
-    /* Hover background color set via inline style */
-}
 
 /* Chat Input Container */
 .snn-chat-input-container {
@@ -179,9 +173,6 @@
     margin-right: 0.5rem;
 }
 
-.snn-chat-input::placeholder {
-    /* Color set via inline style from PHP */
-}
 
 .snn-chat-send {
     background: none;
