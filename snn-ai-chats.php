@@ -37,6 +37,9 @@ class SNN_AI_Chat {
 
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
+
+        // Hook into the specific admin page load to set the title early
+        add_action('load-admin_page_snn-ai-chat-preview', array($this, 'set_preview_page_title'));
     }
 
     public function init() {
@@ -186,6 +189,16 @@ class SNN_AI_Chat {
             'snn-ai-chat-preview',
             array($this, 'preview_page')
         );
+    }
+
+    /**
+     * Sets the global admin page title specifically for the preview page.
+     * This hook runs early enough to prevent `strip_tags(null)` deprecation.
+     */
+    public function set_preview_page_title() {
+        global $admin_title, $title;
+        $admin_title = 'SNN AI Chat Preview';
+        $title = 'SNN AI Chat Preview';
     }
 
     public function admin_enqueue_scripts($hook) {
@@ -1085,10 +1098,8 @@ class SNN_AI_Chat {
         $defaults = $this->get_default_chat_settings();
         $chat_settings = wp_parse_args(is_array($chat_settings_raw) ? $chat_settings_raw : [], $defaults);
         
-        // Set a global title for the preview page to prevent deprecation warnings in admin-header.php
-        // This addresses the strip_tags(null) issue by ensuring a string is always available for the title.
-        global $admin_title;
-        $admin_title = 'SNN AI Chat Preview';
+        // No need to set global $admin_title or $title here, as it's handled by set_preview_page_title()
+        // hooked into 'load-admin_page_snn-ai-chat-preview'
 
         ?>
         <!DOCTYPE html>
@@ -1096,20 +1107,16 @@ class SNN_AI_Chat {
         <head>
             <meta charset="<?php bloginfo( 'charset' ); ?>">
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title><?php echo esc_html($admin_title); ?></title> <!-- Explicitly set title to avoid issues -->
-            <?php 
-            // Manually run actions to load enqueued scripts/styles for the preview
-            wp_print_styles();
-            wp_print_head_scripts();
-            ?>
+            <title>SNN AI Chat Preview</title> <!-- Hardcode title for this specific iframe page -->
         </head>
         <body class="snn-ai-chat-preview-body">
             <?php 
             // Render the widget with its settings
             $this->render_chat_widget($chat, $chat_settings);
             
-            // Manually run footer actions
-            wp_print_footer_scripts();
+            // No need to call wp_print_styles() or wp_print_head_scripts() here.
+            // These are typically handled by admin-header.php, which is included by admin.php.
+            // Our frontend scripts are enqueued via admin_enqueue_scripts.
             ?>
         </body>
         </html>
@@ -1247,7 +1254,7 @@ class SNN_AI_Chat {
             'max_tokens' => intval($api_settings['max_tokens'] ?? 500),
             'top_p' => floatval($api_settings['top_p'] ?? 1.0),
             'frequency_penalty' => floatval($api_settings['frequency_penalty'] ?? 0.0),
-            'presence_penalty' => floatval($api_settings['presence_penalty'] ?? 0.0),
+            'presence_penalty' => floatval($api_params['presence_penalty'] ?? 0.0),
         ];
 
         // Send to AI API
