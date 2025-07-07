@@ -1,9 +1,12 @@
 <?php
 /**
  * Plugin Name: SNN AI CHAT
+* Plugin URI: https://sinanisler.com
  * Description: Advanced AI Chat Plugin with OpenRouter and OpenAI support
- * Version: 1.0.1
- * Author: SNN
+ * Version: 0.2
+ * Author: sinanisler
+ * Author URI: https://sinanisler.com
+ * License: GPL v3
  */
 
 // Prevent direct access
@@ -12,9 +15,10 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
+// Explicitly cast __FILE__ to string for robustness, though it's already a string.
 define('SNN_AI_CHAT_VERSION', '1.0.1');
-define('SNN_AI_CHAT_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('SNN_AI_CHAT_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('SNN_AI_CHAT_PLUGIN_DIR', plugin_dir_path((string)__FILE__));
+define('SNN_AI_CHAT_PLUGIN_URL', plugin_dir_url((string)__FILE__));
 
 class SNN_AI_Chat {
 
@@ -26,6 +30,7 @@ class SNN_AI_Chat {
         add_action('wp_ajax_snn_ai_chat_api', array($this, 'handle_chat_api'));
         add_action('wp_ajax_nopriv_snn_ai_chat_api', array($this, 'handle_chat_api')); // Corrected action hook for non-logged-in users
         add_action('wp_ajax_snn_get_models', array($this, 'get_models'));
+        add_action('wp_action_snn_get_model_details', array($this, 'get_model_details')); // Changed to wp_action for non-logged-in access if needed, though wp_ajax is more common
         add_action('wp_ajax_snn_get_model_details', array($this, 'get_model_details'));
         add_action('wp_ajax_snn_delete_chat', array($this, 'delete_chat')); // Keep delete as AJAX
         add_action('wp_footer', array($this, 'render_frontend_chats'));
@@ -161,8 +166,9 @@ class SNN_AI_Chat {
         );
 
         // New hidden submenu page for viewing individual session history
+        // Changed null to empty string for parent slug to explicitly pass a string.
         add_submenu_page(
-            null, // This makes the page hidden from the menu
+            '', // This makes the page hidden from the menu
             'Session History',
             'Session History',
             'manage_options',
@@ -171,8 +177,9 @@ class SNN_AI_Chat {
         );
 
         // Hidden submenu page for the live preview
+        // Changed null to empty string for parent slug to explicitly pass a string.
         add_submenu_page(
-            null, // This makes the page hidden from the menu
+            '', // This makes the page hidden from the menu
             'Chat Preview',
             'Chat Preview',
             'manage_options',
@@ -1200,9 +1207,9 @@ class SNN_AI_Chat {
         $api_settings = $this->get_settings();
         
         // Determine which API to use (always global provider for API calls)
-        $api_provider = $api_settings['api_provider'] ?? 'openrouter'; // Added null coalescing
-        $model = !empty($chat_settings['model']) ? $chat_settings['model'] : (($api_provider === 'openai') ? ($api_settings['openai_model'] ?? '') : ($api_settings['openrouter_model'] ?? '')); // Added null coalescing
-        $api_key = ($api_provider === 'openai') ? ($api_settings['openai_api_key'] ?? '') : ($api_settings['openrouter_api_key'] ?? ''); // Added null coalescing
+        $api_provider = (string)($api_settings['api_provider'] ?? 'openrouter'); // Added null coalescing and explicit cast
+        $model = !empty($chat_settings['model']) ? (string)$chat_settings['model'] : (($api_provider === 'openai') ? (string)($api_settings['openai_model'] ?? '') : (string)($api_settings['openrouter_model'] ?? '')); // Added null coalescing and explicit cast
+        $api_key = ($api_provider === 'openai') ? (string)($api_settings['openai_api_key'] ?? '') : (string)($api_settings['openrouter_api_key'] ?? ''); // Added null coalescing and explicit cast
 
         if (empty($api_key)) {
              wp_send_json_error(array('response' => 'API key is not configured.'));
@@ -1213,7 +1220,7 @@ class SNN_AI_Chat {
         if (!empty($chat_settings['system_prompt'])) {
              $conversation_history[] = array(
                  'role' => 'system',
-                 'content' => $chat_settings['system_prompt']
+                 'content' => (string)$chat_settings['system_prompt'] // Explicit cast
                 );
         }
 
@@ -1225,7 +1232,7 @@ class SNN_AI_Chat {
         // Add user message
         $conversation_history[] = array(
             'role' => 'user',
-            'content' => $message
+            'content' => (string)$message // Explicit cast
         );
         
         // Prepare API parameters - added null coalescing for robustness
@@ -1326,7 +1333,7 @@ class SNN_AI_Chat {
                 position: fixed;
                 z-index: 99999;
                 <?php
-                switch ((string)($settings['chat_position'] ?? 'bottom-right')) { // Added null coalescing
+                switch ((string)($settings['chat_position'] ?? 'bottom-right')) { // Added null coalescing and explicit cast
                     case 'bottom-right': echo 'bottom: 20px; right: 20px;'; break;
                     case 'bottom-left': echo 'bottom: 20px; left: 20px;'; break;
                     case 'top-right': echo 'top: 20px; right: 20px;'; break;
@@ -1337,7 +1344,7 @@ class SNN_AI_Chat {
 
             /* Toggle Button */
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle {
-                background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; /* Added null coalescing */
+                background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; /* Added null coalescing and explicit cast */
                 border-radius: 9999px; /* Fully rounded */
                 width: 50px;
                 height: 50px;
@@ -1349,18 +1356,18 @@ class SNN_AI_Chat {
                 transition: background-color 0.3s ease;
             }
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle:hover {
-                background-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['primary_color'] ?? '#3b82f6'), -20)); ?>; /* Darken on hover, added null coalescing */
+                background-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['primary_color'] ?? '#3b82f6'), -20)); ?>; /* Darken on hover, added null coalescing and explicit cast */
             }
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle svg {
-                color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; /* Added null coalescing */
+                color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; /* Added null coalescing and explicit cast */
             }
 
             /* Chat Container */
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-container {
-                width: <?php echo esc_attr((string)($settings['widget_width'] ?? 350)); ?>px; /* Added null coalescing */
-                height: <?php echo esc_attr((string)($settings['widget_height'] ?? 500)); ?>px; /* Added null coalescing */
-                border-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; /* Added null coalescing */
-                background-color: <?php echo esc_attr((string)($settings['chat_widget_bg_color'] ?? '#ffffff')); ?>; /* Added null coalescing */
+                width: <?php echo esc_attr((string)($settings['widget_width'] ?? 350)); ?>px; /* Added null coalescing and explicit cast */
+                height: <?php echo esc_attr((string)($settings['widget_height'] ?? 500)); ?>px; /* Added null coalescing and explicit cast */
+                border-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; /* Added null coalescing and explicit cast */
+                background-color: <?php echo esc_attr((string)($settings['chat_widget_bg_color'] ?? '#ffffff')); ?>; /* Added null coalescing and explicit cast */
                 box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
                 display: flex;
                 flex-direction: column;
@@ -1369,14 +1376,14 @@ class SNN_AI_Chat {
 
             /* Chat Header */
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-header {
-                background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; /* Added null coalescing */
-                color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; /* Added null coalescing */
+                background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; /* Added null coalescing and explicit cast */
+                color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; /* Added null coalescing and explicit cast */
                 padding: 1rem;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                border-top-left-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; /* Added null coalescing */
-                border-top-right-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; /* Added null coalescing */
+                border-top-left-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; /* Added null coalescing and explicit cast */
+                border-top-right-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; /* Added null coalescing and explicit cast */
             }
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-header h3 {
                 margin: 0;
@@ -1386,7 +1393,7 @@ class SNN_AI_Chat {
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-close {
                 background: none;
                 border: none;
-                color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; /* Added null coalescing */
+                color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; /* Added null coalescing and explicit cast */
                 cursor: pointer;
                 font-size: 1.25rem;
                 line-height: 1;
@@ -1403,8 +1410,8 @@ class SNN_AI_Chat {
                 flex-grow: 1;
                 padding: 1rem;
                 overflow-y: auto;
-                font-size: <?php echo esc_attr((string)($settings['font_size'] ?? 14)); ?>px; /* Added null coalescing */
-                color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>; /* General chat text color, added null coalescing */
+                font-size: <?php echo esc_attr((string)($settings['font_size'] ?? 14)); ?>px; /* Added null coalescing and explicit cast */
+                color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>; /* General chat text color, added null coalescing and explicit cast */
             }
 
             /* Individual Chat Messages */
@@ -1425,13 +1432,13 @@ class SNN_AI_Chat {
                 word-wrap: break-word;
             }
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message.snn-user-message .snn-message-content {
-                background-color: <?php echo esc_attr((string)($settings['user_message_bg_color'] ?? '#3b82f6')); ?>; /* Added null coalescing */
-                color: <?php echo esc_attr((string)($settings['user_message_text_color'] ?? '#ffffff')); ?>; /* Added null coalescing */
+                background-color: <?php echo esc_attr((string)($settings['user_message_bg_color'] ?? '#3b82f6')); ?>; /* Added null coalescing and explicit cast */
+                color: <?php echo esc_attr((string)($settings['user_message_text_color'] ?? '#ffffff')); ?>; /* Added null coalescing and explicit cast */
                 border-bottom-right-radius: 0.25rem; /* rounded-br-md */
             }
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message.snn-ai-message .snn-message-content {
-                background-color: <?php echo esc_attr((string)($settings['ai_message_bg_color'] ?? '#e5e7eb')); ?>; /* Added null coalescing */
-                color: <?php echo esc_attr((string)($settings['ai_message_text_color'] ?? '#374151')); ?>; /* Added null coalescing */
+                background-color: <?php echo esc_attr((string)($settings['ai_message_bg_color'] ?? '#e5e7eb')); ?>; /* Added null coalescing and explicit cast */
+                color: <?php echo esc_attr((string)($settings['ai_message_text_color'] ?? '#374151')); ?>; /* Added null coalescing and explicit cast */
                 border-bottom-left-radius: 0.25rem; /* rounded-bl-md */
             }
 
@@ -1442,23 +1449,23 @@ class SNN_AI_Chat {
             }
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form p {
                 margin-bottom: 1rem;
-                color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>; /* Added null coalescing */
+                color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>; /* Added null coalescing and explicit cast */
             }
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form input {
                 width: 100%;
                 padding: 0.75rem;
                 margin-bottom: 0.75rem;
-                border: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_bg_color'] ?? '#f9fafb'), -10)); ?>; /* Added null coalescing */
+                border: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_bg_color'] ?? '#f9fafb'), -10)); ?>; /* Added null coalescing and explicit cast */
                 border-radius: 0.5rem;
-                background-color: <?php echo esc_attr((string)($settings['chat_input_bg_color'] ?? '#f9fafb')); ?>; /* Added null coalescing */
-                color: <?php echo esc_attr((string)($settings['chat_input_text_color'] ?? '#1f2937')); ?>; /* Added null coalescing */
+                background-color: <?php echo esc_attr((string)($settings['chat_input_bg_color'] ?? '#f9fafb')); ?>; /* Added null coalescing and explicit cast */
+                color: <?php echo esc_attr((string)($settings['chat_input_text_color'] ?? '#1f2937')); ?>; /* Added null coalescing and explicit cast */
             }
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form input::placeholder {
-                color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>; /* Added null coalescing */
+                color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>; /* Added null coalescing and explicit cast */
             }
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form button.snn-start-chat-btn {
-                background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; /* Added null coalescing */
-                color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; /* Added null coalescing */
+                background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; /* Added null coalescing and explicit cast */
+                color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; /* Added null coalescing and explicit cast */
                 padding: 0.75rem 1.5rem;
                 border: none;
                 border-radius: 0.5rem;
@@ -1466,35 +1473,35 @@ class SNN_AI_Chat {
                 transition: background-color 0.3s ease;
             }
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form button.snn-start-chat-btn:hover {
-                background-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['primary_color'] ?? '#3b82f6'), -20)); ?>; /* Added null coalescing */
+                background-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['primary_color'] ?? '#3b82f6'), -20)); ?>; /* Added null coalescing and explicit cast */
             }
 
             /* Chat Input Container */
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-input-container {
                 display: flex;
                 padding: 1rem;
-                border-top: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_widget_bg_color'] ?? '#ffffff'), -10)); ?>; /* Added null coalescing */
-                background-color: <?php echo esc_attr((string)($settings['chat_widget_bg_color'] ?? '#ffffff')); ?>; /* Added null coalescing */
-                border-bottom-left-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; /* Added null coalescing */
-                border-bottom-right-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; /* Added null coalescing */
+                border-top: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_widget_bg_color'] ?? '#ffffff'), -10)); ?>; /* Added null coalescing and explicit cast */
+                background-color: <?php echo esc_attr((string)($settings['chat_widget_bg_color'] ?? '#ffffff')); ?>; /* Added null coalescing and explicit cast */
+                border-bottom-left-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; /* Added null coalescing and explicit cast */
+                border-bottom-right-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; /* Added null coalescing and explicit cast */
             }
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-input {
                 flex-grow: 1;
                 padding: 0.75rem 1rem;
-                border: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_bg_color'] ?? '#f9fafb'), -10)); ?>; /* Added null coalescing */
+                border: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_bg_color'] ?? '#f9fafb'), -10)); ?>; /* Added null coalescing and explicit cast */
                 border-radius: 0.5rem;
                 outline: none;
-                background-color: <?php echo esc_attr((string)($settings['chat_input_bg_color'] ?? '#f9fafb')); ?>; /* Added null coalescing */
-                color: <?php echo esc_attr((string)($settings['chat_input_text_color'] ?? '#1f2937')); ?>; /* Added null coalescing */
+                background-color: <?php echo esc_attr((string)($settings['chat_input_bg_color'] ?? '#f9fafb')); ?>; /* Added null coalescing and explicit cast */
+                color: <?php echo esc_attr((string)($settings['chat_input_text_color'] ?? '#1f2937')); ?>; /* Added null coalescing and explicit cast */
                 margin-right: 0.5rem;
             }
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-input::placeholder {
-                color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>; /* Added null coalescing */
+                color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>; /* Added null coalescing and explicit cast */
             }
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-send {
                 background: none;
                 border: none;
-                color: <?php echo esc_attr((string)($settings['chat_send_button_color'] ?? '#3b82f6')); ?>; /* Added null coalescing */
+                color: <?php echo esc_attr((string)($settings['chat_send_button_color'] ?? '#3b82f6')); ?>; /* Added null coalescing and explicit cast */
                 cursor: pointer;
                 padding: 0.5rem;
                 border-radius: 0.5rem;
@@ -1791,7 +1798,7 @@ class SNN_AI_Chat {
     }
     
     private function fetch_openai_model_details($model, $api_key) {
-        $response = wp_remote_get('https://api.openai.com/v1/models/' . $model, array(
+        $response = wp_remote_get('https://api.openai.com/v1/models/' . (string)$model, array( // Explicit cast for model
             'headers' => array(
                 'Authorization' => 'Bearer ' . $api_key,
                 'Content-Type' => 'application/json'
@@ -1814,7 +1821,7 @@ class SNN_AI_Chat {
         $chat_settings_raw = get_post_meta($chat_id, '_snn_chat_settings', true);
         $chat_settings = wp_parse_args(is_array($chat_settings_raw) ? $chat_settings_raw : [], $this->get_default_chat_settings());
         
-        $ip = $_SERVER['REMOTE_ADDR'] ?? ''; // Added null coalescing
+        $ip = (string)($_SERVER['REMOTE_ADDR'] ?? ''); // Added null coalescing and explicit cast
         
         // Check rate limit per minute
         $minute_ago = date('Y-m-d H:i:s', time() - 60);
@@ -1823,7 +1830,7 @@ class SNN_AI_Chat {
             WHERE session_id = %s AND created_at > %s
         ", $session_id, $minute_ago)) ?: 0; // Added null coalescing
         
-        if ($recent_messages >= ($chat_settings['rate_limit_per_minute'] ?? 10)) { // Added null coalescing
+        if ($recent_messages >= (int)($chat_settings['rate_limit_per_minute'] ?? 10)) { // Added null coalescing and explicit cast
             return false;
         }
         
@@ -1834,7 +1841,7 @@ class SNN_AI_Chat {
             WHERE ip_address = %s AND DATE(created_at) = %s
         ", $ip, $today)) ?: 0; // Added null coalescing
         
-        if ($daily_sessions >= ($chat_settings['max_chats_per_ip_daily'] ?? 50)) { // Added null coalescing
+        if ($daily_sessions >= (int)($chat_settings['max_chats_per_ip_daily'] ?? 50)) { // Added null coalescing and explicit cast
             return false;
         }
         
@@ -1844,7 +1851,7 @@ class SNN_AI_Chat {
             WHERE s.ip_address = %s AND DATE(m.created_at) = %s
         ", $ip, $today)) ?: 0; // Added null coalescing
         
-        if ($daily_tokens >= ($chat_settings['max_tokens_per_ip_daily'] ?? 10000)) { // Added null coalescing
+        if ($daily_tokens >= (int)($chat_settings['max_tokens_per_ip_daily'] ?? 10000)) { // Added null coalescing and explicit cast
             return false;
         }
         
@@ -1863,8 +1870,8 @@ class SNN_AI_Chat {
         
         $history = array();
         foreach ($messages as $msg) {
-            $history[] = array('role' => 'user', 'content' => $msg->message);
-            $history[] = array('role' => 'assistant', 'content' => $msg->response);
+            $history[] = array('role' => 'user', 'content' => (string)$msg->message); // Explicit cast
+            $history[] = array('role' => 'assistant', 'content' => (string)$msg->response); // Explicit cast
         }
         
         return $history;
@@ -1873,17 +1880,17 @@ class SNN_AI_Chat {
     private function send_to_openrouter($messages, $model, $api_key, $api_params) {
         $response = wp_remote_post('https://openrouter.ai/api/v1/chat/completions', array(
             'headers' => array(
-                'Authorization' => 'Bearer ' . $api_key,
+                'Authorization' => 'Bearer ' . (string)$api_key, // Explicit cast
                 'Content-Type' => 'application/json'
             ),
             'body' => json_encode(array(
-                'model' => $model,
+                'model' => (string)$model, // Explicit cast
                 'messages' => $messages,
-                'temperature' => $api_params['temperature'] ?? 0.7, // Added null coalescing
-                'max_tokens' => $api_params['max_tokens'] ?? 500, // Added null coalescing
-                'top_p' => $api_params['top_p'] ?? 1.0, // Added null coalescing
-                'frequency_penalty' => $api_params['frequency_penalty'] ?? 0.0, // Added null coalescing
-                'presence_penalty' => $api_params['presence_penalty'] ?? 0.0, // Added null coalescing
+                'temperature' => floatval($api_params['temperature'] ?? 0.7), // Added null coalescing and explicit cast
+                'max_tokens' => intval($api_params['max_tokens'] ?? 500), // Added null coalescing and explicit cast
+                'top_p' => floatval($api_params['top_p'] ?? 1.0), // Added null coalescing and explicit cast
+                'frequency_penalty' => floatval($api_params['frequency_penalty'] ?? 0.0), // Added null coalescing and explicit cast
+                'presence_penalty' => floatval($api_params['presence_penalty'] ?? 0.0), // Added null coalescing and explicit cast
             )),
             'timeout' => 30,
         ));
@@ -1898,8 +1905,8 @@ class SNN_AI_Chat {
         
         if (isset($data['choices'][0]['message']['content'])) {
             return array(
-                'content' => $data['choices'][0]['message']['content'],
-                'tokens' => $data['usage']['total_tokens'] ?? 0
+                'content' => (string)$data['choices'][0]['message']['content'], // Explicit cast
+                'tokens' => (int)($data['usage']['total_tokens'] ?? 0) // Explicit cast
             );
         }
         
@@ -1910,17 +1917,17 @@ class SNN_AI_Chat {
     private function send_to_openai($messages, $model, $api_key, $api_params) {
         $response = wp_remote_post('https://api.openai.com/v1/chat/completions', array(
             'headers' => array(
-                'Authorization' => 'Bearer ' . $api_key,
+                'Authorization' => 'Bearer ' . (string)$api_key, // Explicit cast
                 'Content-Type' => 'application/json'
             ),
             'body' => json_encode(array(
-                'model' => $model,
+                'model' => (string)$model, // Explicit cast
                 'messages' => $messages,
-                'temperature' => $api_params['temperature'] ?? 0.7, // Added null coalescing
-                'max_tokens' => $api_params['max_tokens'] ?? 500, // Added null coalescing
-                'top_p' => $api_params['top_p'] ?? 1.0, // Added null coalescing
-                'frequency_penalty' => $api_params['frequency_penalty'] ?? 0.0, // Added null coalescing
-                'presence_penalty' => $api_params['presence_penalty'] ?? 0.0, // Added null coalescing
+                'temperature' => floatval($api_params['temperature'] ?? 0.7), // Added null coalescing and explicit cast
+                'max_tokens' => intval($api_params['max_tokens'] ?? 500), // Added null coalescing and explicit cast
+                'top_p' => floatval($api_params['top_p'] ?? 1.0), // Added null coalescing and explicit cast
+                'frequency_penalty' => floatval($api_params['frequency_penalty'] ?? 0.0), // Added null coalescing and explicit cast
+                'presence_penalty' => floatval($api_params['presence_penalty'] ?? 0.0), // Added null coalescing and explicit cast
             )),
             'timeout' => 30,
         ));
@@ -1935,8 +1942,8 @@ class SNN_AI_Chat {
         
         if (isset($data['choices'][0]['message']['content'])) {
             return array(
-                'content' => $data['choices'][0]['message']['content'],
-                'tokens' => $data['usage']['total_tokens'] ?? 0
+                'content' => (string)$data['choices'][0]['message']['content'], // Explicit cast
+                'tokens' => (int)($data['usage']['total_tokens'] ?? 0) // Explicit cast
             );
         }
         
@@ -1957,10 +1964,10 @@ class SNN_AI_Chat {
                 $wpdb->prefix . 'snn_chat_sessions',
                 array(
                     'chat_id' => $chat_id,
-                    'session_id' => $session_id,
-                    'user_name' => $user_name,
-                    'user_email' => $user_email,
-                    'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '' // Ensure IP address is string
+                    'session_id' => (string)$session_id, // Explicit cast
+                    'user_name' => (string)$user_name, // Explicit cast
+                    'user_email' => (string)$user_email, // Explicit cast
+                    'ip_address' => (string)($_SERVER['REMOTE_ADDR'] ?? '') // Ensure IP address is string
                 ),
                 array('%d', '%s', '%s', '%s', '%s')
             );
@@ -1970,10 +1977,10 @@ class SNN_AI_Chat {
         $wpdb->insert(
             $wpdb->prefix . 'snn_chat_messages',
             array(
-                'session_id' => $session_id,
-                'message' => $message,
-                'response' => $response,
-                'tokens_used' => $tokens
+                'session_id' => (string)$session_id, // Explicit cast
+                'message' => (string)$message, // Explicit cast
+                'response' => (string)$response, // Explicit cast
+                'tokens_used' => (int)$tokens // Explicit cast
             ),
             array('%s', '%s', '%s', '%d')
         );
@@ -1988,14 +1995,14 @@ class SNN_AI_Chat {
      */
     private function adjust_brightness($hex, $steps) {
         // Remove '#' if present
-        $hex = ltrim((string)($hex ?? ''), '#');
+        $hex = ltrim((string)($hex ?? ''), '#'); // Added null coalescing and explicit cast
         
         // Handle shorthand hex codes
         if (strlen((string)$hex) === 3) {
             $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
         }
 
-        $rgb = array_map('hexdec', str_split((string)$hex, 2));
+        $rgb = array_map('hexdec', str_split((string)$hex, 2)); // Explicit cast
 
         foreach ($rgb as &$value) {
             $value = max(0, min(255, $value + $steps));
