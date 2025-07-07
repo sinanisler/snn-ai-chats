@@ -7,7 +7,7 @@ jQuery(document).ready(function($) {
                 return title;
             },
             allowHTML: true,
-            placement: 'right',
+            placement: 'top-start',
             animation: 'fade',
             theme: 'light-border',
         });
