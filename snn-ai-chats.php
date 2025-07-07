@@ -851,7 +851,7 @@ class SNN_AI_Chat {
                     <h3 class="text-lg font-semibold mb-4">Live Preview</h3>
                     <?php if ($chat_id > 0) : ?>
                         <div class="border border-gray-300 rounded-lg overflow-hidden preview-container" id="snn-preview-container">
-                            <iframe id="chat-preview-iframe" src="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-preview&chat_id=' . $chat_id)); ?>" width="100%" height="800" frameborder="0" class="preview-iframe"></iframe>
+                            <iframe id="chat-preview-iframe" src="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-preview&chat_id=' . $chat_id)); ?>" width="100%" height="600" frameborder="0" class="preview-iframe"></iframe>
                         </div>
                     <?php else : ?>
                         <div class="text-center p-4 border-2 border-dashed rounded-lg text-gray-600">
