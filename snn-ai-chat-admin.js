@@ -1,4 +1,11 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // A cache to store model data fetched from the API
+    // Structure: { 'providerName': { 'modelId': { ...modelDetails... } } }
+    let cachedModelsData = {
+        openrouter: {},
+        openai: {}
+    };
+
     // Initialize Tippy.js tooltips
     function initializeTooltips() {
         if (typeof tippy === 'function') { // Check if tippy is loaded
@@ -34,11 +41,16 @@ document.addEventListener('DOMContentLoaded', function() {
             select('#snn-' + selectedProvider + '-settings').classList.remove('hidden');
 
             // Clear models and details when switching providers
-            // Note: We might want to keep the selected model if it's valid for the new provider,
-            // but for now, clearing is safer.
             selectAll('.model-input').forEach(input => input.value = '');
             selectAll('datalist').forEach(datalist => datalist.innerHTML = '');
             selectAll('.model-details').forEach(details => details.innerHTML = '');
+
+            // Clear cache for the other provider
+            if (selectedProvider === 'openrouter') {
+                cachedModelsData.openai = {};
+            } else if (selectedProvider === 'openai') {
+                cachedModelsData.openrouter = {};
+            }
 
             // Automatically fetch models for the newly selected provider if API key exists
             if (selectedProvider === 'openrouter' && select('#openrouter_api_key').value) {
@@ -57,10 +69,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!apiKey) {
             if (datalistElement) datalistElement.innerHTML = '';
             if (modelDetailsElement) modelDetailsElement.innerHTML = '<p class="text-red-500">Please enter an API key to fetch models.</p>';
-            return;
+            cachedModelsData[provider] = {}; // Clear cache for this provider
+            return Promise.resolve(); // Return a resolved promise if no API key
         }
 
-        if (datalistElement) datalistElement.innerHTML = '';
+        if (datalistElement) datalistElement.innerHTML = ''; // Clear previous options
         if (modelDetailsElement) modelDetailsElement.innerHTML = '<p class="text-blue-500">Fetching models...</p>';
 
         const formData = new FormData();
@@ -69,20 +82,29 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('provider', provider);
         formData.append('api_key', apiKey);
 
-        fetch(snn_ai_chat_ajax.ajax_url, {
+        return fetch(snn_ai_chat_ajax.ajax_url, { // Return the fetch promise
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(response => {
                 if (response.success) {
                     if (datalistElement) {
-                        datalistElement.innerHTML = '';
+                        datalistElement.innerHTML = ''; // Clear previous options again, just in case
+                        cachedModelsData[provider] = {}; // Reset cache for this provider
+
                         if (response.data && response.data.length > 0) {
                             response.data.forEach(function(model) {
                                 const option = document.createElement('option');
                                 option.value = model.id;
                                 datalistElement.appendChild(option);
+                                // Store full model details in cache
+                                cachedModelsData[provider][model.id] = model;
                             });
                             if (modelDetailsElement) modelDetailsElement.innerHTML = ''; // Clear fetching message
                         } else {
@@ -90,61 +112,124 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 } else {
+                    // Display error message from the response data if available, otherwise a generic one
                     if (modelDetailsElement) modelDetailsElement.innerHTML = '<p class="text-red-500">' + (response.data || 'Error fetching models.') + '</p>';
+                    cachedModelsData[provider] = {}; // Clear cache on error
                 }
+                return response; // Pass on the response for chaining
             })
             .catch(error => {
-                // console.error("Fetch error fetching models:", error);
-                if (modelDetailsElement) modelDetailsElement.innerHTML = '<p class="text-red-500">Error fetching models. Check console for details.</p>';
+                console.error("Fetch error fetching models:", error); // Keep this for debugging
+                if (modelDetailsElement) modelDetailsElement.innerHTML = '<p class="text-red-500">Error fetching models. Please check your API key and network connection.</p>';
+                cachedModelsData[provider] = {}; // Clear cache on error
+                throw error; // Re-throw to propagate the error
             });
     }
 
     // Function to fetch and display model details
-    function fetchModelDetails(provider, model, apiKey, modelDetailsId) {
+    function fetchModelDetails(provider, modelId, apiKey, modelDetailsId) {
         const modelDetailsElement = select('#' + modelDetailsId);
 
-        if (!model || !apiKey) {
+        if (!modelId || !apiKey) {
             if (modelDetailsElement) modelDetailsElement.innerHTML = '';
             return;
         }
 
+        // Try to retrieve from cache first
+        const cachedDetail = cachedModelsData[provider] && cachedModelsData[provider][modelId];
+        if (cachedDetail) {
+            displayModelDetails(cachedDetail, modelDetailsElement);
+            return; // Details found in cache, no need for AJAX
+        }
+
+        // If not in cache, proceed with AJAX call (e.g., for OpenAI if it doesn't return full details initially)
         if (modelDetailsElement) modelDetailsElement.innerHTML = '<p class="text-blue-500">Fetching model details...</p>';
 
         const formData = new FormData();
         formData.append('action', 'snn_get_model_details');
         formData.append('nonce', snn_ai_chat_ajax.nonce);
         formData.append('provider', provider);
-        formData.append('model', model);
+        formData.append('model', modelId);
         formData.append('api_key', apiKey);
 
         fetch(snn_ai_chat_ajax.ajax_url, {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(response => {
                 if (response.success && response.data) {
-                    const details = response.data;
-                    let html = '<p><strong>ID:</strong> ' + details.id + '</p>';
-                    if (details.owned_by) {
-                        html += '<p><strong>Owned By:</strong> ' + details.owned_by + '</p>';
-                    }
-                    if (details.context_length) {
-                        html += '<p><strong>Context Length:</strong> ' + details.context_length + '</p>';
-                    }
-                    if (details.pricing && details.pricing.prompt && details.pricing.completion) {
-                        html += '<p><strong>Pricing:</strong> Input $' + details.pricing.prompt.toFixed(6) + '/M tokens, Output $' + details.pricing.completion.toFixed(6) + '/M tokens</p>';
-                    }
-                    if (modelDetailsElement) modelDetailsElement.innerHTML = html;
+                    displayModelDetails(response.data, modelDetailsElement);
+                    // Optionally cache the individual detail if it wasn't part of the main list fetch
+                    cachedModelsData[provider][modelId] = response.data;
                 } else {
-                    if (modelDetailsElement) modelDetailsElement.innerHTML = '<p class="text-red-500">Could not retrieve model details.</p>';
+                    if (modelDetailsElement) modelDetailsElement.innerHTML = '<p class="text-red-500">Could not retrieve model details. Model may not exist or API key is invalid.</p>';
                 }
             })
             .catch(error => {
-                // console.error("Fetch error fetching model details:", error);
-                // if (modelDetailsElement) modelDetailsElement.innerHTML = '<p class="text-red-500">Error fetching model details. Check console for details.</p>';
+                console.error("Fetch error fetching model details:", error); // Keep this for debugging
+                if (modelDetailsElement) modelDetailsElement.innerHTML = '<p class="text-red-500">Error fetching model details. Please check your network connection or API key.</p>';
             });
     }
+
+    // Helper function to render model details
+    function displayModelDetails(details, element) {
+        if (!details || typeof details !== 'object' || !details.id) {
+            if (element) element.innerHTML = '<p class="text-red-500">Model details not available.</p>';
+            return;
+        }
+
+        let html = '<p><strong>ID:</strong> ' + details.id + '</p>';
+
+        if (details.name) { // Often present in OpenRouter data
+            html += '<p><strong>Name:</strong> ' + details.name + '</p>';
+        }
+        if (details.owned_by) {
+            html += '<p><strong>Owned By:</strong> ' + details.owned_by + '</p>';
+        } else if (details.canonical_slug) { // OpenRouter often uses canonical_slug
+            html += '<p><strong>Canonical Slug:</strong> ' + details.canonical_slug + '</p>';
+        }
+        if (details.description) {
+            html += '<p><strong>Description:</strong> ' + details.description + '</p>';
+        }
+        if (details.context_length) {
+            html += '<p><strong>Context Length:</strong> ' + details.context_length + ' tokens</p>';
+        }
+        if (details.hugging_face_id) {
+            html += '<p><strong>Hugging Face ID:</strong> ' + details.hugging_face_id + '</p>';
+        }
+
+
+        // Use pricing from 'pricing' object if available, otherwise 'top_provider' (OpenRouter specific)
+        let promptPrice, completionPrice;
+        if (details.pricing && typeof details.pricing.prompt !== 'undefined' && typeof details.pricing.completion !== 'undefined') {
+            promptPrice = parseFloat(details.pricing.prompt);
+            completionPrice = parseFloat(details.pricing.completion);
+        } else if (details.top_provider && details.top_provider.pricing && typeof details.top_provider.pricing.prompt !== 'undefined' && typeof details.top_provider.pricing.completion !== 'undefined') {
+            // Fallback for some OpenRouter models where pricing might be nested
+            promptPrice = parseFloat(details.top_provider.pricing.prompt);
+            completionPrice = parseFloat(details.top_provider.pricing.completion);
+        }
+
+        if (typeof promptPrice !== 'undefined' && typeof completionPrice !== 'undefined') {
+            // Check if both are zero, indicating a free model
+            if (promptPrice === 0 && completionPrice === 0) {
+                html += '<p><strong>Pricing:</strong> Free</p>';
+            } else {
+                html += `<p><strong>Pricing:</strong> Input $${promptPrice.toFixed(7)} / 1M tokens, Output $${completionPrice.toFixed(7)} / 1M tokens</p>`;
+            }
+        } else {
+            html += '<p><strong>Pricing:</strong> Not available or unknown</p>';
+        }
+
+        if (element) element.innerHTML = html;
+    }
+
 
     // Settings page model selection logic and initial load
     const openrouterApiKeyInput = select('#openrouter_api_key');
@@ -166,39 +251,59 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    if (openrouterModelInput) {
-        openrouterModelInput.addEventListener('change', function() {
-            const model = this.value;
-            const apiKey = openrouterApiKeyInput ? openrouterApiKeyInput.value : '';
-            fetchModelDetails('openrouter', model, apiKey, 'openrouter-model-details');
-        });
-    }
+    // Event listener for model input change (settings page)
+    const setupModelInputListeners = (modelInput, apiKeyInput, provider, datalistId, detailsId) => {
+        if (modelInput) {
+            const datalistElement = select('#' + datalistId);
+            modelInput.addEventListener('change', function() {
+                const model = this.value;
+                const apiKey = apiKeyInput ? apiKeyInput.value : '';
+                fetchModelDetails(provider, model, apiKey, detailsId);
+            });
 
-    if (openaiModelInput) {
-        openaiModelInput.addEventListener('change', function() {
-            const model = this.value;
-            const apiKey = openaiApiKeyInput ? openaiApiKeyInput.value : '';
-            fetchModelDetails('openai', model, apiKey, 'openai-model-details');
-        });
-    }
+            // Handle the edge case: if input is clicked/focused and datalist is empty, try fetching models
+            modelInput.addEventListener('focus', function() {
+                const apiKey = apiKeyInput ? apiKeyInput.value : '';
+                if (apiKey && (!datalistElement || datalistElement.options.length === 0)) {
+                    fetchModels(provider, apiKey, datalistId, detailsId);
+                }
+            });
+
+            // Also trigger fetch details on blur, in case user types without selecting
+            modelInput.addEventListener('blur', function() {
+                const model = this.value;
+                const apiKey = apiKeyInput ? apiKeyInput.value : '';
+                if (model && apiKey) {
+                    fetchModelDetails(provider, model, apiKey, detailsId);
+                }
+            });
+        }
+    };
+
+    setupModelInputListeners(openrouterModelInput, openrouterApiKeyInput, 'openrouter', 'openrouter_models', 'openrouter-model-details');
+    setupModelInputListeners(openaiModelInput, openaiApiKeyInput, 'openai', 'openai_models', 'openai-model-details');
+
 
     // Initial load for settings page models and details if keys are already present
-    // This runs only if the current page is the settings page
     const body = select('body');
     if (body && (body.classList.contains('toplevel_page_snn-ai-chat') || body.classList.contains('ai-chat_page_snn-ai-chat-settings'))) {
         const currentProviderRadio = select('.api-provider-radio:checked');
         const currentProvider = currentProviderRadio ? currentProviderRadio.value : null;
 
         if (currentProvider === 'openrouter' && openrouterApiKeyInput && openrouterApiKeyInput.value) {
-            fetchModels('openrouter', openrouterApiKeyInput.value, 'openrouter_models', 'openrouter-model-details');
-            if (openrouterModelInput && openrouterModelInput.value) {
-                fetchModelDetails('openrouter', openrouterModelInput.value, openrouterApiKeyInput.value, 'openrouter-model-details');
-            }
+            fetchModels('openrouter', openrouterApiKeyInput.value, 'openrouter_models', 'openrouter-model-details')
+                .then(() => { // Ensure models are fetched before trying to get details
+                    if (openrouterModelInput && openrouterModelInput.value) {
+                        fetchModelDetails('openrouter', openrouterModelInput.value, openrouterApiKeyInput.value, 'openrouter-model-details');
+                    }
+                });
         } else if (currentProvider === 'openai' && openaiApiKeyInput && openaiApiKeyInput.value) {
-            fetchModels('openai', openaiApiKeyInput.value, 'openai_models', 'openai-model-details');
-            if (openaiModelInput && openaiModelInput.value) {
-                fetchModelDetails('openai', openaiModelInput.value, openaiApiKeyInput.value, 'openai-model-details');
-            }
+            fetchModels('openai', openaiApiKeyInput.value, 'openai_models', 'openai-model-details')
+                .then(() => { // Ensure models are fetched before trying to get details
+                    if (openaiModelInput && openaiModelInput.value) {
+                        fetchModelDetails('openai', openaiModelInput.value, openaiApiKeyInput.value, 'openai-model-details');
+                    }
+                });
         }
     }
 
@@ -210,7 +315,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (chatModelInput) { // Only run if on chat edit/new page
         function loadChatModelsAndDetails() {
-            // snn_ai_chat_ajax is localized with global settings
             const globalApiProvider = snn_ai_chat_ajax.global_api_provider;
             const globalApiKey = (globalApiProvider === 'openrouter') ?
                 snn_ai_chat_ajax.global_openrouter_api_key :
@@ -221,62 +325,75 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Populate datalist with models from the global provider
             if (globalApiKey) {
-                fetchModels(globalApiProvider, globalApiKey, 'chat_models', 'chat-model-details');
+                fetchModels(globalApiProvider, globalApiKey, 'chat_models', 'chat-model-details')
+                    .then(() => { // Ensure models are fetched and cached before trying to display details
+                        // If a specific model is already set for this chat (i.e., on edit page), load its details
+                        const currentChatModel = chatModelInput.value;
+                        if (currentChatModel) {
+                            fetchModelDetails(globalApiProvider, currentChatModel, globalApiKey, 'chat-model-details');
+                        } else {
+                            // If this is a new chat and no model is selected, pre-fill with global default
+                            if (globalDefaultModel) {
+                                chatModelInput.value = globalDefaultModel;
+                                fetchModelDetails(globalApiProvider, globalDefaultModel, globalApiKey, 'chat-model-details');
+                            } else {
+                                if (chatModelDetailsDiv) chatModelDetailsDiv.innerHTML = '<p class="text-gray-500">No chat-specific model selected. Using global default. Configure a global model in settings.</p>';
+                            }
+                        }
+                    });
             } else {
                 if (chatModelDetailsDiv) chatModelDetailsDiv.innerHTML = '<p class="text-red-500">Global API key is not configured. Cannot fetch models.</p>';
-            }
-
-
-            // If a specific model is already set for this chat (i.e., on edit page), load its details
-            // Otherwise, set the default model from global settings
-            const currentChatModel = chatModelInput.value;
-            if (currentChatModel) {
-                if (globalApiKey) {
-                    fetchModelDetails(globalApiProvider, currentChatModel, globalApiKey, 'chat-model-details');
-                }
-            } else {
-                // If this is a new chat and no model is selected, pre-fill with global default
-                if (globalDefaultModel) {
-                    chatModelInput.value = globalDefaultModel;
-                    if (globalApiKey) {
-                        fetchModelDetails(globalApiProvider, globalDefaultModel, globalApiKey, 'chat-model-details');
-                    }
-                } else {
-                    if (chatModelDetailsDiv) chatModelDetailsDiv.innerHTML = '<p class="text-gray-500">No chat-specific model selected. Using global default. Configure a global model in settings.</p>';
-                }
             }
         }
 
         loadChatModelsAndDetails();
 
         // Update model details when a model is selected from the datalist or typed
-        chatModelInput.addEventListener('change', function() {
-            const selectedModel = this.value;
-            const globalApiProvider = snn_ai_chat_ajax.global_api_provider;
-            const globalApiKey = (globalApiProvider === 'openrouter') ?
-                snn_ai_chat_ajax.global_openrouter_api_key :
-                snn_ai_chat_ajax.global_openai_api_key;
+        const setupChatModelInputListeners = (modelInput, detailsDivId) => {
+            const datalistElement = select('#' + modelInput.getAttribute('list')); // Get the associated datalist
 
-            if (selectedModel && globalApiKey) {
-                fetchModelDetails(globalApiProvider, selectedModel, globalApiKey, 'chat-model-details');
-            } else {
-                if (chatModelDetailsDiv) chatModelDetailsDiv.innerHTML = ''; // Clear details if model or API key is missing
-            }
-        });
+            modelInput.addEventListener('change', function() {
+                const selectedModel = this.value;
+                const globalApiProvider = snn_ai_chat_ajax.global_api_provider;
+                const globalApiKey = (globalApiProvider === 'openrouter') ?
+                    snn_ai_chat_ajax.global_openrouter_api_key :
+                    snn_ai_chat_ajax.global_openai_api_key;
 
-        chatModelInput.addEventListener('blur', function() { // Added blur to catch manual entries
-            const selectedModel = this.value;
-            const globalApiProvider = snn_ai_chat_ajax.global_api_provider;
-            const globalApiKey = (globalApiProvider === 'openrouter') ?
-                snn_ai_chat_ajax.global_openrouter_api_key :
-                snn_ai_chat_ajax.global_openai_api_key;
+                if (selectedModel && globalApiKey) {
+                    fetchModelDetails(globalApiProvider, selectedModel, globalApiKey, detailsDivId);
+                } else {
+                    if (chatModelDetailsDiv) chatModelDetailsDiv.innerHTML = ''; // Clear details if model or API key is missing
+                }
+            });
 
-            if (selectedModel && globalApiKey) {
-                fetchModelDetails(globalApiProvider, selectedModel, globalApiKey, 'chat-model-details');
-            } else {
-                if (chatModelDetailsDiv) chatModelDetailsDiv.innerHTML = ''; // Clear details if model or API key is missing
-            }
-        });
+            modelInput.addEventListener('blur', function() { // Added blur to catch manual entries
+                const selectedModel = this.value;
+                const globalApiProvider = snn_ai_chat_ajax.global_api_provider;
+                const globalApiKey = (globalApiProvider === 'openrouter') ?
+                    snn_ai_chat_ajax.global_openrouter_api_key :
+                    snn_ai_chat_ajax.global_openai_api_key;
+
+                if (selectedModel && globalApiKey) {
+                    fetchModelDetails(globalApiProvider, selectedModel, globalApiKey, detailsDivId);
+                } else {
+                    if (chatModelDetailsDiv) chatModelDetailsDiv.innerHTML = ''; // Clear details if model or API key is missing
+                }
+            });
+
+            // Handle the edge case: if input is clicked/focused and datalist is empty, try fetching models
+            modelInput.addEventListener('focus', function() {
+                const globalApiProvider = snn_ai_chat_ajax.global_api_provider;
+                const globalApiKey = (globalApiProvider === 'openrouter') ?
+                    snn_ai_chat_ajax.global_openrouter_api_key :
+                    snn_ai_chat_ajax.global_openai_api_key;
+
+                if (globalApiKey && (!datalistElement || datalistElement.options.length === 0)) {
+                    fetchModels(globalApiProvider, globalApiKey, 'chat_models', 'chat-model-details');
+                }
+            });
+        };
+
+        setupChatModelInputListeners(chatModelInput, 'chat-model-details');
     }
 
     // *** IMPORTANT CHANGE HERE ***
