@@ -75,7 +75,7 @@ With an intuitive admin interface, you can create and manage multiple chat insta
 ### Minimum Requirements
 
 * WordPress 5.0 or higher
-* PHP 7.4 or higher
+* PHP 8.0 or higher
 * An API Key from [OpenRouter.ai](https://openrouter.ai/) or [OpenAI](https://openai.com/)
 
 ### Installation Steps
@@ -186,34 +186,3 @@ To prevent API overages and manage resource consumption, SNN AI CHAT includes co
 
 These limits can be configured per chat instance, offering granular control over your AI's availability and cost.
 
----
-
-## Screenshots
-
-*(In a real README, you would include screenshots here demonstrating the dashboard, settings page, chat creation/edit form, and the frontend chat widget.)*
-
-* **Dashboard Overview**
-* **Global Settings Page**
-* **Create/Edit Chat Page**
-* **Frontend Chat Widget (Open/Closed)**
-* **Chat History List**
-* **Individual Session History**
-
----
-
-## Support
-
-If you encounter any issues, have questions, or need assistance, please visit the plugin's official URI: [https://sinanisler.com](https://sinanisler.com) or contact the author directly.
-
----
-
-## Changelog
-
-**0.2.1 (current version in code)**
-* Initial release with core AI chat functionalities using OpenRouter and OpenAI.
-* Dashboard statistics added.
-* Comprehensive chat instance management with display, styling, and usage limit controls.
-* Detailed chat history logging and viewing.
-* Live preview for chat configurations.
-
-*(You might want to update the version to 1.0.1 as per your `define` statement, and adjust the changelog accordingly.)*
