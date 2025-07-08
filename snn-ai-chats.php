@@ -19,6 +19,7 @@ class SNN_AI_Chat {
 
     public function __construct() {
         add_action('init', array($this, 'init'));
+        add_action('admin_init', array($this, 'handle_admin_form_submissions')); // Handle form submissions early
         add_action('admin_menu', array($this, 'admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'frontend_enqueue_scripts'));
@@ -41,9 +42,21 @@ class SNN_AI_Chat {
         $this->create_post_types();
     }
 
+    public function handle_admin_form_submissions() {
+        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-chats') {
+            return;
+        }
+
+        if (isset($_POST['submit_chat_settings'])) {
+            $saved_chat_id = $this->save_chat_settings_form_submit();
+            wp_safe_redirect(admin_url('admin.php?page=snn-ai-chat-chats&snn_new_chat_saved=1'));
+            exit;
+        }
+    }
+
     public function activate() {
         $this->create_database_tables();
-        $this->create_post_types(); // Also run on activation
+        $this->create_post_types(); 
         flush_rewrite_rules();
     }
 
@@ -52,19 +65,17 @@ class SNN_AI_Chat {
     }
 
     public function create_post_types() {
-        // Chat configurations
         register_post_type('snn_ai_chat', array(
             'labels' => array(
                 'name' => 'AI Chats',
                 'singular_name' => 'AI Chat'
             ),
             'public' => false,
-            'show_ui' => false, // We use our own admin pages
+            'show_ui' => false, 
             'capability_type' => 'post',
             'supports' => array('title', 'custom-fields')
         ));
 
-        // Chat history (Not used in this version, but kept for potential future use)
         register_post_type('snn_chat_history', array(
             'labels' => array(
                 'name' => 'Chat History',
@@ -505,8 +516,13 @@ class SNN_AI_Chat {
     }
 
     public function chats_page() {
-        $action = isset($_GET['action']) ? sanitize_text_field((string)$_GET['action']) : 'list'; // Cast to string
+        $action = isset($_GET['action']) ? sanitize_text_field((string)$_GET['action']) : 'list';
         $chat_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+
+        // Show notice if redirected after new chat creation
+        if (isset($_GET['snn_new_chat_saved']) && $_GET['snn_new_chat_saved'] == '1') {
+            echo '<div class="notice notice-success is-dismissible"><p>Your new chat is saved.</p></div>';
+        }
 
         if ($action === 'edit' || $action === 'new') {
             $this->render_chat_edit_form($chat_id);
@@ -565,13 +581,6 @@ class SNN_AI_Chat {
      * The form submission logic is now handled at the beginning of this function.
      */
     public function render_chat_edit_form($chat_id) {
-        // Handle form submission for saving chat settings
-        if (isset($_POST['submit_chat_settings'])) {
-            // The save function will handle nonce checks and saving.
-            // It will return the saved chat ID (existing or new), which we then use to render the updated page.
-            $chat_id = $this->save_chat_settings_form_submit();
-        }
-
         $chat = null;
         $chat_settings_raw = array();
 
@@ -588,7 +597,7 @@ class SNN_AI_Chat {
         $global_settings = $this->get_settings();
         $default_model_for_display = $chat_settings['model'];
         if (empty($default_model_for_display)) {
-            $default_model_for_display = ($global_settings['api_provider'] === 'openai') ? ($global_settings['openai_model'] ?? '') : ($global_settings['openrouter_model'] ?? ''); // Added null coalescing
+            $default_model_for_display = $global_settings['openrouter_model'] ?? $global_settings['openai_model'] ?? '';
         }
         ?>
         <div class="wrap">
@@ -597,8 +606,8 @@ class SNN_AI_Chat {
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Settings Form -->
                 <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow chat-settings-form" id="snn-chat-settings-form">
-                    <form id="chat-settings-form" method="post" action="">
-                        <?php wp_nonce_field('snn_ai_chat_settings_form', 'snn_ai_chat_settings_nonce_field'); ?>
+                    <form id="chat-settings-form" method="post" action="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats')); ?>" enctype="multipart/form-data">
+                        <?php wp_nonce_field('snn_ai_chat_settings_form', 'snn_ai_chat_settings_nonce_field', false, true); ?>
                         <input type="hidden" name="chat_id" value="<?php echo esc_attr($chat_id); ?>">
                         
                         <!-- Basic Information -->
@@ -844,7 +853,7 @@ class SNN_AI_Chat {
                             <div class="mb-4">
                                 <label class="flex items-center text-gray-700">
                                     <input type="checkbox" name="collect_user_info" value="1" <?php checked($chat_settings['collect_user_info'], 1); ?> class="mr-2 collect-user-info-checkbox">
-                                    <span class="text-sm font-medium snn-tooltip" data-tippy-content="Require users to provide their name and email before they can start chatting">
+                                    <span class="text-sm font-medium snn-tooltip" data-tippy-content="Require users to provide their name and email before they can start a chat">
                                         Collect user name and email before starting chat
                                     </span>
                                 </label>
@@ -855,9 +864,6 @@ class SNN_AI_Chat {
                             <button type="submit" name="submit_chat_settings" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md save-chat-btn hover:bg-blue-700 transition-colors duration-200" id="snn-save-chat-btn">
                                 Save Chat
                             </button>
-                            <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats')); ?>" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md cancel-btn hover:bg-gray-700 transition-colors duration-200">
-                                Cancel
-                            </a>
                         </div>
                     </form>
                 </div>
@@ -1079,6 +1085,7 @@ class SNN_AI_Chat {
     }
 
     /**
+     * MODIFIED FUNCTION
      * New method to render the preview page for the iframe.
      */
     public function preview_page() {
@@ -1255,6 +1262,7 @@ class SNN_AI_Chat {
             'content' => (string)$message // Explicit cast
         );
         
+        
         // Prepare API parameters - added null coalescing for robustness
         $api_params = [
             'temperature' => floatval($api_settings['temperature'] ?? 0.7),
@@ -1267,6 +1275,7 @@ class SNN_AI_Chat {
         // Send to AI API
         if ($api_provider === 'openrouter') {
             $response = $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params);
+
         } else {
             $response = $this->send_to_openai($conversation_history, $model, $api_key, $api_params);
         }
@@ -1501,7 +1510,7 @@ class SNN_AI_Chat {
     
     private function get_default_chat_settings() {
         // Define fixed default values for chat settings.
-        // API parameters will be inherited from global settings in handle_chat_api if not overridden here.
+        // API parameters will be inherited from global settings in handle_chat_api if not overridden here
         return array(
             'model' => '', // Now explicitly empty to use global by default
             'initial_message' => 'Hello! How can I help you today?',
@@ -1650,7 +1659,7 @@ class SNN_AI_Chat {
         $chat_settings_raw = get_post_meta($chat_id, '_snn_chat_settings', true);
         $chat_settings = wp_parse_args(is_array($chat_settings_raw) ? $chat_settings_raw : [], $this->get_default_chat_settings());
         
-        $ip = (string)($_SERVER['REMOTE_ADDR'] ?? ''); // Added null coalescing and explicit cast
+        $ip = (string)$_SERVER['REMOTE_ADDR']; // Added null coalescing and explicit cast
         
         // Check rate limit per minute
         $minute_ago = date('Y-m-d H:i:s', time() - 60);
@@ -1796,7 +1805,7 @@ class SNN_AI_Chat {
                     'session_id' => (string)$session_id, // Explicit cast
                     'user_name' => (string)$user_name, // Explicit cast
                     'user_email' => (string)$user_email, // Explicit cast
-                    'ip_address' => (string)($_SERVER['REMOTE_ADDR'] ?? '') // Ensure IP address is string
+                    'ip_address' => (string)$_SERVER['REMOTE_ADDR'] // Ensure IP address is string
                 ),
                 array('%d', '%s', '%s', '%s', '%s')
             );
