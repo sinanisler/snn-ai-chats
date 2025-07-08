@@ -11,7 +11,7 @@
 
 if (!defined('ABSPATH')) { exit; }
 
-define('SNN_AI_CHAT_VERSION', '1.0.3');
+define('SNN_AI_CHAT_VERSION', '1.0.4');
 define('SNN_AI_CHAT_PLUGIN_DIR', plugin_dir_path((string)__FILE__));
 define('SNN_AI_CHAT_PLUGIN_URL', plugin_dir_url((string)__FILE__));
 
