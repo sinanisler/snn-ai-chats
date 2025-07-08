@@ -19,16 +19,16 @@ class SNN_AI_Chat {
 
     public function __construct() {
         add_action('init', array($this, 'init'));
-        add_action('admin_init', array($this, 'handle_admin_form_submissions')); // Handle form submissions early
+        add_action('admin_init', array($this, 'handle_admin_form_submissions'));
         add_action('admin_menu', array($this, 'admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'frontend_enqueue_scripts'));
         add_action('wp_ajax_snn_ai_chat_api', array($this, 'handle_chat_api'));
-        add_action('wp_ajax_nopriv_snn_ai_chat_api', array($this, 'handle_chat_api')); // Corrected action hook for non-logged-in users
+        add_action('wp_ajax_nopriv_snn_ai_chat_api', array($this, 'handle_chat_api'));
         add_action('wp_ajax_snn_get_models', array($this, 'get_models'));
-        add_action('wp_action_snn_get_model_details', array($this, 'get_model_details')); // Changed to wp_action for non-logged-in access if needed, though wp_ajax is more common
+        add_action('wp_action_snn_get_model_details', array($this, 'get_model_details'));
         add_action('wp_ajax_snn_get_model_details', array($this, 'get_model_details'));
-        add_action('wp_ajax_snn_delete_chat', array($this, 'delete_chat')); // Keep delete as AJAX
+        add_action('wp_ajax_snn_delete_chat', array($this, 'delete_chat'));
         add_action('wp_footer', array($this, 'render_frontend_chats'));
 
         register_activation_hook(__FILE__, array($this, 'activate'));
@@ -56,7 +56,7 @@ class SNN_AI_Chat {
 
     public function activate() {
         $this->create_database_tables();
-        $this->create_post_types(); 
+        $this->create_post_types();
         flush_rewrite_rules();
     }
 
@@ -71,7 +71,7 @@ class SNN_AI_Chat {
                 'singular_name' => 'AI Chat'
             ),
             'public' => false,
-            'show_ui' => false, 
+            'show_ui' => false,
             'capability_type' => 'post',
             'supports' => array('title', 'custom-fields')
         ));
@@ -93,7 +93,6 @@ class SNN_AI_Chat {
 
         $charset_collate = $wpdb->get_charset_collate();
 
-        // Chat sessions table
         $table_name = $wpdb->prefix . 'snn_chat_sessions';
         $sql = "CREATE TABLE $table_name (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
@@ -109,7 +108,6 @@ class SNN_AI_Chat {
             KEY session_id (session_id)
         ) $charset_collate;";
 
-        // Chat messages table
         $table_name_messages = $wpdb->prefix . 'snn_chat_messages';
         $sql_messages = "CREATE TABLE $table_name_messages (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
@@ -175,7 +173,7 @@ class SNN_AI_Chat {
         );
 
         add_submenu_page(
-            '', // This makes the page hidden from the menu
+            '',
             'Session History',
             'Session History',
             'manage_options',
@@ -184,7 +182,7 @@ class SNN_AI_Chat {
         );
 
         add_submenu_page(
-            '', // This makes the page hidden from the menu
+            '',
             'Chat Preview',
             'Chat Preview',
             'manage_options',
@@ -206,8 +204,6 @@ class SNN_AI_Chat {
     }
 
     public function admin_enqueue_scripts($hook) {
-        // Only load scripts on our plugin pages
-        // Cast $hook to string to prevent deprecated notice in strpos
         if (empty($hook) || strpos((string)$hook, 'snn-ai-chat') === false) {
             return;
         }
@@ -215,7 +211,6 @@ class SNN_AI_Chat {
         wp_enqueue_style('snn-ai-chat-admin', SNN_AI_CHAT_PLUGIN_URL . 'snn-ai-chat-admin.css', array(), SNN_AI_CHAT_VERSION);
         wp_enqueue_script('snn-ai-chat-admin', SNN_AI_CHAT_PLUGIN_URL . 'snn-ai-chat-admin.js', array('jquery'), SNN_AI_CHAT_VERSION, true);
 
-        // External CDN libraries
         wp_enqueue_script('tailwind-css', 'https://cdn.tailwindcss.com', array(), null);
         wp_enqueue_script('tippy-js', 'https://unpkg.com/@popperjs/core@2', array(), null, true);
         wp_enqueue_script('tippy-bundle', 'https://unpkg.com/tippy.js@6', array('tippy-js'), null, true);
@@ -224,13 +219,12 @@ class SNN_AI_Chat {
 
         wp_localize_script('snn-ai-chat-admin', 'snn_ai_chat_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('snn_ai_chat_nonce'), // Unified nonce
+            'nonce' => wp_create_nonce('snn_ai_chat_nonce'),
             'global_api_provider' => $global_settings['api_provider'],
             'global_openrouter_api_key' => $global_settings['openrouter_api_key'],
             'global_openai_api_key' => $global_settings['openai_api_key'],
             'global_openrouter_model' => $global_settings['openrouter_model'],
             'global_openai_model' => $global_settings['openai_model'],
-            // New API settings for localization - added null coalescing for robustness
             'global_temperature' => $global_settings['temperature'] ?? 0.7,
             'global_max_tokens' => $global_settings['max_tokens'] ?? 500,
             'global_top_p' => $global_settings['top_p'] ?? 1.0,
@@ -238,7 +232,6 @@ class SNN_AI_Chat {
             'global_presence_penalty' => $global_settings['presence_penalty'] ?? 0.0,
         ));
 
-        // If on the preview page, also load frontend styles for an accurate preview.
         if ($hook === 'admin_page_snn-ai-chat-preview') {
             $this->frontend_enqueue_scripts();
         }
@@ -247,11 +240,11 @@ class SNN_AI_Chat {
     public function frontend_enqueue_scripts() {
         wp_enqueue_style('snn-ai-chat-frontend', SNN_AI_CHAT_PLUGIN_URL . 'snn-ai-chat-frontend.css', array(), SNN_AI_CHAT_VERSION);
         wp_enqueue_script('snn-ai-chat-frontend', SNN_AI_CHAT_PLUGIN_URL . 'snn-ai-chat-frontend.js', array('jquery'), SNN_AI_CHAT_VERSION, true);
-        wp_enqueue_style('dashicons'); // Ensure Dashicons are loaded on the frontend
+        wp_enqueue_style('dashicons');
 
         wp_localize_script('snn-ai-chat-frontend', 'snn_ai_chat_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('snn_ai_chat_nonce') // Unified nonce
+            'nonce' => wp_create_nonce('snn_ai_chat_nonce')
         ));
     }
 
@@ -261,7 +254,6 @@ class SNN_AI_Chat {
         <div class="wrap">
             <h1>SNN AI Chat Dashboard</h1>
             
-            <!-- Statistics Blocks -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div class="bg-white p-4 rounded-lg shadow stats-block" id="snn-active-chats-block">
                     <h3 class="text-lg font-semibold text-gray-700">Active Chats</h3>
@@ -288,7 +280,6 @@ class SNN_AI_Chat {
                 </div>
             </div>
             
-            <!-- Quick Actions -->
             <div class="bg-white p-6 rounded-lg shadow mb-6" id="snn-quick-actions-block">
                 <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -304,7 +295,6 @@ class SNN_AI_Chat {
                 </div>
             </div>
             
-            <!-- Usage Statistics -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white p-6 rounded-lg shadow usage-stats-block" id="snn-today-usage-block">
                     <h2 class="text-xl font-semibold mb-4">Today's Usage</h2>
@@ -343,7 +333,6 @@ class SNN_AI_Chat {
                 </div>
             </div>
             
-            <!-- Chat History (formerly Recent Activity) -->
             <div class="bg-white p-6 rounded-lg shadow recent-activity-block" id="snn-recent-activity-block">
                 <h2 class="text-xl font-semibold mb-4">Recent Chat History</h2>
                 <div class="overflow-x-auto">
@@ -359,7 +348,6 @@ class SNN_AI_Chat {
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <?php
-                            // Limit to 5 recent activities for dashboard
                             $recent_activities = $this->get_recent_activities(5);
                             foreach ($recent_activities as $activity) {
                                 ?>
@@ -413,7 +401,6 @@ class SNN_AI_Chat {
                         </label>
                     </div>
                     
-                    <!-- OpenRouter Settings -->
                     <div class="api-settings <?php echo ($settings['api_provider'] !== 'openrouter') ? 'hidden' : ''; ?> bg-gray-50 p-4 rounded-md border border-gray-200" id="snn-openrouter-settings">
                         <h3 class="text-lg font-semibold mb-3 text-gray-800">OpenRouter API Settings</h3>
                         <div class="mb-4">
@@ -432,7 +419,6 @@ class SNN_AI_Chat {
                         <div class="model-details text-gray-600 text-sm" id="openrouter-model-details"></div>
                     </div>
                     
-                    <!-- OpenAI Settings -->
                     <div class="api-settings <?php echo ($settings['api_provider'] !== 'openai') ? 'hidden' : ''; ?> bg-gray-50 p-4 rounded-md border border-gray-200" id="snn-openai-settings">
                         <h3 class="text-lg font-semibold mb-3 text-gray-800">OpenAI API Settings</h3>
                         <div class="mb-4">
@@ -452,7 +438,6 @@ class SNN_AI_Chat {
                     </div>
                 </div>
 
-                <!-- Shared API Settings -->
                 <div class="bg-white p-6 rounded-lg shadow mb-6" id="snn-shared-api-settings-block">
                     <h2 class="text-xl font-semibold mb-4">Shared API Parameters</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -519,7 +504,6 @@ class SNN_AI_Chat {
         $action = isset($_GET['action']) ? sanitize_text_field((string)$_GET['action']) : 'list';
         $chat_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-        // Show notice if redirected after new chat creation
         if (isset($_GET['snn_new_chat_saved']) && $_GET['snn_new_chat_saved'] == '1') {
             echo '<div class="notice notice-success is-dismissible"><p>Your new chat is saved.</p></div>';
         }
@@ -544,9 +528,8 @@ class SNN_AI_Chat {
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 chats-grid" id="snn-chats-grid">
-                <?php foreach ($chats as $chat) { 
+                <?php foreach ($chats as $chat) {
                     $chat_settings = get_post_meta($chat->ID, '_snn_chat_settings', true);
-                    // Ensure chat_settings is an array, even if empty
                     $chat_settings = is_array($chat_settings) ? $chat_settings : [];
                     $defaults = $this->get_default_chat_settings();
                     $chat_settings = wp_parse_args($chat_settings, $defaults);
@@ -575,11 +558,6 @@ class SNN_AI_Chat {
         <?php
     }
 
-    /**
-     * MODIFIED FUNCTION
-     * Renders the chat edit form. Handles form submission without redirecting to prevent "headers already sent" errors.
-     * The form submission logic is now handled at the beginning of this function.
-     */
     public function render_chat_edit_form($chat_id) {
         $chat = null;
         $chat_settings_raw = array();
@@ -589,11 +567,9 @@ class SNN_AI_Chat {
             $chat_settings_raw = get_post_meta($chat_id, '_snn_chat_settings', true);
         }
         
-        // Use wp_parse_args to merge saved settings with defaults.
         $defaults = $this->get_default_chat_settings();
         $chat_settings = wp_parse_args(is_array($chat_settings_raw) ? $chat_settings_raw : [], $defaults);
         
-        // Get global settings to determine the default model if not overridden
         $global_settings = $this->get_settings();
         $default_model_for_display = $chat_settings['model'];
         if (empty($default_model_for_display)) {
@@ -604,13 +580,11 @@ class SNN_AI_Chat {
             <h1><?php echo esc_html($chat_id > 0 ? 'Edit Chat' : 'Create New Chat'); ?></h1>
             
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Settings Form -->
                 <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow chat-settings-form" id="snn-chat-settings-form">
                     <form id="chat-settings-form" method="post" action="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats')); ?>" enctype="multipart/form-data">
                         <?php wp_nonce_field('snn_ai_chat_settings_form', 'snn_ai_chat_settings_nonce_field', false, true); ?>
                         <input type="hidden" name="chat_id" value="<?php echo esc_attr($chat_id); ?>">
                         
-                        <!-- Basic Information -->
                         <div class="mb-6 basic-info-section" id="snn-basic-info-section">
                             <h3 class="text-lg font-semibold mb-4">Basic Information</h3>
                             
@@ -621,7 +595,6 @@ class SNN_AI_Chat {
                                 <input type="text" id="chat_name" name="chat_name" value="<?php echo esc_attr($chat ? $chat->post_title : ''); ?>" class="w-full p-2 border border-gray-300 rounded-md chat-name-input focus:ring-blue-500 focus:border-blue-500">
                             </div>
                             
-                            <!-- API Source selection removed as per request. Model will implicitly use global API settings. -->
                             
                             <div class="mb-4">
                                 <label for="model" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Select the AI model for this chat. Leave blank to use the global default.">
@@ -631,7 +604,7 @@ class SNN_AI_Chat {
                                 <datalist id="chat_models"></datalist>
                             </div>
                             <div class="model-details text-gray-600 text-sm mb-4" id="chat-model-details">
-                                <!-- Model details will be populated here by JavaScript -->
+                                
                             </div>
 
                             <div class="mb-4">
@@ -658,7 +631,6 @@ class SNN_AI_Chat {
                             </div>
                         </div>
                         
-                        <!-- Styling & Appearance -->
                         <div class="mb-6 styling-section" id="snn-styling-section">
                             <h3 class="text-lg font-semibold mb-4">Styling & Appearance</h3>
                             
@@ -730,7 +702,7 @@ class SNN_AI_Chat {
                                     <label for="border_radius" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Rounded corners for the chat widget">
                                         Border Radius (px)
                                     </label>
-                                    <input type="number" id="border_radius" name="border_radius" value="<?php echo esc_attr($chat_settings['border_radius']); ?>" class="w-full p-2 border border-gray-300 rounded-md border-radius-input focus:ring-blue-500 focus:border-blue-500">
+                                    <input type="number" id="border_radius" name="border_radius" value="<?php echo esc_attr($chat_settings['border_radius']); ?>" class="w-full p-2 border border-gray-30- rounded-md border-radius-input focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                             </div>
                             
@@ -751,7 +723,6 @@ class SNN_AI_Chat {
                             </div>
                         </div>
                         
-                        <!-- Display Settings -->
                         <div class="mb-6 display-settings-section" id="snn-display-settings-section">
                             <h3 class="text-lg font-semibold mb-4">Display Settings</h3>
                             
@@ -809,7 +780,6 @@ class SNN_AI_Chat {
                             </div>
                         </div>
                         
-                        <!-- Usage Limits -->
                         <div class="mb-6 usage-limits-section" id="snn-usage-limits-section">
                             <h3 class="text-lg font-semibold mb-4">Usage Limits</h3>
                             
@@ -846,7 +816,6 @@ class SNN_AI_Chat {
                             </div>
                         </div>
                         
-                        <!-- User Information Collection -->
                         <div class="mb-6 user-info-section" id="snn-user-info-section">
                             <h3 class="text-lg font-semibold mb-4">User Information Collection</h3>
                             
@@ -868,7 +837,6 @@ class SNN_AI_Chat {
                     </form>
                 </div>
                 
-                <!-- Live Preview -->
                 <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow chat-preview-section lg:sticky lg:top-4 lg:self-start" id="snn-chat-preview-section">
                     <h3 class="text-lg font-semibold mb-4">Live Preview</h3>
                     <?php if ($chat_id > 0) : ?>
@@ -886,22 +854,15 @@ class SNN_AI_Chat {
         <?php
     }
 
-    /**
-     * MODIFIED FUNCTION
-     * Handles the form submission for saving/updating chat settings.
-     * It no longer takes an argument as it gets the ID from the form post.
-     * It returns the saved chat ID to the calling function.
-     */
     private function save_chat_settings_form_submit() {
         if (!current_user_can('manage_options')) {
             wp_die(esc_html__('You do not have permission to save settings.'));
         }
 
-        if (!isset($_POST['snn_ai_chat_settings_nonce_field']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_ai_chat_settings_nonce_field'] ?? '')), 'snn_ai_chat_settings_form')) { // Ensure nonce is string
+        if (!isset($_POST['snn_ai_chat_settings_nonce_field']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_ai_chat_settings_nonce_field'] ?? '')), 'snn_ai_chat_settings_form')) {
             wp_die(esc_html__('Nonce verification failed.'));
         }
 
-        // The chat_id from the hidden form field is the most reliable one.
         $chat_id = isset($_POST['chat_id']) ? intval($_POST['chat_id']) : 0;
         $chat_name = sanitize_text_field($_POST['chat_name'] ?? 'New Chat');
 
@@ -909,19 +870,18 @@ class SNN_AI_Chat {
         $defaults = $this->get_default_chat_settings();
 
         foreach ($defaults as $key => $default_value) {
-            $value = $_POST[$key] ?? null; // Get value, default to null if not set
+            $value = $_POST[$key] ?? null;
 
-            // Sanitize based on the expected type of the setting
             if (is_int($default_value)) {
-                $settings[$key] = intval($value ?? 0); // Ensure intval gets a non-null
-            } elseif (is_float($default_value)) { // Handle float values for API parameters
+                $settings[$key] = intval($value ?? 0);
+            } elseif (is_float($default_value)) {
                 $settings[$key] = floatval($value ?? 0.0);
             } elseif (str_contains((string)$key, '_color')) {
-                $settings[$key] = sanitize_hex_color($value ?? '#000000'); // Ensure a default color if null
+                $settings[$key] = sanitize_hex_color($value ?? '#000000');
             } elseif ($key === 'system_prompt' || $key === 'initial_message') {
                 $settings[$key] = sanitize_textarea_field($value ?? '');
             } elseif ($key === 'specific_pages' || $key === 'exclude_pages') {
-                $ids = array_filter(array_map('intval', explode(',', (string)($value ?? '')))); // Ensure explode gets a string
+                $ids = array_filter(array_map('intval', explode(',', (string)($value ?? ''))));
                 $settings[$key] = implode(',', $ids);
             } else {
                 $settings[$key] = sanitize_text_field($value ?? '');
@@ -940,24 +900,22 @@ class SNN_AI_Chat {
         } else {
             $new_chat_id = wp_insert_post($post_data);
             if ($new_chat_id && !is_wp_error($new_chat_id)) {
-                $chat_id = $new_chat_id; // Update chat_id with the new ID
+                $chat_id = $new_chat_id;
             }
         }
         
         if ($chat_id && !is_wp_error($chat_id)) {
             update_post_meta($chat_id, '_snn_chat_settings', $settings);
-            // Display success message
             add_action('admin_notices', function() {
                 echo '<div class="notice notice-success is-dismissible"><p>Chat settings saved successfully!</p></div>';
             });
         } else {
-            // Display error message
             add_action('admin_notices', function() {
                 echo '<div class="notice notice-error is-dismissible"><p>Failed to save chat settings.</p></div>';
             });
         }
         
-        return $chat_id; // Return the final ID
+        return $chat_id;
     }
 
     public function chat_history_page() {
@@ -1008,9 +966,6 @@ class SNN_AI_Chat {
         <?php
     }
 
-    /**
-     * New method to display detailed messages for a specific chat session.
-     */
     public function session_history_page() {
         if (!current_user_can('manage_options')) {
             wp_die(esc_html__('Sorry, you are not allowed to access this page.'));
@@ -1069,25 +1024,20 @@ class SNN_AI_Chat {
         </div>
         <style>
             .snn-user-message-detail {
-                background-color: #e0f2fe; /* Light blue */
-                border-left: 4px solid #3b82f6; /* Blue-500 */
+                background-color: #e0f2fe;
+                border-left: 4px solid #3b82f6;
             }
             .snn-ai-message-detail {
-                background-color: #e2e8f0; /* Light gray */
-                border-left: 4px solid #10b981; /* Green-500 */
+                background-color: #e2e8f0;
+                border-left: 4px solid #10b981;
             }
-            /* Fix for view details button hover */
             .view-history-btn:hover {
-                color: #ffffff !important; /* Ensure text remains white on hover */
+                color: #ffffff !important;
             }
         </style>
         <?php
     }
 
-    /**
-     * MODIFIED FUNCTION
-     * New method to render the preview page for the iframe.
-     */
     public function preview_page() {
         if (!current_user_can('manage_options')) {
             wp_die(esc_html__('Sorry, you are not allowed to access this page.'));
@@ -1107,35 +1057,29 @@ class SNN_AI_Chat {
         $defaults = $this->get_default_chat_settings();
         $chat_settings = wp_parse_args(is_array($chat_settings_raw) ? $chat_settings_raw : [], $defaults);
         
-        // No need to set global $admin_title or $title here, as it's handled by set_preview_page_title()
-        // hooked into 'load-admin_page_snn-ai-chat-preview'
-
         ?>
         <!DOCTYPE html>
         <html <?php language_attributes(); ?>>
         <head>
             <meta charset="<?php bloginfo( 'charset' ); ?>">
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>SNN AI Chat Preview</title> 
+            <title>SNN AI Chat Preview</title>
             <style>#wpadminbar{display:none}</style>
-            <?php 
-            // Re-add wp_print_styles and wp_print_head_scripts to ensure all enqueued assets load in the iframe
+            <?php
             wp_print_styles();
             wp_print_head_scripts();
             ?>
         </head>
         <body class="snn-ai-chat-preview-body">
-            <?php 
-            // Render the widget with its settings
+            <?php
             $this->render_chat_widget($chat, $chat_settings);
             
-            // Re-add wp_print_footer_scripts to ensure scripts enqueued for the footer are loaded
             wp_print_footer_scripts();
             ?>
         </body>
         </html>
         <?php
-        exit; // Stop further admin page rendering
+        exit;
     }
     
     public function get_models() {
@@ -1172,8 +1116,7 @@ class SNN_AI_Chat {
         
         $details = [];
         if ($provider === 'openrouter') {
-            // OpenRouter doesn't have a dedicated details endpoint per model like this
-            // We can fetch all and filter
+            
             $models = $this->fetch_openrouter_models($api_key);
             foreach($models as $m) {
                 if ($m['id'] === $model) {
@@ -1190,7 +1133,6 @@ class SNN_AI_Chat {
         wp_send_json_success($details);
     }
 
-    // This AJAX function is now only for deletion. The saving logic moved to save_chat_settings_form_submit.
     public function delete_chat() {
         check_ajax_referer('snn_ai_chat_nonce', 'nonce');
         
@@ -1201,7 +1143,7 @@ class SNN_AI_Chat {
         $chat_id = intval($_POST['chat_id'] ?? 0);
         
         if ($chat_id > 0 && get_post_type($chat_id) === 'snn_ai_chat') {
-            wp_delete_post($chat_id, true); // true = force delete
+            wp_delete_post($chat_id, true);
             wp_send_json_success();
         } else {
             wp_send_json_error('Invalid chat ID');
@@ -1221,33 +1163,28 @@ class SNN_AI_Chat {
             wp_send_json_error('Missing required data.');
         }
 
-        // Rate limiting and usage checks
         if (!$this->check_rate_limits($session_id, $chat_id)) {
             wp_send_json_error(array('response' => 'Rate limit exceeded. Please try again later.'));
         }
         
-        // Get chat settings
         $chat_settings_raw = get_post_meta($chat_id, '_snn_chat_settings', true);
         $chat_settings = wp_parse_args(is_array($chat_settings_raw) ? $chat_settings_raw : [], $this->get_default_chat_settings());
         
-        // Get global API settings
         $api_settings = $this->get_settings();
         
-        // Determine which API to use (always global provider for API calls)
-        $api_provider = (string)($api_settings['api_provider'] ?? 'openrouter'); // Added null coalescing and explicit cast
-        $model = !empty($chat_settings['model']) ? (string)$chat_settings['model'] : (($api_provider === 'openai') ? (string)($api_settings['openai_model'] ?? '') : (string)($api_settings['openrouter_model'] ?? '')); // Added null coalescing and explicit cast
-        $api_key = ($api_provider === 'openai') ? (string)($api_settings['openai_api_key'] ?? '') : (string)($api_settings['openrouter_api_key'] ?? ''); // Added null coalescing and explicit cast
+        $api_provider = (string)($api_settings['api_provider'] ?? 'openrouter');
+        $model = !empty($chat_settings['model']) ? (string)$chat_settings['model'] : (($api_provider === 'openai') ? (string)($api_settings['openai_model'] ?? '') : (string)($api_settings['openrouter_model'] ?? ''));
+        $api_key = ($api_provider === 'openai') ? (string)($api_settings['openai_api_key'] ?? '') : (string)($api_settings['openrouter_api_key'] ?? '');
 
         if (empty($api_key)) {
              wp_send_json_error(array('response' => 'API key is not configured.'));
         }
 
-        // Prepare conversation history
         $conversation_history = [];
         if (!empty($chat_settings['system_prompt'])) {
              $conversation_history[] = array(
                  'role' => 'system',
-                 'content' => (string)$chat_settings['system_prompt'] // Explicit cast
+                 'content' => (string)$chat_settings['system_prompt']
                 );
         }
 
@@ -1256,23 +1193,20 @@ class SNN_AI_Chat {
             $conversation_history = array_merge($conversation_history, $previous_messages);
         }
         
-        // Add user message
         $conversation_history[] = array(
             'role' => 'user',
-            'content' => (string)$message // Explicit cast
+            'content' => (string)$message
         );
         
         
-        // Prepare API parameters - added null coalescing for robustness
         $api_params = [
             'temperature' => floatval($api_settings['temperature'] ?? 0.7),
             'max_tokens' => intval($api_settings['max_tokens'] ?? 500),
             'top_p' => floatval($api_settings['top_p'] ?? 1.0),
             'frequency_penalty' => floatval($api_settings['frequency_penalty'] ?? 0.0),
-            'presence_penalty' => floatval($api_settings['presence_penalty'] ?? 0.0), // Corrected to use $api_settings
+            'presence_penalty' => floatval($api_settings['presence_penalty'] ?? 0.0),
         ];
 
-        // Send to AI API
         if ($api_provider === 'openrouter') {
             $response = $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params);
 
@@ -1281,7 +1215,6 @@ class SNN_AI_Chat {
         }
         
         if ($response && isset($response['content'])) {
-            // Save to database
             $this->save_chat_message($session_id, $chat_id, $message, $response['content'], $response['tokens'], $user_name, $user_email);
             
             wp_send_json_success(array(
@@ -1298,7 +1231,7 @@ class SNN_AI_Chat {
         
         foreach ($chats as $chat) {
             $chat_settings_raw = get_post_meta($chat->ID, '_snn_chat_settings', true);
-            if (!is_array($chat_settings_raw)) { // Ensure it's an array
+            if (!is_array($chat_settings_raw)) {
                 $chat_settings_raw = [];
             }
             $chat_settings = wp_parse_args($chat_settings_raw, $this->get_default_chat_settings());
@@ -1396,29 +1329,23 @@ class SNN_AI_Chat {
     private function get_dashboard_stats() {
         global $wpdb;
         $stats = array();
-        $stats['active_chats'] = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'snn_ai_chat' AND post_status = 'publish'") ?: 0; // Added null coalescing
+        $stats['active_chats'] = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'snn_ai_chat' AND post_status = 'publish'") ?: 0;
         $stats['total_tokens'] = $wpdb->get_var("SELECT SUM(tokens_used) FROM {$wpdb->prefix}snn_chat_messages") ?: 0;
-        $stats['total_sessions'] = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_sessions") ?: 0; // Added null coalescing
-        $stats['today_sessions'] = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_sessions WHERE DATE(created_at) = %s", current_time('Y-m-d'))) ?: 0; // Added null coalescing
-        $stats['today_messages'] = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_messages WHERE DATE(created_at) = %s", current_time('Y-m-d'))) ?: 0; // Added null coalescing
+        $stats['total_sessions'] = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_sessions") ?: 0;
+        $stats['today_sessions'] = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_sessions WHERE DATE(created_at) = %s", current_time('Y-m-d'))) ?: 0;
+        $stats['today_messages'] = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_messages WHERE DATE(created_at) = %s", current_time('Y-m-d'))) ?: 0;
         $stats['today_tokens'] = $wpdb->get_var($wpdb->prepare("SELECT SUM(tokens_used) FROM {$wpdb->prefix}snn_chat_messages WHERE DATE(created_at) = %s", current_time('Y-m-d'))) ?: 0;
-        $stats['month_messages'] = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_messages WHERE YEAR(created_at) = %d AND MONTH(created_at) = %d", current_time('Y'), current_time('m'))) ?: 0; // Added null coalescing
+        $stats['month_messages'] = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_messages WHERE YEAR(created_at) = %d AND MONTH(created_at) = %d", current_time('Y'), current_time('m'))) ?: 0;
         $stats['month_tokens'] = $wpdb->get_var($wpdb->prepare("SELECT SUM(tokens_used) FROM {$wpdb->prefix}snn_chat_messages WHERE YEAR(created_at) = %d AND MONTH(created_at) = %d", current_time('Y'), current_time('m'))) ?: 0;
-        $stats['month_sessions'] = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_sessions WHERE YEAR(created_at) = %d AND MONTH(created_at) = %d", current_time('Y'), current_time('m'))) ?: 0; // Added null coalescing
+        $stats['month_sessions'] = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_sessions WHERE YEAR(created_at) = %d AND MONTH(created_at) = %d", current_time('Y'), current_time('m'))) ?: 0;
         return $stats;
     }
     
-    /**
-     * Retrieves recent chat activities.
-     *
-     * @param int $limit The maximum number of activities to retrieve. Defaults to 20.
-     * @return array An array of chat activity objects.
-     */
     private function get_recent_activities($limit = 20) {
         global $wpdb;
         
         return $wpdb->get_results($wpdb->prepare("
-            SELECT s.*, 
+            SELECT s.*,
                    COUNT(m.id) as message_count,
                    SUM(m.tokens_used) as total_tokens
             FROM {$wpdb->prefix}snn_chat_sessions s
@@ -1426,7 +1353,7 @@ class SNN_AI_Chat {
             GROUP BY s.id
             ORDER BY s.created_at DESC
             LIMIT %d
-        ", $limit)) ?: []; // Ensure an empty array is returned if no results
+        ", $limit)) ?: [];
     }
     
     private function get_settings() {
@@ -1438,16 +1365,16 @@ class SNN_AI_Chat {
             'openai_model' => 'gpt-4o-mini',
             'default_system_prompt' => 'You are a helpful assistant.',
             'default_initial_message' => 'Hello! How can I help you today?',
-            'temperature' => 0.7, // New setting
-            'max_tokens' => 500, // New setting
-            'top_p' => 1.0, // New setting
-            'frequency_penalty' => 0.0, // New setting
-            'presence_penalty' => 0.0, // New setting
+            'temperature' => 0.7,
+            'max_tokens' => 500,
+            'top_p' => 1.0,
+            'frequency_penalty' => 0.0,
+            'presence_penalty' => 0.0,
         ));
     }
     
     private function save_settings() {
-        if (!isset($_POST['snn_ai_chat_settings_nonce']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_ai_chat_settings_nonce'] ?? '')), 'snn_ai_chat_settings')) { // Ensure nonce is string
+        if (!isset($_POST['snn_ai_chat_settings_nonce']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_ai_chat_settings_nonce'] ?? '')), 'snn_ai_chat_settings')) {
             return;
         }
         
@@ -1459,11 +1386,11 @@ class SNN_AI_Chat {
             'openai_model' => sanitize_text_field(wp_unslash($_POST['openai_model'] ?? '')),
             'default_system_prompt' => sanitize_textarea_field(wp_unslash($_POST['default_system_prompt'] ?? '')),
             'default_initial_message' => sanitize_text_field(wp_unslash($_POST['default_initial_message'] ?? '')),
-            'temperature' => floatval(wp_unslash($_POST['temperature'] ?? 0.7)), // Sanitize as float
-            'max_tokens' => intval(wp_unslash($_POST['max_tokens'] ?? 500)), // Sanitize as int
-            'top_p' => floatval(wp_unslash($_POST['top_p'] ?? 1.0)), // Sanitize as float
-            'frequency_penalty' => floatval(wp_unslash($_POST['frequency_penalty'] ?? 0.0)), // Sanitize as float
-            'presence_penalty' => floatval(wp_unslash($_POST['presence_penalty'] ?? 0.0)), // Sanitize as float
+            'temperature' => floatval(wp_unslash($_POST['temperature'] ?? 0.7)),
+            'max_tokens' => intval(wp_unslash($_POST['max_tokens'] ?? 500)),
+            'top_p' => floatval(wp_unslash($_POST['top_p'] ?? 1.0)),
+            'frequency_penalty' => floatval(wp_unslash($_POST['frequency_penalty'] ?? 0.0)),
+            'presence_penalty' => floatval(wp_unslash($_POST['presence_penalty'] ?? 0.0)),
         );
         
         update_option('snn_ai_chat_settings', $settings);
@@ -1476,7 +1403,7 @@ class SNN_AI_Chat {
             'post_type' => 'snn_ai_chat',
             'post_status' => 'publish',
             'numberposts' => -1
-        )) ?: []; // Ensure an empty array is returned if no posts
+        )) ?: [];
     }
     
     private function get_active_chats() {
@@ -1487,7 +1414,7 @@ class SNN_AI_Chat {
         global $wpdb;
         
         return $wpdb->get_results("
-            SELECT s.*, 
+            SELECT s.*,
                    COUNT(m.id) as message_count,
                    SUM(m.tokens_used) as total_tokens
             FROM {$wpdb->prefix}snn_chat_sessions s
@@ -1495,7 +1422,7 @@ class SNN_AI_Chat {
             GROUP BY s.id
             ORDER BY s.created_at DESC
             LIMIT 100
-        ") ?: []; // Ensure an empty array is returned if no results
+        ") ?: [];
     }
     
     private function get_chat_stats($chat_id) {
@@ -1503,32 +1430,30 @@ class SNN_AI_Chat {
         
         $sessions = $wpdb->get_var($wpdb->prepare("
             SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_sessions WHERE chat_id = %d
-        ", $chat_id)) ?: 0; // Added null coalescing
+        ", $chat_id)) ?: 0;
         
         return sprintf('%d sessions', $sessions);
     }
     
     private function get_default_chat_settings() {
-        // Define fixed default values for chat settings.
-        // API parameters will be inherited from global settings in handle_chat_api if not overridden here
         return array(
-            'model' => '', // Now explicitly empty to use global by default
+            'model' => '',
             'initial_message' => 'Hello! How can I help you today?',
             'system_prompt' => 'You are a helpful assistant.',
             'keep_conversation_history' => 1,
             'chat_position' => 'bottom-right',
-            'primary_color' => '#3b82f6', // blue-500
-            'secondary_color' => '#e5e7eb', // gray-200
-            'text_color' => '#ffffff', // white
-            'chat_widget_bg_color' => '#ffffff', // white
-            'chat_text_color' => '#374151', // gray-700
-            'user_message_bg_color' => '#3b82f6', // blue-500
-            'user_message_text_color' => '#ffffff', // white
-            'ai_message_bg_color' => '#e5e7eb', // gray-200
-            'ai_message_text_color' => '#374151', // gray-700
-            'chat_input_bg_color' => '#f9fafb', // gray-50
-            'chat_input_text_color' => '#1f2937', // gray-900
-            'chat_send_button_color' => '#3b82f6', // blue-500
+            'primary_color' => '#3b82f6',
+            'secondary_color' => '#e5e7eb',
+            'text_color' => '#ffffff',
+            'chat_widget_bg_color' => '#ffffff',
+            'chat_text_color' => '#374151',
+            'user_message_bg_color' => '#3b82f6',
+            'user_message_text_color' => '#ffffff',
+            'ai_message_bg_color' => '#e5e7eb',
+            'ai_message_text_color' => '#374151',
+            'chat_input_bg_color' => '#f9fafb',
+            'chat_input_text_color' => '#1f2937',
+            'chat_send_button_color' => '#3b82f6',
             'font_size' => 14,
             'border_radius' => 8,
             'widget_width' => 350,
@@ -1547,7 +1472,6 @@ class SNN_AI_Chat {
             'max_chats_per_ip_daily' => 50,
             'rate_limit_per_minute' => 10,
             'collect_user_info' => 0,
-            // These are fixed defaults for a new chat, not inherited from global settings here
             'temperature' => 0.7,
             'max_tokens' => 500,
             'top_p' => 1.0,
@@ -1556,34 +1480,27 @@ class SNN_AI_Chat {
         );
     }
     
-    /**
-     * Rewritten display logic to be more robust and follow a clear order of operations.
-     */
     private function should_show_chat($settings) {
         $post_id = get_queried_object_id();
 
-        // 1. Highest priority: Check for exclusion. If the page is excluded, never show the chat.
         if (!empty($settings['exclude_pages'])) {
-            $exclude_pages = array_map('intval', explode(',', (string)($settings['exclude_pages'] ?? ''))); // Ensure string
+            $exclude_pages = array_map('intval', explode(',', (string)($settings['exclude_pages'] ?? '')));
             if (in_array($post_id, $exclude_pages, true)) {
                 return false;
             }
         }
 
-        // 2. If 'Show on all pages' is checked, show it.
         if (!empty($settings['show_on_all_pages'])) {
             return true;
         }
 
-        // 3. Check for inclusion by specific page/post ID.
         if (!empty($settings['specific_pages'])) {
-            $specific_pages = array_map('intval', explode(',', (string)($settings['specific_pages'] ?? ''))); // Ensure string
+            $specific_pages = array_map('intval', explode(',', (string)($settings['specific_pages'] ?? '')));
             if (in_array($post_id, $specific_pages, true)) {
                 return true;
             }
         }
 
-        // 4. Check template conditions.
         if (!empty($settings['show_on_home']) && is_home()) return true;
         if (!empty($settings['show_on_front_page']) && is_front_page()) return true;
         if (!empty($settings['show_on_posts']) && is_singular('post')) return true;
@@ -1591,7 +1508,6 @@ class SNN_AI_Chat {
         if (!empty($settings['show_on_categories']) && is_category()) return true;
         if (!empty($settings['show_on_archives']) && is_archive()) return true;
 
-        // 5. If no condition is met, do not show the chat.
         return false;
     }
     
@@ -1601,7 +1517,7 @@ class SNN_AI_Chat {
                 'Authorization' => 'Bearer ' . $api_key,
                 'Content-Type' => 'application/json'
             ),
-            'timeout' => 15, // Increased timeout for API calls
+            'timeout' => 15,
         ));
         
         if (is_wp_error($response)) {
@@ -1621,7 +1537,7 @@ class SNN_AI_Chat {
                 'Authorization' => 'Bearer ' . $api_key,
                 'Content-Type' => 'application/json'
             ),
-            'timeout' => 15, // Increased timeout for API calls
+            'timeout' => 15,
         ));
         
         if (is_wp_error($response)) {
@@ -1636,12 +1552,12 @@ class SNN_AI_Chat {
     }
     
     private function fetch_openai_model_details($model, $api_key) {
-        $response = wp_remote_get('https://api.openai.com/v1/models/' . (string)$model, array( // Explicit cast for model
+        $response = wp_remote_get('https://api.openai.com/v1/models/' . (string)$model, array(
             'headers' => array(
                 'Authorization' => 'Bearer ' . $api_key,
                 'Content-Type' => 'application/json'
             ),
-            'timeout' => 15, // Increased timeout for API calls
+            'timeout' => 15,
         ));
         
         if (is_wp_error($response)) {
@@ -1659,27 +1575,25 @@ class SNN_AI_Chat {
         $chat_settings_raw = get_post_meta($chat_id, '_snn_chat_settings', true);
         $chat_settings = wp_parse_args(is_array($chat_settings_raw) ? $chat_settings_raw : [], $this->get_default_chat_settings());
         
-        $ip = (string)$_SERVER['REMOTE_ADDR']; // Added null coalescing and explicit cast
+        $ip = (string)$_SERVER['REMOTE_ADDR'];
         
-        // Check rate limit per minute
         $minute_ago = date('Y-m-d H:i:s', time() - 60);
         $recent_messages = $wpdb->get_var($wpdb->prepare("
-            SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_messages 
+            SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_messages
             WHERE session_id = %s AND created_at > %s
-        ", $session_id, $minute_ago)) ?: 0; // Added null coalescing
+        ", $session_id, $minute_ago)) ?: 0;
         
-        if ($recent_messages >= (int)($chat_settings['rate_limit_per_minute'] ?? 10)) { // Added null coalescing and explicit cast
+        if ($recent_messages >= (int)($chat_settings['rate_limit_per_minute'] ?? 10)) {
             return false;
         }
         
-        // Check daily IP limits
         $today = current_time('Y-m-d');
         $daily_sessions = $wpdb->get_var($wpdb->prepare("
-            SELECT COUNT(DISTINCT session_id) FROM {$wpdb->prefix}snn_chat_sessions 
+            SELECT COUNT(DISTINCT session_id) FROM {$wpdb->prefix}snn_chat_sessions
             WHERE ip_address = %s AND DATE(created_at) = %s
-        ", $ip, $today)) ?: 0; // Added null coalescing
+        ", $ip, $today)) ?: 0;
         
-        if ($daily_sessions >= (int)($chat_settings['max_chats_per_ip_daily'] ?? 50)) { // Added null coalescing and explicit cast
+        if ($daily_sessions >= (int)($chat_settings['max_chats_per_ip_daily'] ?? 50)) {
             return false;
         }
         
@@ -1687,9 +1601,9 @@ class SNN_AI_Chat {
             SELECT SUM(m.tokens_used) FROM {$wpdb->prefix}snn_chat_messages m
             JOIN {$wpdb->prefix}snn_chat_sessions s ON m.session_id = s.session_id
             WHERE s.ip_address = %s AND DATE(m.created_at) = %s
-        ", $ip, $today)) ?: 0; // Added null coalescing
+        ", $ip, $today)) ?: 0;
         
-        if ($daily_tokens >= (int)($chat_settings['max_tokens_per_ip_daily'] ?? 10000)) { // Added null coalescing and explicit cast
+        if ($daily_tokens >= (int)($chat_settings['max_tokens_per_ip_daily'] ?? 10000)) {
             return false;
         }
         
@@ -1700,16 +1614,16 @@ class SNN_AI_Chat {
         global $wpdb;
         
         $messages = $wpdb->get_results($wpdb->prepare("
-            SELECT message, response FROM {$wpdb->prefix}snn_chat_messages 
-            WHERE session_id = %s 
+            SELECT message, response FROM {$wpdb->prefix}snn_chat_messages
+            WHERE session_id = %s
             ORDER BY created_at ASC
             LIMIT 10
-        ", $session_id)) ?: []; // Ensure an empty array is returned if no results
+        ", $session_id)) ?: [];
         
         $history = array();
         foreach ($messages as $msg) {
-            $history[] = array('role' => 'user', 'content' => (string)$msg->message); // Explicit cast
-            $history[] = array('role' => 'assistant', 'content' => (string)$msg->response); // Explicit cast
+            $history[] = array('role' => 'user', 'content' => (string)$msg->message);
+            $history[] = array('role' => 'assistant', 'content' => (string)$msg->response);
         }
         
         return $history;
@@ -1718,17 +1632,17 @@ class SNN_AI_Chat {
     private function send_to_openrouter($messages, $model, $api_key, $api_params) {
         $response = wp_remote_post('https://openrouter.ai/api/v1/chat/completions', array(
             'headers' => array(
-                'Authorization' => 'Bearer ' . (string)$api_key, // Explicit cast
+                'Authorization' => 'Bearer ' . (string)$api_key,
                 'Content-Type' => 'application/json'
             ),
             'body' => json_encode(array(
-                'model' => (string)$model, // Explicit cast
+                'model' => (string)$model,
                 'messages' => $messages,
-                'temperature' => floatval($api_params['temperature'] ?? 0.7), // Added null coalescing and explicit cast
-                'max_tokens' => intval($api_params['max_tokens'] ?? 500), // Added null coalescing and explicit cast
-                'top_p' => floatval($api_params['top_p'] ?? 1.0), // Added null coalescing and explicit cast
-                'frequency_penalty' => floatval($api_params['frequency_penalty'] ?? 0.0), // Added null coalescing and explicit cast
-                'presence_penalty' => floatval($api_params['presence_penalty'] ?? 0.0), // Added null coalescing and explicit cast
+                'temperature' => floatval($api_params['temperature'] ?? 0.7),
+                'max_tokens' => intval($api_params['max_tokens'] ?? 500),
+                'top_p' => floatval($api_params['top_p'] ?? 1.0),
+                'frequency_penalty' => floatval($api_params['frequency_penalty'] ?? 0.0),
+                'presence_penalty' => floatval($api_params['presence_penalty'] ?? 0.0),
             )),
             'timeout' => 30,
         ));
@@ -1743,8 +1657,8 @@ class SNN_AI_Chat {
         
         if (isset($data['choices'][0]['message']['content'])) {
             return array(
-                'content' => (string)$data['choices'][0]['message']['content'], // Explicit cast
-                'tokens' => (int)($data['usage']['total_tokens'] ?? 0) // Explicit cast
+                'content' => (string)$data['choices'][0]['message']['content'],
+                'tokens' => (int)($data['usage']['total_tokens'] ?? 0)
             );
         }
         
@@ -1755,17 +1669,17 @@ class SNN_AI_Chat {
     private function send_to_openai($messages, $model, $api_key, $api_params) {
         $response = wp_remote_post('https://api.openai.com/v1/chat/completions', array(
             'headers' => array(
-                'Authorization' => 'Bearer ' . (string)$api_key, // Explicit cast
+                'Authorization' => 'Bearer ' . (string)$api_key,
                 'Content-Type' => 'application/json'
             ),
             'body' => json_encode(array(
-                'model' => (string)$model, // Explicit cast
+                'model' => (string)$model,
                 'messages' => $messages,
-                'temperature' => floatval($api_params['temperature'] ?? 0.7), // Added null coalescing and explicit cast
-                'max_tokens' => intval($api_params['max_tokens'] ?? 500), // Added null coalescing and explicit cast
-                'top_p' => floatval($api_params['top_p'] ?? 1.0), // Added null coalescing and explicit cast
-                'frequency_penalty' => floatval($api_params['frequency_penalty'] ?? 0.0), // Added null coalescing and explicit cast
-                'presence_penalty' => floatval($api_params['presence_penalty'] ?? 0.0), // Added null coalescing and explicit cast
+                'temperature' => floatval($api_params['temperature'] ?? 0.7),
+                'max_tokens' => intval($api_params['max_tokens'] ?? 500),
+                'top_p' => floatval($api_params['top_p'] ?? 1.0),
+                'frequency_penalty' => floatval($api_params['frequency_penalty'] ?? 0.0),
+                'presence_penalty' => floatval($api_params['presence_penalty'] ?? 0.0),
             )),
             'timeout' => 30,
         ));
@@ -1780,8 +1694,8 @@ class SNN_AI_Chat {
         
         if (isset($data['choices'][0]['message']['content'])) {
             return array(
-                'content' => (string)$data['choices'][0]['message']['content'], // Explicit cast
-                'tokens' => (int)($data['usage']['total_tokens'] ?? 0) // Explicit cast
+                'content' => (string)$data['choices'][0]['message']['content'],
+                'tokens' => (int)($data['usage']['total_tokens'] ?? 0)
             );
         }
         
@@ -1792,7 +1706,6 @@ class SNN_AI_Chat {
     private function save_chat_message($session_id, $chat_id, $message, $response, $tokens, $user_name, $user_email) {
         global $wpdb;
         
-        // Create or update session
         $session_exists = $wpdb->get_var($wpdb->prepare("
             SELECT id FROM {$wpdb->prefix}snn_chat_sessions WHERE session_id = %s
         ", $session_id));
@@ -1802,38 +1715,35 @@ class SNN_AI_Chat {
                 $wpdb->prefix . 'snn_chat_sessions',
                 array(
                     'chat_id' => $chat_id,
-                    'session_id' => (string)$session_id, // Explicit cast
-                    'user_name' => (string)$user_name, // Explicit cast
-                    'user_email' => (string)$user_email, // Explicit cast
-                    'ip_address' => (string)$_SERVER['REMOTE_ADDR'] // Ensure IP address is string
+                    'session_id' => (string)$session_id,
+                    'user_name' => (string)$user_name,
+                    'user_email' => (string)$user_email,
+                    'ip_address' => (string)$_SERVER['REMOTE_ADDR']
                 ),
                 array('%d', '%s', '%s', '%s', '%s')
             );
         }
         
-        // Save message
         $wpdb->insert(
             $wpdb->prefix . 'snn_chat_messages',
             array(
-                'session_id' => (string)$session_id, // Explicit cast
-                'message' => (string)$message, // Explicit cast
-                'response' => (string)$response, // Explicit cast
-                'tokens_used' => (int)$tokens // Explicit cast
+                'session_id' => (string)$session_id,
+                'message' => (string)$message,
+                'response' => (string)$response,
+                'tokens_used' => (int)$tokens
             ),
             array('%s', '%s', '%s', '%d')
         );
     }
 
     private function adjust_brightness($hex, $steps) {
-        // Remove '#' if present
-        $hex = ltrim((string)($hex ?? ''), '#'); // Added null coalescing and explicit cast
+        $hex = ltrim((string)($hex ?? ''), '#');
         
-        // Handle shorthand hex codes
         if (strlen((string)$hex) === 3) {
             $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
         }
 
-        $rgb = array_map('hexdec', str_split((string)$hex, 2)); // Explicit cast
+        $rgb = array_map('hexdec', str_split((string)$hex, 2));
 
         foreach ($rgb as &$value) {
             $value = max(0, min(255, $value + $steps));
@@ -1845,5 +1755,4 @@ class SNN_AI_Chat {
     }
 }
 
-// Initialize the plugin
 new SNN_AI_Chat();
