@@ -550,10 +550,10 @@ class SNN_AI_Chat {
                                 <?php echo $this->get_chat_stats($chat->ID); ?>
                             </div>
                             <div class="space-x-2">
-                                <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $chat->ID)); ?>" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 edit-chat-btn transition-colors duration-200">
+                                <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $chat->ID)); ?>" class="inline-flex item s-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-blue-500 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 edit-chat-btn transition-colors duration-200">
                                     Edit
                                 </a>
-                                <button class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 delete-chat-btn transition-colors duration-200" data-chat-id="<?php echo esc_attr($chat->ID); ?>">
+                                <button class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 delete-chat-btn transition-colors duration-200" data-chat-id="<?php echo esc_attr($chat->ID); ?>">
                                     Delete
                                 </button>
                             </div>
