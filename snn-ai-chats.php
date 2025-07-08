@@ -40,6 +40,8 @@ class SNN_AI_Chat {
 
         // Hook into the specific admin page load to set the title early
         add_action('load-admin_page_snn-ai-chat-preview', array($this, 'set_preview_page_title'));
+        // NEW: Hook for the session history page to set its title early
+        add_action('load-admin_page_snn-ai-chat-session-history', array($this, 'set_session_history_page_title'));
     }
 
     public function init() {
@@ -191,14 +193,16 @@ class SNN_AI_Chat {
         );
     }
 
-    /**
-     * Sets the global admin page title specifically for the preview page.
-     * This hook runs early enough to prevent `strip_tags(null)` deprecation.
-     */
     public function set_preview_page_title() {
         global $admin_title, $title;
         $admin_title = 'SNN AI Chat Preview';
         $title = 'SNN AI Chat Preview';
+    }
+
+    public function set_session_history_page_title() {
+        global $admin_title, $title;
+        $admin_title = 'SNN AI Chat Session History';
+        $title = 'SNN AI Chat Session History';
     }
 
     public function admin_enqueue_scripts($hook) {
@@ -1136,7 +1140,7 @@ class SNN_AI_Chat {
         <?php
         exit; // Stop further admin page rendering
     }
-
+    
     public function get_models() {
         check_ajax_referer('snn_ai_chat_nonce', 'nonce');
         
@@ -1267,7 +1271,7 @@ class SNN_AI_Chat {
             'max_tokens' => intval($api_settings['max_tokens'] ?? 500),
             'top_p' => floatval($api_settings['top_p'] ?? 1.0),
             'frequency_penalty' => floatval($api_settings['frequency_penalty'] ?? 0.0),
-            'presence_penalty' => floatval($api_params['presence_penalty'] ?? 0.0),
+            'presence_penalty' => floatval($api_settings['presence_penalty'] ?? 0.0), // Corrected to use $api_settings
         ];
 
         // Send to AI API
@@ -1611,8 +1615,8 @@ class SNN_AI_Chat {
         
         return $wpdb->get_results($wpdb->prepare("
             SELECT s.*, 
-                    COUNT(m.id) as message_count,
-                    SUM(m.tokens_used) as total_tokens
+                   COUNT(m.id) as message_count,
+                   SUM(m.tokens_used) as total_tokens
             FROM {$wpdb->prefix}snn_chat_sessions s
             LEFT JOIN {$wpdb->prefix}snn_chat_messages m ON s.session_id = m.session_id
             GROUP BY s.id
@@ -1680,8 +1684,8 @@ class SNN_AI_Chat {
         
         return $wpdb->get_results("
             SELECT s.*, 
-                    COUNT(m.id) as message_count,
-                    SUM(m.tokens_used) as total_tokens
+                   COUNT(m.id) as message_count,
+                   SUM(m.tokens_used) as total_tokens
             FROM {$wpdb->prefix}snn_chat_sessions s
             LEFT JOIN {$wpdb->prefix}snn_chat_messages m ON s.session_id = m.session_id
             GROUP BY s.id
