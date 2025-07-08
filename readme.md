@@ -36,7 +36,7 @@ With an intuitive admin interface, you can create and manage multiple chat insta
 
 |  1 |  2 |  3 |
 
-
+ 
 
 ---
 
