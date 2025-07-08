@@ -844,7 +844,7 @@ class SNN_AI_Chat {
                             <div class="mb-4">
                                 <label class="flex items-center text-gray-700">
                                     <input type="checkbox" name="collect_user_info" value="1" <?php checked($chat_settings['collect_user_info'], 1); ?> class="mr-2 collect-user-info-checkbox">
-                                    <span class="text-sm font-medium snn-tooltip" data-tippy-content="Require users to provide their name and email before they can start chatting">
+                                    <span class="text-sm font-medium snn-tooltip" data-tippy-content="Require users to provide their name and email before they can start a chat">
                                         Collect user name and email before starting chat
                                     </span>
                                 </label>
@@ -1227,9 +1227,9 @@ class SNN_AI_Chat {
         $api_settings = $this->get_settings();
         
         // Determine which API to use (always global provider for API calls)
-        $api_provider = (string)($api_settings['api_provider'] ?? 'openrouter'); // Added null coalescing and explicit cast
-        $model = !empty($chat_settings['model']) ? (string)$chat_settings['model'] : (($api_provider === 'openai') ? (string)($api_settings['openai_model'] ?? '') : (string)($api_settings['openrouter_model'] ?? '')); // Added null coalescing and explicit cast
-        $api_key = ($api_provider === 'openai') ? (string)($api_settings['openai_api_key'] ?? '') : (string)($api_settings['openrouter_api_key'] ?? ''); // Added null coalescing and explicit cast
+        $api_provider = (string)($api_settings['api_provider'] ?? 'openrouter');
+        $model = !empty($chat_settings['model']) ? (string)$chat_settings['model'] : (($api_provider === 'openai') ? (string)($api_settings['openai_model'] ?? '') : (string)($api_settings['openrouter_model'] ?? ''));
+        $api_key = ($api_provider === 'openai') ? (string)($api_settings['openai_api_key'] ?? '') : (string)($api_settings['openrouter_api_key'] ?? '');
 
         if (empty($api_key)) {
              wp_send_json_error(array('response' => 'API key is not configured.'));
@@ -1237,11 +1237,18 @@ class SNN_AI_Chat {
 
         // Prepare conversation history
         $conversation_history = [];
+        // STACKED SYSTEM PROMPTS: Chat-specific first, then global (always include global)
         if (!empty($chat_settings['system_prompt'])) {
-             $conversation_history[] = array(
-                 'role' => 'system',
-                 'content' => (string)$chat_settings['system_prompt'] // Explicit cast
-                );
+            $conversation_history[] = array(
+                'role' => 'system',
+                'content' => (string)$chat_settings['system_prompt']
+            );
+        }
+        if (!empty($api_settings['default_system_prompt'])) {
+            $conversation_history[] = array(
+                'role' => 'system',
+                'content' => (string)$api_settings['default_system_prompt']
+            );
         }
 
         if (!empty($chat_settings['keep_conversation_history'])) {
@@ -1252,16 +1259,16 @@ class SNN_AI_Chat {
         // Add user message
         $conversation_history[] = array(
             'role' => 'user',
-            'content' => (string)$message // Explicit cast
+            'content' => (string)$message
         );
         
-        // Prepare API parameters - added null coalescing for robustness
+        // Prepare API parameters
         $api_params = [
             'temperature' => floatval($api_settings['temperature'] ?? 0.7),
             'max_tokens' => intval($api_settings['max_tokens'] ?? 500),
             'top_p' => floatval($api_settings['top_p'] ?? 1.0),
             'frequency_penalty' => floatval($api_settings['frequency_penalty'] ?? 0.0),
-            'presence_penalty' => floatval($api_settings['presence_penalty'] ?? 0.0), // Corrected to use $api_settings
+            'presence_penalty' => floatval($api_settings['presence_penalty'] ?? 0.0),
         ];
 
         // Send to AI API
