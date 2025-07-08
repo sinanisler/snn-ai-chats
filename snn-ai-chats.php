@@ -247,6 +247,7 @@ class SNN_AI_Chat {
     public function frontend_enqueue_scripts() {
         wp_enqueue_style('snn-ai-chat-frontend', SNN_AI_CHAT_PLUGIN_URL . 'snn-ai-chat-frontend.css', array(), SNN_AI_CHAT_VERSION);
         wp_enqueue_script('snn-ai-chat-frontend', SNN_AI_CHAT_PLUGIN_URL . 'snn-ai-chat-frontend.js', array('jquery'), SNN_AI_CHAT_VERSION, true);
+        wp_enqueue_style('dashicons'); // Ensure Dashicons are loaded on the frontend
 
         wp_localize_script('snn-ai-chat-frontend', 'snn_ai_chat_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
@@ -1319,9 +1320,7 @@ class SNN_AI_Chat {
             data-initial-message="<?php echo esc_attr($settings['initial_message']); ?>"
             data-collect-user-info="<?php echo esc_attr((int)$settings['collect_user_info']); ?>">
             <div class="snn-chat-toggle" id="snn-chat-toggle-<?php echo esc_attr($chat->ID); ?>">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3.46957 20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+                <span class="dashicons dashicons-format-chat"></span>
             </div>
             
             <div class="snn-chat-container" id="snn-chat-container-<?php echo esc_attr($chat->ID); ?>" style="display: none;">
@@ -1393,8 +1392,15 @@ class SNN_AI_Chat {
             #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle:hover {
                 background-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['primary_color'] ?? '#3b82f6'), -20)); ?>;
             }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle svg {
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle .dashicons {
                 color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>;
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+                line-height: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
 
             /* Chat Container */
