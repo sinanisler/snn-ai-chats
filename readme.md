@@ -30,6 +30,14 @@ The SNN AI CHAT plugin brings the power of artificial intelligence directly to y
 
 With an intuitive admin interface, you can create and manage multiple chat instances, each with its own settings, appearance, and AI personality. The plugin also includes comprehensive logging and analytics to help you monitor usage and optimize your AI interactions.
 
+
+## Screenshots
+
+
+|  1 |  2 |  3 |
+
+
+
 ---
 
 ## Features
