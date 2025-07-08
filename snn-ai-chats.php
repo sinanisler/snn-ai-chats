@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 
 // Define plugin constants
 // Explicitly cast __FILE__ to string for robustness, though it's already a string.
-define('SNN_AI_CHAT_VERSION', '1.0.1');
+define('SNN_AI_CHAT_VERSION', '1.0.2');
 define('SNN_AI_CHAT_PLUGIN_DIR', plugin_dir_path((string)__FILE__));
 define('SNN_AI_CHAT_PLUGIN_URL', plugin_dir_url((string)__FILE__));
 
@@ -1251,7 +1251,7 @@ class SNN_AI_Chat {
              $conversation_history[] = array(
                  'role' => 'system',
                  'content' => (string)$chat_settings['system_prompt'] // Explicit cast
-               );
+                );
         }
 
         if (!empty($chat_settings['keep_conversation_history'])) {
@@ -1313,10 +1313,14 @@ class SNN_AI_Chat {
     private function render_chat_widget($chat, $settings) {
         $session_id = 'snn_' . time() . '_' . bin2hex(random_bytes(8));
         ?>
-        <div class="snn-ai-chat-widget" id="snn-chat-<?php echo esc_attr($chat->ID); ?>" data-chat-id="<?php echo esc_attr($chat->ID); ?>" data-session-id="<?php echo esc_attr($session_id); ?>">
+        <div class="snn-ai-chat-widget" id="snn-chat-<?php echo esc_attr($chat->ID); ?>"
+            data-chat-id="<?php echo esc_attr($chat->ID); ?>"
+            data-session-id="<?php echo esc_attr($session_id); ?>"
+            data-initial-message="<?php echo esc_attr($settings['initial_message']); ?>"
+            data-collect-user-info="<?php echo esc_attr((int)$settings['collect_user_info']); ?>">
             <div class="snn-chat-toggle" id="snn-chat-toggle-<?php echo esc_attr($chat->ID); ?>">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3.46957 20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </div>
             
@@ -1331,6 +1335,7 @@ class SNN_AI_Chat {
                 </div>
                 
                 <div class="snn-chat-messages" id="snn-chat-messages-<?php echo esc_attr($chat->ID); ?>">
+                    <div class="snn-chat-message-box" style="display: none; background-color: #ffe0e0; border: 1px solid #ff0000; color: #cc0000; padding: 10px; margin-bottom: 10px; border-radius: 5px;"></div>
                     <?php if (!empty($settings['collect_user_info'])) { ?>
                         <div class="snn-user-info-form" id="snn-user-info-form-<?php echo esc_attr($chat->ID); ?>">
                             <p>Please provide your information to start the chat:</p>

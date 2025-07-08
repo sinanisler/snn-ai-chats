@@ -1,7 +1,11 @@
 jQuery(document).ready(function($) {
     $('.snn-ai-chat-widget').each(function() {
-        const chatId = $(this).data('chat-id');
-        const sessionId = $(this).data('session-id');
+        const $this = $(this); // Cache the current widget element
+        const chatId = $this.data('chat-id');
+        const sessionId = $this.data('session-id');
+        const initialMessageText = $this.data('initial-message'); // Get initial message from data attribute
+        const collectUserInfoEnabled = $this.data('collect-user-info'); // Get boolean flag
+
         const chatToggle = $('#snn-chat-toggle-' + chatId);
         const chatContainer = $('#snn-chat-container-' + chatId);
         const chatClose = $('#snn-chat-close-' + chatId);
@@ -12,11 +16,24 @@ jQuery(document).ready(function($) {
         const startChatBtn = $('#snn-start-chat-btn-' + chatId);
         const userNameInput = $('#snn-user-name-' + chatId);
         const userEmailInput = $('#snn-user-email-' + chatId);
+        const messageBox = chatMessages.find('.snn-chat-message-box'); // Reference to the new message box
+
+        // Function to display messages in the custom message box
+        function showMessageBox(message) {
+            messageBox.text(message).fadeIn(300);
+            setTimeout(function() {
+                messageBox.fadeOut(300);
+            }, 3000); // Hide after 3 seconds
+        }
 
         // Toggle chat visibility
         chatToggle.on('click', function() {
             chatContainer.slideToggle(300);
             $(this).toggleClass('active');
+            // If user info is not collected, and chat is opened, scroll to bottom
+            if (!collectUserInfoEnabled && chatContainer.is(':visible')) {
+                chatMessages.scrollTop(chatMessages[0].scrollHeight);
+            }
         });
 
         // Close chat
@@ -102,13 +119,14 @@ jQuery(document).ready(function($) {
         if (userInfoForm.length) {
             startChatBtn.on('click', function() {
                 if (userNameInput.val().trim() === '' || userEmailInput.val().trim() === '') {
-                    alert('Please fill in your name and email.'); // Replace with custom modal later
+                    showMessageBox('Please fill in your name and email.'); // Use custom message box
                     return;
                 }
                 userInfoForm.hide();
                 chatInput.prop('disabled', false);
                 chatSendBtn.prop('disabled', false);
-                appendMessage('ai', $('#snn-chat-messages-' + chatId + ' .snn-ai-message .snn-message-content').first().html());
+                // Append the initial message using the data attribute value
+                appendMessage('ai', initialMessageText);
                 chatInput.focus();
             });
         }
