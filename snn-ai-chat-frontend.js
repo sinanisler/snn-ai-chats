@@ -45,22 +45,39 @@ jQuery(document).ready(function($) {
             });
         });
 
-        // Close chat
         chatClose.on('click', function() {
             chatContainer.slideUp(300, function() {
                 chatToggle.removeClass('active');
             });
         });
 
-        // Function to append message to chat window
+        function stripMarkdown(text) {
+            if (!text) return '';
+            text = text.replace(/```[\s\S]*?```/g, '');
+            text = text.replace(/`([^`]+)`/g, '$1');
+            text = text.replace(/!\[[^\]]*\]\([^\)]*\)/g, '');
+            text = text.replace(/\[([^\]]*)\]\([^\)]*\)/g, '$1');
+            text = text.replace(/([*_~]{1,3})(\S.*?\S)\1/g, '$2');
+            text = text.replace(/^#+\s+/gm, '');
+            text = text.replace(/^>\s?/gm, '');
+            text = text.replace(/^\s*[-*+]\s+/gm, '');
+            text = text.replace(/^\s*\d+\.\s+/gm, '');
+            text = text.replace(/^---$/gm, '');
+            text = text.replace(/\n{2,}/g, '\n');
+            return text;
+        }
+
         function appendMessage(sender, message) {
             const messageClass = sender === 'user' ? 'snn-user-message' : 'snn-ai-message';
-            const messageHtml = `<div class="snn-chat-message ${messageClass}"><div class="snn-message-content">${message}</div></div>`;
+            let trimmedMessage = (message || '').trim();
+            if (sender === 'ai') {
+                trimmedMessage = stripMarkdown(trimmedMessage);
+            }
+            const messageHtml = `<div class="snn-chat-message ${messageClass}"><div class="snn-message-content">${trimmedMessage}</div></div>`;
             chatMessages.append(messageHtml);
             chatMessages.scrollTop(chatMessages[0].scrollHeight); // Scroll to bottom
         }
 
-        // Handle sending message
         function sendMessage() {
             const message = chatInput.val().trim();
             if (message === '') {
