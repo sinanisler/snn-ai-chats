@@ -554,7 +554,7 @@ class SNN_AI_Chat {
                                 <?php echo $this->get_chat_stats($chat->ID); ?>
                             </div>
                             <div class="space-x-2">
-                                <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $chat->ID)); ?>" class="inline-flex item s-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-blue-500 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 edit-chat-btn transition-colors duration-200">
+                                <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $chat->ID)); ?>" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-blue-500 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 edit-chat-btn transition-colors duration-200">
                                     Edit
                                 </a>
                                 <button class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 delete-chat-btn transition-colors duration-200" data-chat-id="<?php echo esc_attr($chat->ID); ?>">
@@ -873,11 +873,11 @@ class SNN_AI_Chat {
                 </div>
                 
                 <!-- Live Preview -->
-                <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow chat-preview-section" id="snn-chat-preview-section">
+                <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow chat-preview-section lg:sticky lg:top-4 lg:self-start" id="snn-chat-preview-section">
                     <h3 class="text-lg font-semibold mb-4">Live Preview</h3>
                     <?php if ($chat_id > 0) : ?>
-                        <div class="border border-gray-300 rounded-lg overflow-hidden preview-container" id="snn-preview-container">
-                            <iframe id="chat-preview-iframe" src="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-preview&chat_id=' . $chat_id)); ?>" width="100%" height="600" frameborder="0" class="preview-iframe"></iframe>
+                        <div class="border border-gray-300 rounded-lg overflow-hidden preview-container relative" id="snn-preview-container" style="min-height: 660px; max-height: calc(100vh - 80px);">
+                            <iframe id="chat-preview-iframe" src="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-preview&chat_id=' . $chat_id)); ?>" width="100%" height="100%" frameborder="0" class="preview-iframe absolute inset-0"></iframe>
                         </div>
                     <?php else : ?>
                         <div class="text-center p-4 border-2 border-dashed rounded-lg text-gray-600">
@@ -1251,7 +1251,7 @@ class SNN_AI_Chat {
              $conversation_history[] = array(
                  'role' => 'system',
                  'content' => (string)$chat_settings['system_prompt'] // Explicit cast
-             );
+               );
         }
 
         if (!empty($chat_settings['keep_conversation_history'])) {
