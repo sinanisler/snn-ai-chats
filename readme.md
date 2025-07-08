@@ -5,30 +5,6 @@ A feature-rich WordPress plugin that integrates advanced AI chat capabilities in
 
 ---
 
-## Table of Contents
-* [Description](#description)
-* [Features](#features)
-* [Installation](#installation)
-    * [Minimum Requirements](#minimum-requirements)
-    * [Installation Steps](#installation-steps)
-* [Configuration](#configuration)
-    * [Global Settings](#global-settings)
-    * [Managing Individual Chats](#managing-individual-chats)
-* [Usage](#usage)
-* [Chat History & Analytics](#chat-history--analytics)
-* [Styling & Customization](#styling--customization)
-* [Rate Limiting & Usage Control](#rate-limiting--usage-control)
-* [Screenshots](#screenshots)
-
----
-
-## Description
-
-The SNN AI CHAT plugin brings the power of artificial intelligence directly to your WordPress website. Whether you want to offer instant customer support, provide an interactive FAQ, or simply enhance user engagement, SNN AI CHAT offers a flexible and robust solution. It seamlessly integrates with leading AI providers like OpenRouter and OpenAI, allowing you to choose the best model for your needs.
-
-With an intuitive admin interface, you can create and manage multiple chat instances, each with its own settings, appearance, and AI personality. The plugin also includes comprehensive logging and analytics to help you monitor usage and optimize your AI interactions.
-
-
 ## Screenshots
 
 <img src="https://github.com/user-attachments/assets/9d49bab0-b41f-4923-939a-535376c1ef09"  width="32%">
@@ -36,6 +12,17 @@ With an intuitive admin interface, you can create and manage multiple chat insta
 <img src="https://github.com/user-attachments/assets/2269bd6c-1ad6-4621-b448-7a32a7bc6aeb"  width="32%">
 
 <img src="https://github.com/user-attachments/assets/35be720b-d176-4cd1-b7ee-f0ef25ad9e6e"  width="32%">
+
+
+
+---
+
+
+## Description
+
+The SNN AI CHAT plugin brings the power of artificial intelligence directly to your WordPress website. Whether you want to offer instant customer support, provide an interactive FAQ, or simply enhance user engagement, SNN AI CHAT offers a flexible and robust solution. It seamlessly integrates with leading AI providers like OpenRouter and OpenAI, allowing you to choose the best model for your needs.
+
+With an intuitive admin interface, you can create and manage multiple chat instances, each with its own settings, appearance, and AI personality. The plugin also includes comprehensive logging and analytics to help you monitor usage and optimize your AI interactions.
 
  
 
