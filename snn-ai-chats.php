@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 
 // Define plugin constants
 // Explicitly cast __FILE__ to string for robustness, though it's already a string.
-define('SNN_AI_CHAT_VERSION', '1.0.2');
+define('SNN_AI_CHAT_VERSION', '1.0.3');
 define('SNN_AI_CHAT_PLUGIN_DIR', plugin_dir_path((string)__FILE__));
 define('SNN_AI_CHAT_PLUGIN_URL', plugin_dir_url((string)__FILE__));
 

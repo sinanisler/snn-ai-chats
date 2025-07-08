@@ -28,18 +28,28 @@ jQuery(document).ready(function($) {
 
         // Toggle chat visibility
         chatToggle.on('click', function() {
-            chatContainer.slideToggle(300);
-            $(this).toggleClass('active');
-            // If user info is not collected, and chat is opened, scroll to bottom
-            if (!collectUserInfoEnabled && chatContainer.is(':visible')) {
-                chatMessages.scrollTop(chatMessages[0].scrollHeight);
-            }
+            // Close all other chat containers and show all toggles
+            $('.snn-chat-container').not(chatContainer).slideUp(300);
+            $('.snn-chat-toggle').not(chatToggle).removeClass('active');
+
+            // Toggle this chat
+            chatContainer.slideToggle(300, function() {
+                if (chatContainer.is(':visible')) {
+                    chatToggle.addClass('active');
+                    if (!collectUserInfoEnabled) {
+                        chatMessages.scrollTop(chatMessages[0].scrollHeight);
+                    }
+                } else {
+                    chatToggle.removeClass('active');
+                }
+            });
         });
 
         // Close chat
         chatClose.on('click', function() {
-            chatContainer.slideUp(300);
-            chatToggle.removeClass('active');
+            chatContainer.slideUp(300, function() {
+                chatToggle.removeClass('active');
+            });
         });
 
         // Function to append message to chat window
