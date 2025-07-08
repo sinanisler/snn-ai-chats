@@ -33,11 +33,11 @@ With an intuitive admin interface, you can create and manage multiple chat insta
 
 ## Screenshots
 
-<img src="https://github.com/user-attachments/assets/9d49bab0-b41f-4923-939a-535376c1ef09"  width="30%">
+<img src="https://github.com/user-attachments/assets/9d49bab0-b41f-4923-939a-535376c1ef09"  width="33%">
 
-<img src="https://github.com/user-attachments/assets/2269bd6c-1ad6-4621-b448-7a32a7bc6aeb"  width="30%">
+<img src="https://github.com/user-attachments/assets/2269bd6c-1ad6-4621-b448-7a32a7bc6aeb"  width="33%">
 
-<img src="https://github.com/user-attachments/assets/35be720b-d176-4cd1-b7ee-f0ef25ad9e6e"  width="30%">
+<img src="https://github.com/user-attachments/assets/35be720b-d176-4cd1-b7ee-f0ef25ad9e6e"  width="33%">
 
  
 
