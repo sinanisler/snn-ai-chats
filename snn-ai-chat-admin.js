@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error("Fetch error fetching models:", error);
+                // console.error("Fetch error fetching models:", error);
                 if (modelDetailsElement) modelDetailsElement.innerHTML = '<p class="text-red-500">Error fetching models. Check console for details.</p>';
             });
     }
@@ -141,8 +141,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error("Fetch error fetching model details:", error);
-                if (modelDetailsElement) modelDetailsElement.innerHTML = '<p class="text-red-500">Error fetching model details. Check console for details.</p>';
+                // console.error("Fetch error fetching model details:", error);
+                // if (modelDetailsElement) modelDetailsElement.innerHTML = '<p class="text-red-500">Error fetching model details. Check console for details.</p>';
             });
     }
 
