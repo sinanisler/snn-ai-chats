@@ -1,32 +1,77 @@
 # SNN AI CHAT - Advanced AI Chat Plugin for WordPress
 
-Create one or multiple chats for your WordPress site.
+**Plugin Name:** SNN AI CHAT
+**Plugin URI:** https://sinanisler.com
+**Description:** A feature-rich WordPress plugin that integrates advanced AI chat capabilities into your website, supporting both OpenRouter and OpenAI models. Engage your users with dynamic, intelligent conversations, customizable chat widgets, and comprehensive usage analytics.
+**Version:** 0.2.1 (Based on the provided code, consider updating this if you have a newer internal version like 1.0.1 in the code)
+**Author:** sinanisler
+**Author URI:** https://sinanisler.com
+**License:** GPL v3
 
-![image](https://github.com/user-attachments/assets/5f618621-824e-43ea-a0aa-971fddfcaf89)
+---
 
-![image](https://github.com/user-attachments/assets/066a8f5a-d831-4f0b-a8c2-ab25d44063ec)
+## Table of Contents
+* [Description](#description)
+* [Features](#features)
+* [Installation](#installation)
+    * [Minimum Requirements](#minimum-requirements)
+    * [Installation Steps](#installation-steps)
+* [Configuration](#configuration)
+    * [Global Settings](#global-settings)
+    * [Managing Individual Chats](#managing-individual-chats)
+* [Usage](#usage)
+* [Chat History & Analytics](#chat-history--analytics)
+* [Styling & Customization](#styling--customization)
+* [Rate Limiting & Usage Control](#rate-limiting--usage-control)
+* [Screenshots](#screenshots)
+* [Support](#support)
+* [Changelog](#changelog)
 
+---
 
+## Description
 
-SNN AI CHAT is an advanced WordPress plugin that seamlessly integrates AI-powered chat functionalities into your website. It supports both **OpenRouter** and **OpenAI** APIs, allowing you to choose your preferred AI model for intelligent and dynamic conversations with your users.
+The SNN AI CHAT plugin brings the power of artificial intelligence directly to your WordPress website. Whether you want to offer instant customer support, provide an interactive FAQ, or simply enhance user engagement, SNN AI CHAT offers a flexible and robust solution. It seamlessly integrates with leading AI providers like OpenRouter and OpenAI, allowing you to choose the best model for your needs.
 
-This plugin provides a comprehensive dashboard to monitor usage, manage chat configurations, and customize the appearance of each chat widget. You can define specific system prompts, initial messages, and even set up detailed display conditions for where each chat should appear on your site.
+With an intuitive admin interface, you can create and manage multiple chat instances, each with its own settings, appearance, and AI personality. The plugin also includes comprehensive logging and analytics to help you monitor usage and optimize your AI interactions.
 
-**Key Features:**
+---
 
-* **Flexible AI Provider Support:** Connects with OpenRouter and OpenAI APIs.
-* **Customizable Chat Instances:** Create multiple chat configurations, each with its own settings.
-* **Granular Control over AI Models:** Select a specific AI model for each chat, or use a global default.
-* **Personalized Chat Experience:** Set unique system prompts and initial messages for different chatbots.
-* **Styling & Appearance Options:** Customize chat widget position, colors (primary, secondary, text, background, input), font size, and border radius to match your brand.
-* **Display Conditions:** Control where chat widgets appear (all pages, specific pages/posts, home, front page, posts, pages, categories, archives) with exclusion rules.
-* **Usage Limits & Rate Limiting:** Prevent abuse by setting limits on tokens per session, daily tokens per IP, daily chats per IP, and messages per minute.
-* **User Information Collection:** Optionally collect user names and emails before starting a chat session.
-* **Comprehensive Dashboard:** View statistics on active chats, total tokens used, total sessions, and today's/month's usage.
-* **Detailed Chat History:** Keep a record of all chat sessions, including user messages, AI responses, and tokens used.
-* **Live Preview:** See your chat widget styling and initial messages in real-time within the admin panel.
+## Features
 
-Empower your website with intelligent conversational AI, enhance user engagement, and provide instant support with SNN AI CHAT.
+* **Dual AI Provider Support:**
+    * **OpenRouter Integration:** Connect to a wide range of models available through OpenRouter.
+    * **OpenAI Integration:** Utilize powerful OpenAI models like GPT-4o-mini.
+* **Centralized API Settings:** Configure your OpenRouter and OpenAI API keys and default models from a single settings page.
+* **Customizable Chat Instances:**
+    * Create multiple, independent chat widgets for different purposes or pages on your site.
+    * Each chat can have its own **name, initial message, and system prompt** to define its unique personality and function.
+    * Option to **keep conversation history** for multi-turn dialogues within a session.
+    * Ability to specify a **particular AI model** for each chat, overriding the global default if needed.
+* **Advanced API Parameter Control (Global):** Fine-tune AI responses with adjustable parameters:
+    * **Temperature:** Controls randomness (0.0 - 2.0).
+    * **Max Response Tokens:** Sets the maximum length of AI replies.
+    * **Top P:** Nucleus sampling control (0.0 - 1.0).
+    * **Frequency Penalty:** Reduces repetition of frequent tokens (-2.0 to 2.0).
+    * **Presence Penalty:** Encourages new topics (-2.0 to 2.0).
+* **Extensive Display Conditions:** Control exactly where each chat widget appears on your site:
+    * Show on **all pages**.
+    * Display on **specific pages/posts** by ID.
+    * **Exclude specific pages/posts** by ID (highest priority).
+    * Show based on **WordPress template conditions** (Home, Front Page, Posts, Pages, Categories, Archives).
+* **Visual Customization:** Tailor the chat widget's appearance to match your website's design:
+    * **Chat Position:** Choose from Bottom Right, Bottom Left, Top Right, Top Left.
+    * **Color Pickers:** Customize primary, secondary, and text colors for various chat elements (toggle button, headers, user/AI messages, input fields).
+    * **Sizing Controls:** Adjust widget width, height, font size, and border-radius.
+* **Robust Usage Limits & Rate Limiting:**
+    * Set **max tokens per session**.
+    * Limit **max tokens per IP daily**.
+    * Limit **max chat sessions per IP daily**.
+    * Define a **rate limit per minute** to prevent abuse.
+* **User Information Collection (Optional):** Option to require users to provide their name and email before initiating a chat.
+* **Comprehensive Chat History:** View detailed logs of all chat sessions, including user information, messages, responses, and token usage.
+* **Live Preview:** See how your chat widget will look and behave in real-time within the chat editing interface.
+* **Admin Dashboard Statistics:** Get an overview of your chat plugin's performance with key metrics like active chats, total tokens, and daily/monthly sessions.
 
 ---
 
@@ -34,87 +79,146 @@ Empower your website with intelligent conversational AI, enhance user engagement
 
 ### Minimum Requirements
 
-* WordPress 5.0 or greater
-* PHP version 7.4 or greater (PHP 8+ recommended for `str_contains`)
-* MySQL version 5.6 or greater OR MariaDB version 10.1 or greater
-* An API key from either [OpenRouter.ai](https://openrouter.ai/) or [OpenAI.com](https://openai.com/).
+* WordPress 5.0 or higher
+* PHP 7.4 or higher
+* An API Key from [OpenRouter.ai](https://openrouter.ai/) or [OpenAI](https://openai.com/)
 
-### Automatic Installation
+### Installation Steps
 
-1.  Navigate to the 'Plugins' menu in your WordPress dashboard.
-2.  Click 'Add New'.
-3.  Search for "SNN AI Chat" (if available on WordPress.org) or upload the plugin zip file.
-4.  Click 'Install Now'.
-5.  After installation, click 'Activate'.
-
-### Manual Installation
-
-1.  Download the plugin zip file from the WordPress plugin repository or source.
-2.  Unzip the file.
-3.  Upload the `snn-ai-chat` folder to the `/wp-content/plugins/` directory via FTP or your hosting file manager.
-4.  Activate the plugin through the 'Plugins' menu in your WordPress dashboard.
-
-### After Activation
-
-Once activated, go to **SNN AI Chat > Settings** to configure your API keys and default models. You can then create and customize your chat instances under **SNN AI Chat > Chats**.
+1.  **Upload:**
+    * Download the plugin ZIP file.
+    * Go to your WordPress admin dashboard.
+    * Navigate to **Plugins > Add New > Upload Plugin**.
+    * Click "Choose File" and select the downloaded ZIP.
+    * Click "Install Now".
+2.  **Activate:**
+    * Once installed, click "Activate Plugin".
+3.  **Configure API Keys:**
+    * Go to **SNN AI Chat > Settings** in your WordPress admin menu.
+    * Select your preferred **AI Provider** (OpenRouter or OpenAI).
+    * Enter your corresponding **API Key**.
+    * Choose a **default model** for your selected provider.
+    * Configure **shared API parameters** like Temperature, Max Tokens, etc.
+    * Click "Save Settings".
 
 ---
 
-## Frequently Asked Questions
+## Configuration
 
-### Q: What are the main features of SNN AI Chat?
-A: SNN AI Chat offers integration with OpenRouter and OpenAI, allowing you to create multiple customizable chat instances. You can set system prompts, initial messages, define display conditions (which pages the chat appears on), configure styling (colors, sizes), set usage limits (tokens, sessions, rate limits), and optionally collect user information. It also includes a dashboard for statistics and chat history.
+After activating the plugin, you'll find the SNN AI Chat menu in your WordPress admin sidebar.
 
-### Q: Do I need an API key to use this plugin?
-A: Yes, you will need an API key from either OpenRouter.ai or OpenAI.com to power the AI responses. You can configure this in **SNN AI Chat > Settings**.
+### Global Settings
 
-### Q: How do I select which AI model to use?
-A: In **SNN AI Chat > Settings**, you can choose your primary API provider (OpenRouter or OpenAI) and select a default model for your entire site. When creating or editing individual chats under **SNN AI Chat > Chats**, you can override the global model and select a specific one for that chat instance.
+Navigate to **SNN AI Chat > Settings** to configure global parameters that apply to all your chat instances unless specifically overridden by individual chat settings.
 
-### Q: Can I customize the appearance of the chat widget?
-A: Absolutely! Each chat instance has extensive styling options, including chat position, primary/secondary colors, text color, widget background, input background/text colors, font size, border radius, and widget dimensions.
+* **AI Provider Selection:** Choose between OpenRouter or OpenAI.
+* **API Keys & Models:** Input your API keys and select the default models for each provider.
+* **Shared API Parameters:** Adjust `Temperature`, `Max Response Tokens`, `Top P`, `Frequency Penalty`, and `Presence Penalty` to control the AI's response behavior.
+* **General Settings:** Set a `Default System Prompt` and `Default Initial Message` for new chats.
 
-### Q: How do I control where the chat widget appears on my website?
-A: In the "Display Settings" section of each chat's edit page, you have several options:
-* **Show on all pages:** Displays the chat on every page (except those explicitly excluded).
-* **Display On Specific Pages:** Enter a comma-separated list of page/post IDs.
-* **Exclude Pages:** Enter a comma-separated list of page/post IDs where the chat should **never** appear (this overrides other display settings).
-* **Template Conditions:** Check boxes to show the chat on your home page, front page, individual posts, pages, categories, or archives.
+### Managing Individual Chats
 
-The plugin processes these rules with exclusions taking the highest priority, followed by "show on all pages," then specific page inclusions, and finally template conditions.
+Go to **SNN AI Chat > Chats** to create and manage your chat widgets.
 
-### Q: What kind of usage limits can I set?
-A: You can set:
-* **Max Tokens Per Session:** Limits the number of tokens used in a single chat conversation.
-* **Max Tokens Per IP Daily:** Limits the total tokens an IP address can consume in a 24-hour period across all chat instances.
-* **Max Chats Per IP Daily:** Limits the number of new chat sessions an IP address can start in a 24-hour period.
-* **Rate Limit Per Minute:** Limits the number of messages a user can send within a 60-second window.
+* **Add New Chat:** Click "Add New Chat" to create a new AI chat instance.
+* **Edit Chat:** Click "Edit" on an existing chat to modify its settings.
+    * **Basic Information:**
+        * **Chat Name:** A title for your chat widget (e.g., "Customer Support Bot").
+        * **Model:** Select a specific AI model for this chat. Leave blank to use the global default.
+        * **Initial Message:** The first message displayed to users.
+        * **System Prompt:** Instructions for the AI's behavior and personality for this specific chat.
+        * **Keep conversation history during session:** Toggle to enable or disable persistent context for the AI.
+    * **Styling & Appearance:** Customize colors, sizes, and positioning of the chat widget.
+    * **Display Settings:** Control precisely which pages or post types the chat widget appears on. You can use:
+        * **Show on all pages:** Displays the chat universally (unless excluded).
+        * **Display On Specific Pages:** Enter comma-separated page/post IDs.
+        * **Exclude Pages:** Enter comma-separated page/post IDs to prevent the chat from appearing there (overrides all other display settings).
+        * **Template Conditions:** Select WordPress template types (Home, Posts, Pages, etc.).
+    * **Usage Limits:** Set limits on tokens and chat sessions per user IP per day, and message rate limits per minute.
+    * **User Information Collection:** Enable this to prompt users for their name and email before they can start chatting.
+* **Delete Chat:** Remove a chat instance.
 
-### Q: How can I view chat history and statistics?
-A: The plugin provides a **Dashboard** under "SNN AI Chat" which shows overall statistics like active chats, total tokens, and session counts. The **Chat History** page lists all recorded chat sessions, along with user details, message counts, and tokens used, allowing you to view details for each session.
+---
 
-### Q: Is conversation history maintained?
-A: Yes, each chat configuration has an option "Keep conversation history during session". If enabled, the AI will remember previous messages in the current session up to a certain limit (default 10 messages, configurable through the AI model's context window and the "Max Tokens Per Session" setting).
+## Usage
 
-### Q: Does this plugin store user data?
-A: Yes, if the "Collect user name and email before starting chat" option is enabled for a chat, it will store the provided name and email along with the session and message data in your WordPress database. IP addresses are also stored for rate limiting.
+Once you've configured your chat instances and their display conditions, the chat widgets will automatically appear on your website's frontend. Users can click the chat toggle button to open the chat interface and start interacting with your AI.
+
+If "Collect user name and email" is enabled for a chat, users will be prompted to enter their details before the chat begins.
+
+---
+
+## Chat History & Analytics
+
+The plugin provides robust tools to monitor chat activity:
+
+* **Dashboard:** The main **SNN AI Chat** dashboard provides an overview of:
+    * Active Chats
+    * Total Tokens Used
+    * Total Sessions
+    * Today's Sessions, Messages, and Tokens
+    * This Month's Sessions, Messages, and Tokens
+    * Recent Chat History (last 5 sessions).
+* **Chat History:** Navigate to **SNN AI Chat > Chat History** for a detailed list of all sessions. You can see:
+    * Session ID
+    * User Name & Email
+    * IP Address
+    * Number of Messages
+    * Total Tokens Used
+    * Timestamp
+    * **View Details:** Click to see the full transcript of a specific chat session.
+
+---
+
+## Styling & Customization
+
+The plugin leverages inline CSS for dynamic styling based on your settings, allowing for a high degree of customization without needing to write custom code. You can easily modify:
+
+* **Colors:** Primary, Secondary, Text, Widget Background, Input Background, Input Text, Send Button.
+* **Dimensions:** Widget width and height, font size, and border radius.
+* **Positioning:** Control where the chat bubble appears on your site.
+
+---
+
+## Rate Limiting & Usage Control
+
+To prevent API overages and manage resource consumption, SNN AI CHAT includes comprehensive usage limits:
+
+* **Max Tokens Per Session:** Caps the total tokens used in a single continuous chat session.
+* **Max Tokens Per IP Daily:** Limits the total tokens an individual IP address can consume across all sessions in a 24-hour period.
+* **Max Chats Per IP Daily:** Restricts the number of new chat sessions an IP address can initiate per day.
+* **Rate Limit Per Minute:** Prevents a single user from sending too many messages too quickly.
+
+These limits can be configured per chat instance, offering granular control over your AI's availability and cost.
 
 ---
 
 ## Screenshots
 
-*(Currently, no screenshots are provided. You would typically add `screenshot-1.png`, `screenshot-2.png`, etc., to your plugin directory and list them here.)*
+*(In a real README, you would include screenshots here demonstrating the dashboard, settings page, chat creation/edit form, and the frontend chat widget.)*
+
+* **Dashboard Overview**
+* **Global Settings Page**
+* **Create/Edit Chat Page**
+* **Frontend Chat Widget (Open/Closed)**
+* **Chat History List**
+* **Individual Session History**
+
+---
+
+## Support
+
+If you encounter any issues, have questions, or need assistance, please visit the plugin's official URI: [https://sinanisler.com](https://sinanisler.com) or contact the author directly.
 
 ---
 
 ## Changelog
 
-### 1.0.1 - 2025-07-07
-* **Bug Fix:** Addressed `str_contains` deprecated notice by casting `$hook` to string.
-* **Improvement:** Explicitly cast variables to string before using functions that expect string type to improve PHP 8.x compatibility.
-* **Feature:** Implemented live preview functionality for individual chat configurations within the admin edit screen.
-* **Enhancement:** Refined the `should_show_chat` logic for clearer precedence of display conditions (exclude > all pages > specific pages > template conditions).
-* **Refinement:** Updated nonce verification to use a unified nonce for all AJAX actions for better consistency.
-* **UI:** Added tooltips to chat settings using Tippy.js for better user guidance.
-* **Admin:** Improved styling and layout of admin pages using Tailwind CSS classes for better readability and user experience.
-* **Code:** Ensured `wp_parse_args` always receives an array for chat settings.
+**0.2.1 (current version in code)**
+* Initial release with core AI chat functionalities using OpenRouter and OpenAI.
+* Dashboard statistics added.
+* Comprehensive chat instance management with display, styling, and usage limit controls.
+* Detailed chat history logging and viewing.
+* Live preview for chat configurations.
+
+*(You might want to update the version to 1.0.1 as per your `define` statement, and adjust the changelog accordingly.)*
