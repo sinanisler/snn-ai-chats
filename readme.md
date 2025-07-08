@@ -4,7 +4,7 @@ Create one or multiple chats for your WordPress site.
 
 ![image](https://github.com/user-attachments/assets/5f618621-824e-43ea-a0aa-971fddfcaf89)
 
-![image](https://github.com/user-attachments/assets/066a8f5a-d831-4f0b-a8c2-ab25d44063ec)
+![image](https://github.com/user-attachments/assets/601b0841-4b43-4e96-862c-00be6095cdb8)
 
 
 
