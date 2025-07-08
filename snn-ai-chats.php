@@ -9,13 +9,8 @@
  * License: GPL v3
  */
 
-// Prevent direct access
-if (!defined('ABSPATH')) {
-    exit;
-}
+if (!defined('ABSPATH')) { exit; }
 
-// Define plugin constants
-// Explicitly cast __FILE__ to string for robustness, though it's already a string.
 define('SNN_AI_CHAT_VERSION', '1.0.3');
 define('SNN_AI_CHAT_PLUGIN_DIR', plugin_dir_path((string)__FILE__));
 define('SNN_AI_CHAT_PLUGIN_URL', plugin_dir_url((string)__FILE__));
@@ -38,9 +33,7 @@ class SNN_AI_Chat {
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
 
-        // Hook into the specific admin page load to set the title early
         add_action('load-admin_page_snn-ai-chat-preview', array($this, 'set_preview_page_title'));
-        // NEW: Hook for the session history page to set its title early
         add_action('load-admin_page_snn-ai-chat-session-history', array($this, 'set_session_history_page_title'));
     }
 
@@ -170,8 +163,6 @@ class SNN_AI_Chat {
             array($this, 'chat_history_page')
         );
 
-        // New hidden submenu page for viewing individual session history
-        // Changed null to empty string for parent slug to explicitly pass a string.
         add_submenu_page(
             '', // This makes the page hidden from the menu
             'Session History',
@@ -181,8 +172,6 @@ class SNN_AI_Chat {
             array($this, 'session_history_page')
         );
 
-        // Hidden submenu page for the live preview
-        // Changed null to empty string for parent slug to explicitly pass a string.
         add_submenu_page(
             '', // This makes the page hidden from the menu
             'Chat Preview',
@@ -1362,256 +1351,51 @@ class SNN_AI_Chat {
         </div>
                 
         <style>
-            /* Widget Positioning */
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> {
-                position: fixed;
-                z-index: 99999;
-                <?php
-                switch ((string)($settings['chat_position'] ?? 'bottom-right')) {
-                    case 'bottom-right': echo 'bottom: 20px; right: 20px;'; break;
-                    case 'bottom-left': echo 'bottom: 20px; left: 20px;'; break;
-                    case 'top-right': echo 'top: 20px; right: 20px;'; break;
-                    case 'top-left': echo 'top: 20px; left: 20px;'; break;
-                }
-                ?>
-            }
-
-            /* Toggle Button */
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle {
-                background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>;
-                border-radius: 9999px; /* Fully rounded */
-                width: 50px;
-                height: 50px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                transition: background-color 0.3s ease;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle:hover {
-                background-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['primary_color'] ?? '#3b82f6'), -20)); ?>;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle .dashicons {
-                color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>;
-                font-size: 28px;
-                width: 28px;
-                height: 28px;
-                line-height: 1;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            /* Chat Container */
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-container {
-                width: <?php echo esc_attr((string)($settings['widget_width'] ?? 350)); ?>px;
-                height: <?php echo esc_attr((string)($settings['widget_height'] ?? 500)); ?>px;
-                border-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px;
-                background-color: <?php echo esc_attr((string)($settings['chat_widget_bg_color'] ?? '#ffffff')); ?>;
-                box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
-            }
-
-            /* Chat Header */
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-header {
-                background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>;
-                color: <?php echo esc_attr((string)($settings['text_color'] ?? '#000000')); ?>;
-                padding: 1rem;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                border-top-left-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px;
-                border-top-right-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-header h3 {
-                margin: 0;
-                font-size: 1.125rem; /* text-lg */
-                font-weight: 600; /* font-semibold */
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-close {
-                background: none;
-                border: none;
-                color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>;
-                cursor: pointer;
-                font-size: 1.25rem;
-                line-height: 1;
-                padding: 0.25rem;
-                border-radius: 0.25rem;
-                transition: background-color 0.3s ease;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-close:hover {
-                background-color: rgba(255, 255, 255, 0.2);
-            }
-
-            /* Chat Messages Area */
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-messages {
-                flex-grow: 1;
-                padding: 1rem;
-                overflow-y: auto;
-                font-size: <?php echo esc_attr((string)($settings['font_size'] ?? 14)); ?>px;
-                color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>;
-            }
-
-            /* Individual Chat Messages */
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message {
-                margin-bottom: 0.75rem;
-                display: flex;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message.snn-user-message {
-                justify-content: flex-end;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message.snn-ai-message {
-                justify-content: flex-start;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-message-content {
-                max-width: 80%;
-                padding: 0.75rem 1rem;
-                border-radius: 0.75rem; /* rounded-xl */
-                word-wrap: break-word;
-            }
-            
-            /* === CORRECTED SECTION START === */
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message.snn-user-message .snn-message-content {
-                background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; /* CORRECTED KEY */
-                color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; /* CORRECTED KEY */
-                border-bottom-right-radius: 0.25rem; /* rounded-br-md */
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message.snn-ai-message .snn-message-content {
-                background-color: <?php echo esc_attr((string)($settings['secondary_color'] ?? '#e5e7eb')); ?>; /* CORRECTED KEY */
-                color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>; /* CORRECTED KEY */
-                border-bottom-left-radius: 0.25rem; /* rounded-bl-md */
-            }
-            /* === CORRECTED SECTION END === */
-
-            /* User Info Form */
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form {
-                padding: 1rem;
-                text-align: center;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form p {
-                margin-bottom: 1rem;
-                color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form input {
-                width: 100%;
-                padding: 0.75rem;
-                margin-bottom: 0.75rem;
-                border: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_bg_color'] ?? '#f9fafb'), -10)); ?>;
-                border-radius: 0.5rem;
-                background-color: <?php echo esc_attr((string)($settings['chat_input_bg_color'] ?? '#f9fafb')); ?>;
-                color: <?php echo esc_attr((string)($settings['chat_input_text_color'] ?? '#1f2937')); ?>;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form input::placeholder {
-                color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form button.snn-start-chat-btn {
-                background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>;
-                color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>;
-                padding: 0.75rem 1.5rem;
-                border: none;
-                border-radius: 0.5rem;
-                cursor: pointer;
-                transition: background-color 0.3s ease;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form button.snn-start-chat-btn:hover {
-                background-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['primary_color'] ?? '#3b82f6'), -20)); ?>;
-            }
-
-            /* Chat Input Container */
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-input-container {
-                display: flex;
-                padding: 1rem;
-                border-top: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_widget_bg_color'] ?? '#ffffff'), -10)); ?>;
-                background-color: <?php echo esc_attr((string)($settings['chat_widget_bg_color'] ?? '#ffffff')); ?>;
-                border-bottom-left-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px;
-                border-bottom-right-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-input {
-                flex-grow: 1;
-                padding: 0.75rem 1rem;
-                border: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_bg_color'] ?? '#f9fafb'), -10)); ?>;
-                border-radius: 0.5rem;
-                outline: none;
-                background-color: <?php echo esc_attr((string)($settings['chat_input_bg_color'] ?? '#f9fafb')); ?>;
-                color: <?php echo esc_attr((string)($settings['chat_input_text_color'] ?? '#1f2937')); ?>;
-                margin-right: 0.5rem;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-input::placeholder {
-                color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-send {
-                background: none;
-                border: none;
-                color: <?php echo esc_attr((string)($settings['chat_send_button_color'] ?? '#3b82f6')); ?>;
-                cursor: pointer;
-                padding: 0.5rem;
-                border-radius: 0.5rem;
-                transition: background-color 0.3s ease;
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-send:hover {
-                background-color: rgba(0, 0, 0, 0.05); /* Slightly darken on hover */
-            }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-send:disabled {
-                opacity: 0.5;
-                cursor: not-allowed;
-            }
-
-            /* Responsive adjustments for smaller screens */
-            @media (max-width: 768px) {
-                #snn-chat-<?php echo esc_attr($chat->ID); ?> {
-                    bottom: 10px;
-                    right: 10px;
-                    left: auto; /* Reset left/top for mobile */
-                    top: auto;
-                }
-                #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-container {
-                    width: calc(100vw - 20px); /* Full width minus margin */
-                    height: calc(100vh - 100px); /* Adjust height for mobile */
-                    max-width: 400px; /* Max width for chat container on mobile */
-                    max-height: 600px; /* Max height for chat container on mobile */
-                }
-            }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> { position: fixed; z-index: 99999; <?php switch ((string)($settings['chat_position'] ?? 'bottom-right')) { case 'bottom-right': echo 'bottom: 20px; right: 20px;'; break; case 'bottom-left': echo 'bottom: 20px; left: 20px;'; break; case 'top-right': echo 'top: 20px; right: 20px;'; break; case 'top-left': echo 'top: 20px; left: 20px;'; break; } ?> }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle { background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; border-radius: 9999px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: background-color 0.3s ease; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle:hover { background-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['primary_color'] ?? '#3b82f6'), -20)); ?>; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle .dashicons { color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; font-size: 28px; width: 28px; height: 28px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-container { width: <?php echo esc_attr((string)($settings['widget_width'] ?? 350)); ?>px; height: <?php echo esc_attr((string)($settings['widget_height'] ?? 500)); ?>px; border-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; background-color: <?php echo esc_attr((string)($settings['chat_widget_bg_color'] ?? '#ffffff')); ?>; box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; overflow: hidden; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-header { background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; color: <?php echo esc_attr((string)($settings['text_color'] ?? '#000000')); ?>; padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; border-top-right-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-header h3 { margin: 0; font-size: 1.125rem; font-weight: 600; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-close { background: none; border: none; color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; cursor: pointer; font-size: 1.25rem; line-height: 1; padding: 0.25rem; border-radius: 0.25rem; transition: background-color 0.3s ease; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-close:hover { background-color: rgba(255, 255, 255, 0.2); }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-messages { flex-grow: 1; padding: 1rem; overflow-y: auto; font-size: <?php echo esc_attr((string)($settings['font_size'] ?? 14)); ?>px; color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message { margin-bottom: 0.75rem; display: flex; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message.snn-user-message { justify-content: flex-end; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message.snn-ai-message { justify-content: flex-start; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-message-content { max-width: 80%; padding: 0.75rem 1rem; border-radius: 0.75rem; word-wrap: break-word; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message.snn-user-message .snn-message-content { background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; border-bottom-right-radius: 0.25rem; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message.snn-ai-message .snn-message-content { background-color: <?php echo esc_attr((string)($settings['secondary_color'] ?? '#e5e7eb')); ?>; color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>; border-bottom-left-radius: 0.25rem; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form { padding: 1rem; text-align: center; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form p { margin-bottom: 1rem; color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form input { width: 100%; padding: 0.75rem; margin-bottom: 0.75rem; border: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_bg_color'] ?? '#f9fafb'), -10)); ?>; border-radius: 0.5rem; background-color: <?php echo esc_attr((string)($settings['chat_input_bg_color'] ?? '#f9fafb')); ?>; color: <?php echo esc_attr((string)($settings['chat_input_text_color'] ?? '#1f2937')); ?>; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form input::placeholder { color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form button.snn-start-chat-btn { background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; cursor: pointer; transition: background-color 0.3s ease; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form button.snn-start-chat-btn:hover { background-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['primary_color'] ?? '#3b82f6'), -20)); ?>; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-input-container { display: flex; padding: 1rem; border-top: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_widget_bg_color'] ?? '#ffffff'), -10)); ?>; background-color: <?php echo esc_attr((string)($settings['chat_widget_bg_color'] ?? '#ffffff')); ?>; border-bottom-left-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; border-bottom-right-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-input { flex-grow: 1; padding: 0.75rem 1rem; border: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_bg_color'] ?? '#f9fafb'), -10)); ?>; border-radius: 0.5rem; outline: none; background-color: <?php echo esc_attr((string)($settings['chat_input_bg_color'] ?? '#f9fafb')); ?>; color: <?php echo esc_attr((string)($settings['chat_input_text_color'] ?? '#1f2937')); ?>; margin-right: 0.5rem; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-input::placeholder { color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-send { background: none; border: none; color: <?php echo esc_attr((string)($settings['chat_send_button_color'] ?? '#3b82f6')); ?>; cursor: pointer; padding: 0.5rem; border-radius: 0.5rem; transition: background-color 0.3s ease; }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-send:hover { background-color: rgba(0, 0, 0, 0.05); }
+            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+            @media (max-width: 768px) { #snn-chat-<?php echo esc_attr($chat->ID); ?> { bottom: 10px; right: 10px; left: auto; top: auto; } #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-container { width: calc(100vw - 20px); height: calc(100vh - 100px); max-width: 400px; max-height: 600px; } }
         </style>
-
         <?php
     }
     
-    // Helper methods
     private function get_dashboard_stats() {
         global $wpdb;
-        
         $stats = array();
-        
-        // Active chats
         $stats['active_chats'] = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'snn_ai_chat' AND post_status = 'publish'") ?: 0; // Added null coalescing
-        
-        // Total tokens
         $stats['total_tokens'] = $wpdb->get_var("SELECT SUM(tokens_used) FROM {$wpdb->prefix}snn_chat_messages") ?: 0;
-        
-        // Total sessions
         $stats['total_sessions'] = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_sessions") ?: 0; // Added null coalescing
-        
-        // Today's sessions
         $stats['today_sessions'] = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_sessions WHERE DATE(created_at) = %s", current_time('Y-m-d'))) ?: 0; // Added null coalescing
-        
-        // Today's messages
         $stats['today_messages'] = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_messages WHERE DATE(created_at) = %s", current_time('Y-m-d'))) ?: 0; // Added null coalescing
-        
-        // Today's tokens
         $stats['today_tokens'] = $wpdb->get_var($wpdb->prepare("SELECT SUM(tokens_used) FROM {$wpdb->prefix}snn_chat_messages WHERE DATE(created_at) = %s", current_time('Y-m-d'))) ?: 0;
-        
-        // This month's messages
         $stats['month_messages'] = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_messages WHERE YEAR(created_at) = %d AND MONTH(created_at) = %d", current_time('Y'), current_time('m'))) ?: 0; // Added null coalescing
-        
-        // This month's tokens
         $stats['month_tokens'] = $wpdb->get_var($wpdb->prepare("SELECT SUM(tokens_used) FROM {$wpdb->prefix}snn_chat_messages WHERE YEAR(created_at) = %d AND MONTH(created_at) = %d", current_time('Y'), current_time('m'))) ?: 0;
-        
-        // This month's sessions
         $stats['month_sessions'] = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}snn_chat_sessions WHERE YEAR(created_at) = %d AND MONTH(created_at) = %d", current_time('Y'), current_time('m'))) ?: 0; // Added null coalescing
-        
         return $stats;
     }
     
@@ -2031,13 +1815,6 @@ class SNN_AI_Chat {
         );
     }
 
-    /**
-     * Adjusts the brightness of a given hex color.
-     *
-     * @param string $hex The hex color code (e.g., '#RRGGBB').
-     * @param int $steps The amount to lighten (positive) or darken (negative) the color, from -255 to 255.
-     * @return string The adjusted hex color code.
-     */
     private function adjust_brightness($hex, $steps) {
         // Remove '#' if present
         $hex = ltrim((string)($hex ?? ''), '#'); // Added null coalescing and explicit cast

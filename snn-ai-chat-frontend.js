@@ -55,10 +55,7 @@ jQuery(document).ready(function($) {
         // Function to append message to chat window
         function appendMessage(sender, message) {
             const messageClass = sender === 'user' ? 'snn-user-message' : 'snn-ai-message';
-            const messageHtml = `
-                <div class="snn-chat-message ${messageClass}">
-                    <div class="snn-message-content">${message}</div>
-                </div>`;
+            const messageHtml = `<div class="snn-chat-message ${messageClass}"><div class="snn-message-content">${message}</div></div>`;
             chatMessages.append(messageHtml);
             chatMessages.scrollTop(chatMessages[0].scrollHeight); // Scroll to bottom
         }
@@ -76,13 +73,7 @@ jQuery(document).ready(function($) {
             chatSendBtn.prop('disabled', true);
 
             // Add a loading indicator for AI response
-            const loadingHtml = `
-                <div class="snn-chat-message snn-ai-message snn-loading-message">
-                    <div class="snn-message-content">
-                        <span class="snn-loading-dots">. . .</span>
-                    </div>
-                </div>
-            `;
+            const loadingHtml = `<div class="snn-chat-message snn-ai-message snn-loading-message"><div class="snn-message-content"><span class="snn-loading-dots">. . .</span></div></div>`;
             chatMessages.append(loadingHtml);
             chatMessages.scrollTop(chatMessages[0].scrollHeight);
 
