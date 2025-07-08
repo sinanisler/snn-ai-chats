@@ -3,7 +3,7 @@
  * Plugin Name: SNN AI CHAT
  * Plugin URI: https://sinanisler.com
  * Description: Advanced AI Chat Plugin with OpenRouter and OpenAI support
- * Version: 0.2.1
+ * Version: 0.2.2
  * Author: sinanisler
  * Author URI: https://sinanisler.com
  * License: GPL v3
@@ -43,13 +43,24 @@ class SNN_AI_Chat {
     }
 
     public function handle_admin_form_submissions() {
-        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-chats') {
+        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-chats' || !isset($_POST['submit_chat_settings'])) {
             return;
         }
-
-        if (isset($_POST['submit_chat_settings'])) {
-            $saved_chat_id = $this->save_chat_settings_form_submit();
-            wp_safe_redirect(admin_url('admin.php?page=snn-ai-chat-chats&snn_new_chat_saved=1'));
+    
+        // Determine if it was a new chat before saving.
+        $is_new_chat = empty($_POST['chat_id']);
+    
+        $saved_chat_id = $this->save_chat_settings_form_submit();
+    
+        // Check if the save was successful
+        if ($saved_chat_id && !is_wp_error($saved_chat_id)) {
+            if ($is_new_chat) {
+                // For a new chat, redirect to the chats list page with a success message.
+                wp_safe_redirect(admin_url('admin.php?page=snn-ai-chat-chats&snn_new_chat_saved=1'));
+            } else {
+                // For an existing chat, redirect back to the edit page with a success message.
+                wp_safe_redirect(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $saved_chat_id . '&snn_chat_updated=1'));
+            }
             exit;
         }
     }
@@ -503,11 +514,15 @@ class SNN_AI_Chat {
     public function chats_page() {
         $action = isset($_GET['action']) ? sanitize_text_field((string)$_GET['action']) : 'list';
         $chat_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-
+    
         if (isset($_GET['snn_new_chat_saved']) && $_GET['snn_new_chat_saved'] == '1') {
             echo '<div class="notice notice-success is-dismissible"><p>Your new chat is saved.</p></div>';
         }
-
+    
+        if (isset($_GET['snn_chat_updated']) && $_GET['snn_chat_updated'] == '1') {
+            echo '<div class="notice notice-success is-dismissible"><p>Chat settings saved successfully!</p></div>';
+        }
+    
         if ($action === 'edit' || $action === 'new') {
             $this->render_chat_edit_form($chat_id);
         } else {
@@ -858,20 +873,20 @@ class SNN_AI_Chat {
         if (!current_user_can('manage_options')) {
             wp_die(esc_html__('You do not have permission to save settings.'));
         }
-
+    
         if (!isset($_POST['snn_ai_chat_settings_nonce_field']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_ai_chat_settings_nonce_field'] ?? '')), 'snn_ai_chat_settings_form')) {
             wp_die(esc_html__('Nonce verification failed.'));
         }
-
+    
         $chat_id = isset($_POST['chat_id']) ? intval($_POST['chat_id']) : 0;
         $chat_name = sanitize_text_field($_POST['chat_name'] ?? 'New Chat');
-
+    
         $settings = [];
         $defaults = $this->get_default_chat_settings();
-
+    
         foreach ($defaults as $key => $default_value) {
             $value = $_POST[$key] ?? null;
-
+    
             if (is_int($default_value)) {
                 $settings[$key] = intval($value ?? 0);
             } elseif (is_float($default_value)) {
@@ -887,13 +902,13 @@ class SNN_AI_Chat {
                 $settings[$key] = sanitize_text_field($value ?? '');
             }
         }
-
+    
         $post_data = array(
             'post_title' => $chat_name,
             'post_type' => 'snn_ai_chat',
             'post_status' => 'publish'
         );
-
+    
         if ($chat_id > 0) {
             $post_data['ID'] = $chat_id;
             wp_update_post($post_data);
@@ -901,18 +916,15 @@ class SNN_AI_Chat {
             $new_chat_id = wp_insert_post($post_data);
             if ($new_chat_id && !is_wp_error($new_chat_id)) {
                 $chat_id = $new_chat_id;
+            } else {
+                return 0; // Return a value that indicates failure
             }
         }
         
         if ($chat_id && !is_wp_error($chat_id)) {
             update_post_meta($chat_id, '_snn_chat_settings', $settings);
-            add_action('admin_notices', function() {
-                echo '<div class="notice notice-success is-dismissible"><p>Chat settings saved successfully!</p></div>';
-            });
         } else {
-            add_action('admin_notices', function() {
-                echo '<div class="notice notice-error is-dismissible"><p>Failed to save chat settings.</p></div>';
-            });
+            return 0; // Return a value that indicates failure
         }
         
         return $chat_id;
@@ -1185,7 +1197,7 @@ class SNN_AI_Chat {
              $conversation_history[] = array(
                  'role' => 'system',
                  'content' => (string)$chat_settings['system_prompt']
-                );
+             );
         }
 
         if (!empty($chat_settings['keep_conversation_history'])) {
