@@ -19,8 +19,6 @@ A feature-rich WordPress plugin that integrates advanced AI chat capabilities in
 * [Styling & Customization](#styling--customization)
 * [Rate Limiting & Usage Control](#rate-limiting--usage-control)
 * [Screenshots](#screenshots)
-* [Support](#support)
-* [Changelog](#changelog)
 
 ---
 
