@@ -1,12 +1,7 @@
 # SNN AI CHAT - Advanced AI Chat Plugin for WordPress
 
-**Plugin Name:** SNN AI CHAT
-**Plugin URI:** https://sinanisler.com
-**Description:** A feature-rich WordPress plugin that integrates advanced AI chat capabilities into your website, supporting both OpenRouter and OpenAI models. Engage your users with dynamic, intelligent conversations, customizable chat widgets, and comprehensive usage analytics.
-**Version:** 0.2.1 (Based on the provided code, consider updating this if you have a newer internal version like 1.0.1 in the code)
-**Author:** sinanisler
-**Author URI:** https://sinanisler.com
-**License:** GPL v3
+A feature-rich WordPress plugin that integrates advanced AI chat capabilities into your website, supporting both OpenRouter and OpenAI models. Engage your users with dynamic, intelligent conversations, customizable chat widgets, and comprehensive usage analytics.
+
 
 ---
 
