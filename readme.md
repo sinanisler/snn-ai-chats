@@ -7,11 +7,12 @@ A feature-rich WordPress plugin that integrates advanced AI chat capabilities in
 
 ## Screenshots
 
-<img src="https://github.com/user-attachments/assets/9d49bab0-b41f-4923-939a-535376c1ef09"  width="32%">
 
-<img src="https://github.com/user-attachments/assets/2269bd6c-1ad6-4621-b448-7a32a7bc6aeb"  width="32%">
-
-<img src="https://github.com/user-attachments/assets/35be720b-d176-4cd1-b7ee-f0ef25ad9e6e"  width="32%">
+<img src=" https://github.com/user-attachments/assets/6836ad4d-f3c2-41b7-84ba-7fde5ff75834  "  width="48%">
+<img src=" https://github.com/user-attachments/assets/374aa3f5-56c5-4f47-8e7a-253aea89044d  "  width="48%">
+<img src=" https://github.com/user-attachments/assets/d7d734f1-df32-41bb-9b13-49b2e7e85811  "  width="48%">
+<img src=" https://github.com/user-attachments/assets/7980da32-4470-43af-a883-13da605b8c6b "  width="48%">
+<img src=" https://github.com/user-attachments/assets/37fae6be-c3a3-4753-ad0b-9c97a0842fe6 "  width="48%">
 
 
 
