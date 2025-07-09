@@ -266,7 +266,7 @@ class SNN_AI_Chat {
         <div class="wrap">
             <h1>SNN AI Chat Dashboard</h1>
             
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4" id="snn-dashboard-stats-section">
                 <div class="bg-white p-4 rounded-lg shadow stats-block" id="snn-active-chats-block">
                     <h3 class="text-lg font-semibold text-gray-700">Active Chats</h3>
                     <p class="text-3xl font-bold text-blue-600"><?php echo esc_html($stats['active_chats']); ?></p>
@@ -292,22 +292,22 @@ class SNN_AI_Chat {
                 </div>
             </div>
             
-            <div class="bg-white p-6 rounded-lg shadow mb-6" id="snn-quick-actions-block">
+            <div class="bg-white p-6 rounded-lg shadow mb-4" id="snn-dashboard-quick-actions-section">
                 <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=new')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-center quick-action-btn hover:bg-blue-700 transition-colors duration-200" id="snn-create-chat-btn">
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=new')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg text-lg text-center quick-action-btn hover:bg-blue-700 transition-colors duration-200" id="snn-create-chat-btn">
                         Create New Chat
                     </a>
-                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-settings')); ?>" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-center quick-action-btn hover:bg-green-700 transition-colors duration-200" id="snn-settings-btn">
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-settings')); ?>" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-lg text-center quick-action-btn hover:bg-green-700 transition-colors duration-200" id="snn-settings-btn">
                         Settings
                     </a>
-                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats')); ?>" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg text-center quick-action-btn hover:bg-purple-700 transition-colors duration-200" id="snn-manage-chats-btn">
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats')); ?>" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg text-lg text-center quick-action-btn hover:bg-purple-700 transition-colors duration-200" id="snn-manage-chats-btn">
                         Manage Chats
                     </a>
                 </div>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4" id="snn-dashboard-usage-summary-section">
                 <div class="bg-white p-6 rounded-lg shadow usage-stats-block" id="snn-today-usage-block">
                     <h2 class="text-xl font-semibold mb-4">Today's Usage</h2>
                     <div class="space-y-2">
@@ -345,10 +345,10 @@ class SNN_AI_Chat {
                 </div>
             </div>
             
-            <div class="bg-white p-6 rounded-lg shadow recent-activity-block" id="snn-recent-activity-block">
+            <div class="bg-white p-6 rounded-lg shadow recent-activity-block" id="snn-dashboard-recent-history-section">
                 <h2 class="text-xl font-semibold mb-4">Recent Chat History</h2>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200" id="snn-recent-history-table">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Session</th>
@@ -358,12 +358,12 @@ class SNN_AI_Chat {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
+                        <tbody class="bg-white divide-y divide-gray-200" id="snn-recent-history-table-body">
                             <?php
                             $recent_activities = $this->get_recent_activities(5);
                             foreach ($recent_activities as $activity) {
                                 ?>
-                                <tr class="activity-row">
+                                <tr class="activity-row" id="snn-recent-activity-row-<?php echo esc_attr($activity->session_id); ?>">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html(substr((string)$activity->session_id, 0, 8)); ?>...</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html($activity->user_name ?: 'Anonymous'); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html($activity->message_count); ?></td>
@@ -396,10 +396,10 @@ class SNN_AI_Chat {
         <div class="wrap">
             <h1>SNN AI Chat Settings</h1>
             
-            <form method="post" action="" class="snn-settings-form">
+            <form method="post" action="" class="snn-settings-form" id="snn-settings-form">
                 <?php wp_nonce_field('snn_ai_chat_settings', 'snn_ai_chat_settings_nonce'); ?>
                 
-                <div class="bg-white p-6 rounded-lg shadow mb-6" id="snn-api-provider-block">
+                <div class="bg-white p-6 rounded-lg shadow mb-4" id="snn-api-provider-section">
                     <h2 class="text-xl font-semibold mb-4">AI Provider Selection</h2>
                     
                     <div class="api-provider-selection" id="snn-provider-selection">
@@ -450,7 +450,7 @@ class SNN_AI_Chat {
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-lg shadow mb-6" id="snn-shared-api-settings-block">
+                <div class="bg-white p-6 rounded-lg shadow mb-4" id="snn-shared-api-parameters-section">
                     <h2 class="text-xl font-semibold mb-4">Shared API Parameters</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="mb-4">
@@ -485,8 +485,8 @@ class SNN_AI_Chat {
                         </div>
                     </div>
                 </div>
-                
-                <div class="bg-white p-6 rounded-lg shadow mb-6" id="snn-general-settings-block">
+
+                <div class="bg-white p-6 rounded-lg shadow mb-4" id="snn-general-settings-section">
                     <h2 class="text-xl font-semibold mb-4">General Settings</h2>
                     
                     <div class="mb-4">
@@ -554,14 +554,14 @@ class SNN_AI_Chat {
                         <h3 class="text-lg font-semibold mb-2 text-gray-800"><?php echo esc_html($chat->post_title); ?></h3>
                         
                         <div class="flex justify-between items-center mt-4">
-                            <div class="text-sm text-gray-500">
+                            <div class="text-sm text-gray-500" id="snn-chat-stats-<?php echo esc_attr($chat->ID); ?>">
                                 <?php echo $this->get_chat_stats($chat->ID); ?>
                             </div>
-                            <div class="space-x-2">
-                                <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $chat->ID)); ?>" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-blue-500 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 edit-chat-btn transition-colors duration-200">
+                            <div class="space-x-2" id="snn-chat-actions-<?php echo esc_attr($chat->ID); ?>">
+                                <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $chat->ID)); ?>" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-blue-500 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 edit-chat-btn transition-colors duration-200" id="snn-edit-chat-btn-<?php echo esc_attr($chat->ID); ?>">
                                     Edit
                                 </a>
-                                <button class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 delete-chat-btn transition-colors duration-200" data-chat-id="<?php echo esc_attr($chat->ID); ?>">
+                                <button class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 delete-chat-btn transition-colors duration-200" data-chat-id="<?php echo esc_attr($chat->ID); ?>" id="snn-delete-chat-btn-<?php echo esc_attr($chat->ID); ?>">
                                     Delete
                                 </button>
                             </div>
@@ -591,12 +591,12 @@ class SNN_AI_Chat {
             <h1><?php echo esc_html($chat_id > 0 ? 'Edit Chat' : 'Create New Chat'); ?></h1>
             
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow chat-settings-form" id="snn-chat-settings-form">
+                <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow chat-settings-form" id="snn-chat-settings-form-container">
                     <form id="chat-settings-form" method="post" action="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats')); ?>" enctype="multipart/form-data">
                         <?php wp_nonce_field('snn_ai_chat_settings_form', 'snn_ai_chat_settings_nonce_field', false, true); ?>
                         <input type="hidden" name="chat_id" value="<?php echo esc_attr($chat_id); ?>">
                         
-                        <div class="mb-6 basic-info-section" id="snn-basic-info-section">
+                        <div class="mb-4 basic-info-section" id="snn-basic-info-section">
                             <h3 class="text-lg font-semibold mb-4">Basic Information</h3>
                             
                             <div class="mb-4">
@@ -623,7 +623,7 @@ class SNN_AI_Chat {
                             
                             <div class="mb-4">
                                 <label class="flex items-center text-gray-700">
-                                    <input type="checkbox" name="keep_conversation_history" value="1" <?php checked($chat_settings['keep_conversation_history'], 1); ?> class="mr-2 conversation-history-checkbox">
+                                    <input type="checkbox" name="keep_conversation_history" value="1" <?php checked($chat_settings['keep_conversation_history'], 1); ?> class="mr-2 conversation-history-checkbox" id="snn-keep-conversation-history-checkbox">
                                     <span class="text-sm font-medium snn-tooltip" data-tippy-content="Whether to maintain conversation context between messages">
                                         Keep conversation history during session
                                     </span>
@@ -631,7 +631,7 @@ class SNN_AI_Chat {
                             </div>
                         </div>
                         
-                        <div class="mb-6 styling-section" id="snn-styling-section">
+                        <div class="mb-4 styling-section" id="snn-styling-appearance-section">
                             <h3 class="text-lg font-semibold mb-4">Styling & Appearance</h3>
                             
                             <div class="mb-4">
@@ -723,12 +723,12 @@ class SNN_AI_Chat {
                             </div>
                         </div>
                         
-                        <div class="mb-6 display-settings-section" id="snn-display-settings-section">
+                        <div class="mb-4 display-settings-section" id="snn-display-settings-section">
                             <h3 class="text-lg font-semibold mb-4">Display Settings</h3>
                             
                             <div class="mb-4">
                                 <label class="flex items-center text-gray-700">
-                                    <input type="checkbox" name="show_on_all_pages" value="1" <?php checked($chat_settings['show_on_all_pages'], 1); ?> class="mr-2 show-all-pages-checkbox">
+                                    <input type="checkbox" name="show_on_all_pages" value="1" <?php checked($chat_settings['show_on_all_pages'], 1); ?> class="mr-2 show-all-pages-checkbox" id="snn-show-on-all-pages-checkbox">
                                     <span class="text-sm font-medium snn-tooltip" data-tippy-content="Display this chat on all pages of the website. This overrides other display settings except for 'Exclude Pages'.">
                                         Show on all pages
                                     </span>
@@ -753,34 +753,34 @@ class SNN_AI_Chat {
                                 <h4 class="text-md font-semibold mb-2">Template Conditions</h4>
                                 <div class="space-y-2">
                                     <label class="flex items-center text-gray-700">
-                                        <input type="checkbox" name="show_on_home" value="1" <?php checked($chat_settings['show_on_home'], 1); ?> class="mr-2 template-condition-checkbox">
+                                        <input type="checkbox" name="show_on_home" value="1" <?php checked($chat_settings['show_on_home'], 1); ?> class="mr-2 template-condition-checkbox" id="snn-show-on-home-checkbox">
                                         <span class="text-sm">Home</span>
                                     </label>
                                     <label class="flex items-center text-gray-700">
-                                        <input type="checkbox" name="show_on_front_page" value="1" <?php checked($chat_settings['show_on_front_page'], 1); ?> class="mr-2 template-condition-checkbox">
+                                        <input type="checkbox" name="show_on_front_page" value="1" <?php checked($chat_settings['show_on_front_page'], 1); ?> class="mr-2 template-condition-checkbox" id="snn-show-on-front-page-checkbox">
                                         <span class="text-sm">Front Page</span>
                                     </label>
                                     <label class="flex items-center text-gray-700">
-                                        <input type="checkbox" name="show_on_posts" value="1" <?php checked($chat_settings['show_on_posts'], 1); ?> class="mr-2 template-condition-checkbox">
+                                        <input type="checkbox" name="show_on_posts" value="1" <?php checked($chat_settings['show_on_posts'], 1); ?> class="mr-2 template-condition-checkbox" id="snn-show-on-posts-checkbox">
                                         <span class="text-sm">Posts</span>
                                     </label>
                                     <label class="flex items-center text-gray-700">
-                                        <input type="checkbox" name="show_on_pages" value="1" <?php checked($chat_settings['show_on_pages'], 1); ?> class="mr-2 template-condition-checkbox">
+                                        <input type="checkbox" name="show_on_pages" value="1" <?php checked($chat_settings['show_on_pages'], 1); ?> class="mr-2 template-condition-checkbox" id="snn-show-on-pages-checkbox">
                                         <span class="text-sm">Pages</span>
                                     </label>
                                     <label class="flex items-center text-gray-700">
-                                        <input type="checkbox" name="show_on_categories" value="1" <?php checked($chat_settings['show_on_categories'], 1); ?> class="mr-2 template-condition-checkbox">
+                                        <input type="checkbox" name="show_on_categories" value="1" <?php checked($chat_settings['show_on_categories'], 1); ?> class="mr-2 template-condition-checkbox" id="snn-show-on-categories-checkbox">
                                         <span class="text-sm">Categories</span>
                                     </label>
                                     <label class="flex items-center text-gray-700">
-                                        <input type="checkbox" name="show_on_archives" value="1" <?php checked($chat_settings['show_on_archives'], 1); ?> class="mr-2 template-condition-checkbox">
+                                        <input type="checkbox" name="show_on_archives" value="1" <?php checked($chat_settings['show_on_archives'], 1); ?> class="mr-2 template-condition-checkbox" id="snn-show-on-archives-checkbox">
                                         <span class="text-sm">Archives</span>
                                     </label>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="mb-6 usage-limits-section" id="snn-usage-limits-section">
+                        <div class="mb-4 usage-limits-section" id="snn-usage-limits-section">
                             <h3 class="text-lg font-semibold mb-4">Usage Limits</h3>
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -816,12 +816,12 @@ class SNN_AI_Chat {
                             </div>
                         </div>
                         
-                        <div class="mb-6 user-info-section" id="snn-user-info-section">
+                        <div class="mb-4 user-info-section" id="snn-user-info-collection-section">
                             <h3 class="text-lg font-semibold mb-4">User Information Collection</h3>
                             
                             <div class="mb-4">
                                 <label class="flex items-center text-gray-700">
-                                    <input type="checkbox" name="collect_user_info" value="1" <?php checked($chat_settings['collect_user_info'], 1); ?> class="mr-2 collect-user-info-checkbox">
+                                    <input type="checkbox" name="collect_user_info" value="1" <?php checked($chat_settings['collect_user_info'], 1); ?> class="mr-2 collect-user-info-checkbox" id="snn-collect-user-info-checkbox">
                                     <span class="text-sm font-medium snn-tooltip" data-tippy-content="Require users to provide their name and email before they can start a chat">
                                         Collect user name and email before starting chat
                                     </span>
@@ -844,7 +844,7 @@ class SNN_AI_Chat {
                             <iframe id="chat-preview-iframe" src="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-preview&chat_id=' . $chat_id)); ?>" width="100%" height="100%" frameborder="0" class="preview-iframe absolute inset-0"></iframe>
                         </div>
                     <?php else : ?>
-                        <div class="text-center p-4 border-2 border-dashed rounded-lg text-gray-600">
+                        <div class="text-center p-4 border-2 border-dashed rounded-lg text-gray-600" id="snn-preview-placeholder">
                             <p>Save the chat to enable the live preview.</p>
                         </div>
                     <?php endif; ?>
@@ -920,9 +920,9 @@ class SNN_AI_Chat {
         <div class="wrap">
             <h1>Chat History</h1>
             
-            <div class="bg-white p-6 rounded-lg shadow chat-history-table" id="snn-chat-history-table">
+            <div class="bg-white p-6 rounded-lg shadow chat-history-table" id="snn-chat-history-table-container">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200" id="snn-chat-history-table">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Session ID</th>
@@ -934,12 +934,12 @@ class SNN_AI_Chat {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
+                        <tbody class="bg-white divide-y divide-gray-200" id="snn-chat-history-table-body">
                             <?php
                             $chat_history = $this->get_chat_history();
                             foreach ($chat_history as $history) {
                                 ?>
-                                <tr class="history-row">
+                                <tr class="history-row" id="snn-history-row-<?php echo esc_attr($history->session_id); ?>">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html(substr((string)$history->session_id, 0, 12)); ?>...</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html($history->user_name ?: 'Anonymous'); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html($history->user_email ?: 'N/A'); ?></td>
@@ -947,7 +947,7 @@ class SNN_AI_Chat {
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html(number_format($history->total_tokens)); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html(date('M j, Y H:i', strtotime($history->created_at))); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-session-history&session_id=' . $history->session_id)); ?>" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 view-history-btn transition-colors duration-200">
+                                        <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-session-history&session_id=' . $history->session_id)); ?>" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 view-history-btn transition-colors duration-200" id="snn-view-session-details-btn-<?php echo esc_attr($history->session_id); ?>">
                                             View Details
                                         </a>
                                     </td>
@@ -984,9 +984,9 @@ class SNN_AI_Chat {
         ?>
         <div class="wrap">
             <h1>Chat Session Details: <?php echo esc_html(substr($session_id, 0, 12)); ?>...</h1>
-            <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-center quick-action-btn hover:bg-blue-700 transition-colors duration-200 mb-4 inline-block">← Back to Chat History</a>
+            <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-center quick-action-btn hover:bg-blue-700 transition-colors duration-200 mb-4 inline-block" id="snn-back-to-history-btn">← Back to Chat History</a>
 
-            <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <div class="bg-white p-6 rounded-lg shadow mb-4" id="snn-session-info-block">
                 <h2 class="text-xl font-semibold mb-4">Session Information</h2>
                 <p><strong>Chat Name:</strong> <?php echo esc_html(get_the_title($session_info->chat_id) ?: 'N/A'); ?></p>
                 <p><strong>User Name:</strong> <?php echo esc_html($session_info->user_name ?: 'Anonymous'); ?></p>
@@ -996,12 +996,12 @@ class SNN_AI_Chat {
                 <p><strong>Last Updated:</strong> <?php echo esc_html(date('M j, Y H:i:s', strtotime($session_info->updated_at))); ?></p>
             </div>
 
-            <div class="bg-white p-6 rounded-lg shadow">
+            <div class="bg-white p-6 rounded-lg shadow" id="snn-session-messages-block">
                 <h2 class="text-xl font-semibold mb-4">Messages</h2>
-                <div class="space-y-4">
+                <div class="space-y-4" id="snn-session-messages-list">
                     <?php if (!empty($session_messages)) : ?>
-                        <?php foreach ($session_messages as $msg) : ?>
-                            <div class="snn-chat-message-detail <?php echo !empty($msg->message) ? 'snn-user-message-detail' : 'snn-ai-message-detail'; ?> p-3 rounded-lg shadow-sm">
+                        <?php foreach ($session_messages as $index => $msg) : ?>
+                            <div class="snn-chat-message-detail <?php echo !empty($msg->message) ? 'snn-user-message-detail' : 'snn-ai-message-detail'; ?> p-3 rounded-lg shadow-sm" id="snn-session-message-<?php echo esc_attr($index); ?>">
                                 <?php if (!empty($msg->message)) : ?>
                                     <p class="font-semibold text-blue-700">You:</p>
                                     <p class="text-gray-800"><?php echo esc_html($msg->message); ?></p>
@@ -1034,7 +1034,7 @@ class SNN_AI_Chat {
         </style>
         <?php
     }
-
+    
     public function preview_page() {
         if (!current_user_can('manage_options')) {
             wp_die(esc_html__('Sorry, you are not allowed to access this page.'));
@@ -1252,7 +1252,7 @@ class SNN_AI_Chat {
             </div>
             
             <div class="snn-chat-container" id="snn-chat-container-<?php echo esc_attr($chat->ID); ?>" style="display: none;">
-                <div class="snn-chat-header">
+                <div class="snn-chat-header" id="snn-chat-header-<?php echo esc_attr($chat->ID); ?>">
                     <h3><?php echo esc_html($chat->post_title); ?></h3>
                     <button class="snn-chat-close" id="snn-chat-close-<?php echo esc_attr($chat->ID); ?>">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1262,7 +1262,7 @@ class SNN_AI_Chat {
                 </div>
                 
                 <div class="snn-chat-messages" id="snn-chat-messages-<?php echo esc_attr($chat->ID); ?>">
-                    <div class="snn-chat-message-box" style="display: none; background-color: #ffe0e0; border: 1px solid #ff0000; color: #cc0000; padding: 10px; margin-bottom: 10px; border-radius: 5px;"></div>
+                    <div class="snn-chat-message-box" style="display: none; background-color: #ffe0e0; border: 1px solid #ff0000; color: #cc0000; padding: 10px; margin-bottom: 10px; border-radius: 5px;" id="snn-chat-error-message-box-<?php echo esc_attr($chat->ID); ?>"></div>
                     <?php if (!empty($settings['collect_user_info'])) { ?>
                         <div class="snn-user-info-form" id="snn-user-info-form-<?php echo esc_attr($chat->ID); ?>">
                             <p>Please provide your information to start the chat:</p>
@@ -1271,13 +1271,13 @@ class SNN_AI_Chat {
                             <button type="button" class="snn-start-chat-btn" id="snn-start-chat-btn-<?php echo esc_attr($chat->ID); ?>">Start Chat</button>
                         </div>
                     <?php } else { ?>
-                        <div class="snn-chat-message snn-ai-message">
+                        <div class="snn-chat-message snn-ai-message" id="snn-initial-ai-message-<?php echo esc_attr($chat->ID); ?>">
                             <div class="snn-message-content"><?php echo esc_html($settings['initial_message']); ?></div>
                         </div>
                     <?php } ?>
                 </div>
                 
-                <div class="snn-chat-input-container">
+                <div class="snn-chat-input-container" id="snn-chat-input-container-<?php echo esc_attr($chat->ID); ?>">
                     <input type="text" class="snn-chat-input" id="snn-chat-input-<?php echo esc_attr($chat->ID); ?>" placeholder="Type your message..." <?php echo !empty($settings['collect_user_info']) ? 'disabled' : ''; ?>>
                     <button class="snn-chat-send" id="snn-chat-send-<?php echo esc_attr($chat->ID); ?>" <?php echo !empty($settings['collect_user_info']) ? 'disabled' : ''; ?>>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
