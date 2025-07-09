@@ -47,12 +47,12 @@ class SNN_AI_Chat {
         if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-chats' || !isset($_POST['submit_chat_settings'])) {
             return;
         }
-    
+        
         // Determine if it was a new chat before saving.
         $is_new_chat = empty($_POST['chat_id']);
-    
+        
         $saved_chat_id = $this->save_chat_settings_form_submit();
-    
+        
         // Check if the save was successful
         if ($saved_chat_id && !is_wp_error($saved_chat_id)) {
             if ($is_new_chat) {
@@ -515,15 +515,15 @@ class SNN_AI_Chat {
     public function chats_page() {
         $action = isset($_GET['action']) ? sanitize_text_field((string)$_GET['action']) : 'list';
         $chat_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-    
+        
         if (isset($_GET['snn_new_chat_saved']) && $_GET['snn_new_chat_saved'] == '1') {
             echo '<div class="notice notice-success is-dismissible"><p>Your new chat is saved.</p></div>';
         }
-    
+        
         if (isset($_GET['snn_chat_updated']) && $_GET['snn_chat_updated'] == '1') {
             echo '<div class="notice notice-success is-dismissible"><p>Chat settings saved successfully!</p></div>';
         }
-    
+        
         if ($action === 'edit' || $action === 'new') {
             $this->render_chat_edit_form($chat_id);
         } else {
@@ -690,6 +690,44 @@ class SNN_AI_Chat {
                                 </div>
                             </div>
                             
+                            <!-- New Color Inputs for Message Bubbles and Send Button -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div>
+                                    <label for="user_message_bg_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Background color for user messages.">
+                                        User Message Background
+                                    </label>
+                                    <input type="color" id="user_message_bg_color" name="user_message_bg_color" value="<?php echo esc_attr($chat_settings['user_message_bg_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
+                                </div>
+                                <div>
+                                    <label for="user_message_text_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Text color for user messages.">
+                                        User Message Text
+                                    </label>
+                                    <input type="color" id="user_message_text_color" name="user_message_text_color" value="<?php echo esc_attr($chat_settings['user_message_text_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
+                                </div>
+                                <div>
+                                    <label for="ai_message_bg_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Background color for AI messages.">
+                                        AI Message Background
+                                    </label>
+                                    <input type="color" id="ai_message_bg_color" name="ai_message_bg_color" value="<?php echo esc_attr($chat_settings['ai_message_bg_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label for="ai_message_text_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Text color for AI messages.">
+                                        AI Message Text
+                                    </label>
+                                    <input type="color" id="ai_message_text_color" name="ai_message_text_color" value="<?php echo esc_attr($chat_settings['ai_message_text_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
+                                </div>
+                                <div>
+                                    <label for="chat_send_button_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Color for the send button icon.">
+                                        Send Button Color
+                                    </label>
+                                    <input type="color" id="chat_send_button_color" name="chat_send_button_color" value="<?php echo esc_attr($chat_settings['chat_send_button_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
+                                </div>
+                            </div>
+                            <!-- End New Color Inputs -->
+
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label for="font_size" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Font size for chat messages">
@@ -851,6 +889,31 @@ class SNN_AI_Chat {
                 </div>
             </div>
         </div>
+        <script>
+            jQuery(document).ready(function($) {
+                const chatSettingsForm = $('#chat-settings-form');
+                const chatPreviewIframe = $('#chat-preview-iframe');
+                const chatId = chatSettingsForm.find('input[name="chat_id"]').val();
+
+                function applyStyleToPreview(property, value) {
+                    if (chatPreviewIframe.length && chatPreviewIframe[0].contentWindow && chatPreviewIframe[0].contentWindow.updateChatStyle) {
+                        chatPreviewIframe[0].contentWindow.updateChatStyle(property, value, chatId);
+                    }
+                }
+
+                // Listen for changes on all relevant input fields
+                chatSettingsForm.find('input[type="color"], input[type="number"], input[type="text"], textarea, select, input[type="checkbox"]').on('input change', function() {
+                    const fieldName = $(this).attr('name');
+                    let fieldValue = $(this).val();
+
+                    if ($(this).is(':checkbox')) {
+                        fieldValue = $(this).prop('checked') ? 1 : 0;
+                    }
+
+                    applyStyleToPreview(fieldName, fieldValue);
+                });
+            });
+        </script>
         <?php
     }
 
@@ -858,20 +921,20 @@ class SNN_AI_Chat {
         if (!current_user_can('manage_options')) {
             wp_die(esc_html__('You do not have permission to save settings.'));
         }
-    
+        
         if (!isset($_POST['snn_ai_chat_settings_nonce_field']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_ai_chat_settings_nonce_field'] ?? '')), 'snn_ai_chat_settings_form')) {
             wp_die(esc_html__('Nonce verification failed.'));
         }
-    
+        
         $chat_id = isset($_POST['chat_id']) ? intval($_POST['chat_id']) : 0;
         $chat_name = sanitize_text_field($_POST['chat_name'] ?? 'New Chat');
-    
+        
         $settings = [];
         $defaults = $this->get_default_chat_settings();
-    
+        
         foreach ($defaults as $key => $default_value) {
             $value = $_POST[$key] ?? null;
-    
+        
             if (is_int($default_value)) {
                 $settings[$key] = intval($value ?? 0);
             } elseif (is_float($default_value)) {
@@ -887,13 +950,13 @@ class SNN_AI_Chat {
                 $settings[$key] = sanitize_text_field($value ?? '');
             }
         }
-    
+        
         $post_data = array(
             'post_title' => $chat_name,
             'post_type' => 'snn_ai_chat',
             'post_status' => 'publish'
         );
-    
+        
         if ($chat_id > 0) {
             $post_data['ID'] = $chat_id;
             wp_update_post($post_data);
@@ -1073,6 +1136,136 @@ class SNN_AI_Chat {
             
             wp_print_footer_scripts();
             ?>
+            <script>
+                // Function to adjust brightness (replicated from PHP for client-side preview)
+                function adjustBrightness(hex, steps) {
+                    hex = hex.replace('#', '');
+                    if (hex.length === 3) {
+                        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+                    }
+                    let rgb = [];
+                    for (let i = 0; i < 6; i += 2) {
+                        rgb.push(parseInt(hex.substr(i, 2), 16));
+                    }
+
+                    for (let i = 0; i < 3; i++) {
+                        rgb[i] = Math.max(0, Math.min(255, rgb[i] + steps));
+                    }
+
+                    return '#' + rgb.map(val => ('0' + val.toString(16)).slice(-2)).join('');
+                }
+
+                window.updateChatStyle = function(property, value, targetChatId) {
+                    const chatWidget = document.getElementById('snn-chat-' + targetChatId);
+                    if (!chatWidget) return;
+
+                    // Update CSS variables
+                    switch (property) {
+                        case 'primary_color':
+                            chatWidget.style.setProperty('--snn-primary-color', value);
+                            chatWidget.style.setProperty('--snn-primary-color-hover', adjustBrightness(value, -20));
+                            break;
+                        case 'secondary_color':
+                            chatWidget.style.setProperty('--snn-secondary-color', value);
+                            break;
+                        case 'text_color':
+                            chatWidget.style.setProperty('--snn-text-color', value);
+                            break;
+                        case 'chat_widget_bg_color':
+                            chatWidget.style.setProperty('--snn-chat-widget-bg-color', value);
+                            chatWidget.style.setProperty('--snn-widget-border-top-color', adjustBrightness(value, -10));
+                            break;
+                        case 'chat_text_color':
+                            chatWidget.style.setProperty('--snn-chat-text-color', value);
+                            break;
+                        case 'chat_input_bg_color':
+                            chatWidget.style.setProperty('--snn-chat-input-bg-color', value);
+                            chatWidget.style.setProperty('--snn-input-border-color', adjustBrightness(value, -10));
+                            break;
+                        case 'chat_input_text_color':
+                            chatWidget.style.setProperty('--snn-chat-input-text-color', value);
+                            chatWidget.style.setProperty('--snn-placeholder-color', adjustBrightness(value, 50));
+                            break;
+                        case 'chat_send_button_color':
+                            chatWidget.style.setProperty('--snn-chat-send-button-color', value);
+                            break;
+                        case 'user_message_bg_color':
+                            chatWidget.style.setProperty('--snn-user-message-bg-color', value);
+                            break;
+                        case 'user_message_text_color':
+                            chatWidget.style.setProperty('--snn-user-message-text-color', value);
+                            break;
+                        case 'ai_message_bg_color':
+                            chatWidget.style.setProperty('--snn-ai-message-bg-color', value);
+                            break;
+                        case 'ai_message_text_color':
+                            chatWidget.style.setProperty('--snn-ai-message-text-color', value);
+                            break;
+                        case 'font_size':
+                            chatWidget.style.setProperty('--snn-font-size', value + 'px');
+                            break;
+                        case 'border_radius':
+                            chatWidget.style.setProperty('--snn-border-radius', value + 'px');
+                            break;
+                        case 'widget_width':
+                            chatWidget.style.setProperty('--snn-widget-width', value + 'px');
+                            break;
+                        case 'widget_height':
+                            chatWidget.style.setProperty('--snn-widget-height', value + 'px');
+                            break;
+                        case 'chat_position':
+                            // Reset position properties before applying new one
+                            chatWidget.style.removeProperty('bottom');
+                            chatWidget.style.removeProperty('right');
+                            chatWidget.style.removeProperty('left');
+                            chatWidget.style.removeProperty('top');
+                            switch (value) {
+                                case 'bottom-right':
+                                    chatWidget.style.bottom = '20px';
+                                    chatWidget.style.right = '20px';
+                                    break;
+                                case 'bottom-left':
+                                    chatWidget.style.bottom = '20px';
+                                    chatWidget.style.left = '20px';
+                                    break;
+                                case 'top-right':
+                                    chatWidget.style.top = '20px';
+                                    chatWidget.style.right = '20px';
+                                    break;
+                                case 'top-left':
+                                    chatWidget.style.top = '20px';
+                                    chatWidget.style.left = '20px';
+                                    break;
+                            }
+                            break;
+                        case 'initial_message':
+                            const initialAiMessageContent = chatWidget.querySelector('#snn-initial-ai-message-' + targetChatId + ' .snn-message-content');
+                            if (initialAiMessageContent) {
+                                initialAiMessageContent.textContent = value;
+                            }
+                            break;
+                        case 'collect_user_info':
+                            const userInfoFormDiv = chatWidget.querySelector('#snn-user-info-form-' + targetChatId);
+                            const initialAiMessageDiv = chatWidget.querySelector('#snn-initial-ai-message-' + targetChatId);
+                            const chatInputEl = chatWidget.querySelector('#snn-chat-input-' + targetChatId);
+                            const chatSendEl = chatWidget.querySelector('#snn-chat-send-' + targetChatId);
+
+                            if (value == 1) { // Collect user info is checked
+                                if (userInfoFormDiv) userInfoFormDiv.style.display = 'block';
+                                if (initialAiMessageDiv) initialAiMessageDiv.style.display = 'none';
+                                if (chatInputEl) chatInputEl.disabled = true;
+                                if (chatSendEl) chatSendEl.disabled = true;
+                            } else { // Collect user info is unchecked
+                                if (userInfoFormDiv) userInfoFormDiv.style.display = 'none';
+                                if (initialAiMessageDiv) initialAiMessageDiv.style.display = 'flex'; // Assuming it's a flex item
+                                if (chatInputEl) chatInputEl.disabled = false;
+                                if (chatSendEl) chatSendEl.disabled = false;
+                            }
+                            break;
+                        // Add other cases for system_prompt, keep_conversation_history, etc. if needed for visual preview
+                    }
+                };
+            </script>
         </body>
         </html>
         <?php
@@ -1182,7 +1375,7 @@ class SNN_AI_Chat {
              $conversation_history[] = array(
                  'role' => 'system',
                  'content' => (string)$chat_settings['system_prompt']
-             );
+               );
         }
 
         if (!empty($chat_settings['keep_conversation_history'])) {
@@ -1246,7 +1439,30 @@ class SNN_AI_Chat {
              data-chat-id="<?php echo esc_attr($chat->ID); ?>"
              data-session-id="<?php echo esc_attr($session_id); ?>"
              data-initial-message="<?php echo esc_attr($settings['initial_message']); ?>"
-             data-collect-user-info="<?php echo esc_attr((int)$settings['collect_user_info']); ?>">
+             data-collect-user-info="<?php echo esc_attr((int)$settings['collect_user_info']); ?>"
+             style="
+                --snn-primary-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>;
+                --snn-primary-color-hover: <?php echo esc_attr($this->adjust_brightness((string)($settings['primary_color'] ?? '#3b82f6'), -20)); ?>;
+                --snn-secondary-color: <?php echo esc_attr((string)($settings['secondary_color'] ?? '#e5e7eb')); ?>;
+                --snn-text-color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>;
+                --snn-chat-widget-bg-color: <?php echo esc_attr((string)($settings['chat_widget_bg_color'] ?? '#ffffff')); ?>;
+                --snn-chat-text-color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>;
+                --snn-user-message-bg-color: <?php echo esc_attr((string)($settings['user_message_bg_color'] ?? '#3b82f6')); ?>;
+                --snn-user-message-text-color: <?php echo esc_attr((string)($settings['user_message_text_color'] ?? '#ffffff')); ?>;
+                --snn-ai-message-bg-color: <?php echo esc_attr((string)($settings['ai_message_bg_color'] ?? '#e5e7eb')); ?>;
+                --snn-ai-message-text-color: <?php echo esc_attr((string)($settings['ai_message_text_color'] ?? '#374151')); ?>;
+                --snn-chat-input-bg-color: <?php echo esc_attr((string)($settings['chat_input_bg_color'] ?? '#f9fafb')); ?>;
+                --snn-chat-input-text-color: <?php echo esc_attr((string)($settings['chat_input_text_color'] ?? '#1f2937')); ?>;
+                --snn-chat-send-button-color: <?php echo esc_attr((string)($settings['chat_send_button_color'] ?? '#3b82f6')); ?>;
+                --snn-font-size: <?php echo esc_attr((string)($settings['font_size'] ?? 14)); ?>px;
+                --snn-border-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px;
+                --snn-widget-width: <?php echo esc_attr((string)($settings['widget_width'] ?? 350)); ?>px;
+                --snn-widget-height: <?php echo esc_attr((string)($settings['widget_height'] ?? 500)); ?>px;
+                --snn-input-border-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_bg_color'] ?? '#f9fafb'), -10)); ?>;
+                --snn-widget-border-top-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_widget_bg_color'] ?? '#ffffff'), -10)); ?>;
+                --snn-placeholder-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>;
+                <?php switch ((string)($settings['chat_position'] ?? 'bottom-right')) { case 'bottom-right': echo 'bottom: 20px; right: 20px;'; break; case 'bottom-left': echo 'bottom: 20px; left: 20px;'; break; case 'top-right': echo 'top: 20px; right: 20px;'; break; case 'top-left': echo 'top: 20px; left: 20px;'; break; } ?>
+             ">
             <div class="snn-chat-toggle" id="snn-chat-toggle-<?php echo esc_attr($chat->ID); ?>">
                 <span class="dashicons dashicons-format-chat"></span>
             </div>
@@ -1288,37 +1504,192 @@ class SNN_AI_Chat {
                 </div>
             </div>
         </div>
-                
         <style>
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> { position: fixed; z-index: 99999; <?php switch ((string)($settings['chat_position'] ?? 'bottom-right')) { case 'bottom-right': echo 'bottom: 20px; right: 20px;'; break; case 'bottom-left': echo 'bottom: 20px; left: 20px;'; break; case 'top-right': echo 'top: 20px; right: 20px;'; break; case 'top-left': echo 'top: 20px; left: 20px;'; break; } ?> }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle { background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; border-radius: 9999px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: background-color 0.3s ease; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle:hover { background-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['primary_color'] ?? '#3b82f6'), -20)); ?>; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-toggle .dashicons { color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; font-size: 28px; width: 28px; height: 28px; line-height: 1; display: flex; align-items: center; justify-content: center; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-container { width: <?php echo esc_attr((string)($settings['widget_width'] ?? 350)); ?>px; height: <?php echo esc_attr((string)($settings['widget_height'] ?? 500)); ?>px; border-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; background-color: <?php echo esc_attr((string)($settings['chat_widget_bg_color'] ?? '#ffffff')); ?>; box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; overflow: hidden; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-header { background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; color: <?php echo esc_attr((string)($settings['text_color'] ?? '#000000')); ?>; padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; border-top-right-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-header h3 { margin: 0; font-size: 1.125rem; font-weight: 600; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-close { background: none; border: none; color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; cursor: pointer; font-size: 1.25rem; line-height: 1; padding: 0.25rem; border-radius: 0.25rem; transition: background-color 0.3s ease; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-close:hover { background-color: rgba(255, 255, 255, 0.2); }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-messages { flex-grow: 1; padding: 1rem; overflow-y: auto; font-size: <?php echo esc_attr((string)($settings['font_size'] ?? 14)); ?>px; color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message { margin-bottom: 0.75rem; display: flex; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message.snn-user-message { justify-content: flex-end; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message.snn-ai-message { justify-content: flex-start; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-message-content { max-width: 80%; padding: 0.75rem 1rem; border-radius: 0.75rem; word-wrap: break-word; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message.snn-user-message .snn-message-content { background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; border-bottom-right-radius: 0.25rem; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-message.snn-ai-message .snn-message-content { background-color: <?php echo esc_attr((string)($settings['secondary_color'] ?? '#e5e7eb')); ?>; color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>; border-bottom-left-radius: 0.25rem; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form { padding: 1rem; text-align: center; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form p { margin-bottom: 1rem; color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form input { width: 100%; padding: 0.75rem; margin-bottom: 0.75rem; border: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_bg_color'] ?? '#f9fafb'), -10)); ?>; border-radius: 0.5rem; background-color: <?php echo esc_attr((string)($settings['chat_input_bg_color'] ?? '#f9fafb')); ?>; color: <?php echo esc_attr((string)($settings['chat_input_text_color'] ?? '#1f2937')); ?>; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form input::placeholder { color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form button.snn-start-chat-btn { background-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>; color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; cursor: pointer; transition: background-color 0.3s ease; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-user-info-form button.snn-start-chat-btn:hover { background-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['primary_color'] ?? '#3b82f6'), -20)); ?>; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-input-container { display: flex; padding: 1rem; border-top: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_widget_bg_color'] ?? '#ffffff'), -10)); ?>; background-color: <?php echo esc_attr((string)($settings['chat_widget_bg_color'] ?? '#ffffff')); ?>; border-bottom-left-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; border-bottom-right-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-input { flex-grow: 1; padding: 0.75rem 1rem; border: 1px solid <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_bg_color'] ?? '#f9fafb'), -10)); ?>; border-radius: 0.5rem; outline: none; background-color: <?php echo esc_attr((string)($settings['chat_input_bg_color'] ?? '#f9fafb')); ?>; color: <?php echo esc_attr((string)($settings['chat_input_text_color'] ?? '#1f2937')); ?>; margin-right: 0.5rem; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-input::placeholder { color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-send { background: none; border: none; color: <?php echo esc_attr((string)($settings['chat_send_button_color'] ?? '#3b82f6')); ?>; cursor: pointer; padding: 0.5rem; border-radius: 0.5rem; transition: background-color 0.3s ease; }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-send:hover { background-color: rgba(0, 0, 0, 0.05); }
-            #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
-            @media (max-width: 768px) { #snn-chat-<?php echo esc_attr($chat->ID); ?> { bottom: 10px; right: 10px; left: auto; top: auto; } #snn-chat-<?php echo esc_attr($chat->ID); ?> .snn-chat-container { width: calc(100vw - 20px); height: calc(100vh - 100px); max-width: 400px; max-height: 600px; } }
+            /* Define CSS variables on the root widget element */
+            .snn-ai-chat-widget {
+                position: fixed;
+                z-index: 99999;
+            }
+            .snn-ai-chat-widget .snn-chat-toggle {
+                background-color: var(--snn-primary-color);
+                border-radius: 9999px;
+                width: 50px;
+                height: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                transition: background-color 0.3s ease;
+            }
+            .snn-ai-chat-widget .snn-chat-toggle:hover {
+                background-color: var(--snn-primary-color-hover);
+            }
+            .snn-ai-chat-widget .snn-chat-toggle .dashicons {
+                color: var(--snn-text-color);
+                font-size: 28px;
+                width: 28px;
+                height: 28px;
+                line-height: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .snn-ai-chat-widget .snn-chat-container {
+                width: var(--snn-widget-width);
+                height: var(--snn-widget-height);
+                border-radius: var(--snn-border-radius);
+                background-color: var(--snn-chat-widget-bg-color);
+                box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            .snn-ai-chat-widget .snn-chat-header {
+                background-color: var(--snn-primary-color);
+                color: var(--snn-text-color);
+                padding: 1rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-top-left-radius: var(--snn-border-radius);
+                border-top-right-radius: var(--snn-border-radius);
+            }
+            .snn-ai-chat-widget .snn-chat-header h3 {
+                margin: 0;
+                font-size: 1.125rem;
+                font-weight: 600;
+            }
+            .snn-ai-chat-widget .snn-chat-close {
+                background: none;
+                border: none;
+                color: var(--snn-text-color);
+                cursor: pointer;
+                font-size: 1.25rem;
+                line-height: 1;
+                padding: 0.25rem;
+                border-radius: 0.25rem;
+                transition: background-color 0.3s ease;
+            }
+            .snn-ai-chat-widget .snn-chat-close:hover {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+            .snn-ai-chat-widget .snn-chat-messages {
+                flex-grow: 1;
+                padding: 1rem;
+                overflow-y: auto;
+                font-size: var(--snn-font-size);
+                color: var(--snn-chat-text-color);
+            }
+            .snn-ai-chat-widget .snn-chat-message {
+                margin-bottom: 0.75rem;
+                display: flex;
+            }
+            .snn-ai-chat-widget .snn-chat-message.snn-user-message {
+                justify-content: flex-end;
+            }
+            .snn-ai-chat-widget .snn-chat-message.snn-ai-message {
+                justify-content: flex-start;
+            }
+            .snn-ai-chat-widget .snn-message-content {
+                max-width: 80%;
+                padding: 0.75rem 1rem;
+                border-radius: 0.75rem;
+                word-wrap: break-word;
+            }
+            .snn-ai-chat-widget .snn-chat-message.snn-user-message .snn-message-content {
+                background-color: var(--snn-user-message-bg-color);
+                color: var(--snn-user-message-text-color);
+                border-bottom-right-radius: 0.25rem;
+            }
+            .snn-ai-chat-widget .snn-chat-message.snn-ai-message .snn-message-content {
+                background-color: var(--snn-ai-message-bg-color);
+                color: var(--snn-ai-message-text-color);
+                border-bottom-left-radius: 0.25rem;
+            }
+            .snn-ai-chat-widget .snn-user-info-form {
+                padding: 1rem;
+                text-align: center;
+            }
+            .snn-ai-chat-widget .snn-user-info-form p {
+                margin-bottom: 1rem;
+                color: var(--snn-chat-text-color);
+            }
+            .snn-ai-chat-widget .snn-user-info-form input {
+                width: 100%;
+                padding: 0.75rem;
+                margin-bottom: 0.75rem;
+                border: 1px solid var(--snn-input-border-color);
+                border-radius: 0.5rem;
+                background-color: var(--snn-chat-input-bg-color);
+                color: var(--snn-chat-input-text-color);
+            }
+            .snn-ai-chat-widget .snn-user-info-form input::placeholder {
+                color: var(--snn-placeholder-color);
+            }
+            .snn-ai-chat-widget .snn-user-info-form button.snn-start-chat-btn {
+                background-color: var(--snn-primary-color);
+                color: var(--snn-text-color);
+                padding: 0.75rem 1.5rem;
+                border: none;
+                border-radius: 0.5rem;
+                cursor: pointer;
+                transition: background-color 0.3s ease;
+            }
+            .snn-ai-chat-widget .snn-user-info-form button.snn-start-chat-btn:hover {
+                background-color: var(--snn-primary-color-hover);
+            }
+            .snn-ai-chat-widget .snn-chat-input-container {
+                display: flex;
+                padding: 1rem;
+                border-top: 1px solid var(--snn-widget-border-top-color);
+                background-color: var(--snn-chat-widget-bg-color);
+                border-bottom-left-radius: var(--snn-border-radius);
+                border-bottom-right-radius: var(--snn-border-radius);
+            }
+            .snn-ai-chat-widget .snn-chat-input {
+                flex-grow: 1;
+                padding: 0.75rem 1rem;
+                border: 1px solid var(--snn-input-border-color);
+                border-radius: 0.5rem;
+                outline: none;
+                background-color: var(--snn-chat-input-bg-color);
+                color: var(--snn-chat-input-text-color);
+                margin-right: 0.5rem;
+            }
+            .snn-ai-chat-widget .snn-chat-input::placeholder {
+                color: var(--snn-placeholder-color);
+            }
+            .snn-ai-chat-widget .snn-chat-send {
+                background: none;
+                border: none;
+                color: var(--snn-chat-send-button-color);
+                cursor: pointer;
+                padding: 0.5rem;
+                border-radius: 0.5rem;
+                transition: background-color 0.3s ease;
+            }
+            .snn-ai-chat-widget .snn-chat-send:hover {
+                background-color: rgba(0, 0, 0, 0.05);
+            }
+            .snn-ai-chat-widget .snn-chat-send:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            @media (max-width: 768px) {
+                .snn-ai-chat-widget {
+                    bottom: 10px;
+                    right: 10px;
+                    left: auto;
+                    top: auto;
+                }
+                .snn-ai-chat-widget .snn-chat-container {
+                    width: calc(100vw - 20px);
+                    height: calc(100vh - 100px);
+                    max-width: 400px;
+                    max-height: 600px;
+                }
+            }
         </style>
         <?php
     }
@@ -1443,13 +1814,13 @@ class SNN_AI_Chat {
             'text_color' => '#ffffff',
             'chat_widget_bg_color' => '#ffffff',
             'chat_text_color' => '#374151',
-            'user_message_bg_color' => '#3b82f6',
-            'user_message_text_color' => '#ffffff',
+            'user_message_bg_color' => '#3b82f6', // Added explicit setting
+            'user_message_text_color' => '#ffffff', // Added explicit setting
             'ai_message_bg_color' => '#e5e7eb',
             'ai_message_text_color' => '#374151',
             'chat_input_bg_color' => '#f9fafb',
             'chat_input_text_color' => '#1f2937',
-            'chat_send_button_color' => '#3b82f6',
+            'chat_send_button_color' => '#3b82f6', // Added explicit setting
             'font_size' => 14,
             'border_radius' => 8,
             'widget_width' => 350,
@@ -1752,11 +2123,3 @@ class SNN_AI_Chat {
 }
 
 new SNN_AI_Chat();
-
-
-
-
-
-
-
-// Fully Code Keep Rest Same
