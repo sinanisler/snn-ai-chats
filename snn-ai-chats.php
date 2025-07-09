@@ -3,11 +3,12 @@
  * Plugin Name: SNN AI CHAT
  * Plugin URI: https://sinanisler.com
  * Description: Advanced AI Chat Plugin with OpenRouter and OpenAI support
- * Version: 0.2.2
+ * Version: 0.2.3
  * Author: sinanisler
  * Author URI: https://sinanisler.com
  * License: GPL v3
  */
+// Fully Code Keep Rest Same
 
 if (!defined('ABSPATH')) { exit; }
 
@@ -551,9 +552,8 @@ class SNN_AI_Chat {
                     ?>
                     <div class="bg-white p-6 rounded-lg shadow chat-card" id="snn-chat-card-<?php echo esc_attr($chat->ID); ?>">
                         <h3 class="text-lg font-semibold mb-2 text-gray-800"><?php echo esc_html($chat->post_title); ?></h3>
-                        <p class="text-gray-600 mb-4">Model: <?php echo esc_html(!empty($chat_settings['model']) ? $chat_settings['model'] : 'Global Default'); ?></p>
                         
-                        <div class="flex justify-between items-center">
+                        <div class="flex justify-between items-center mt-4">
                             <div class="text-sm text-gray-500">
                                 <?php echo $this->get_chat_stats($chat->ID); ?>
                             </div>
@@ -586,10 +586,6 @@ class SNN_AI_Chat {
         $chat_settings = wp_parse_args(is_array($chat_settings_raw) ? $chat_settings_raw : [], $defaults);
         
         $global_settings = $this->get_settings();
-        $default_model_for_display = $chat_settings['model'];
-        if (empty($default_model_for_display)) {
-            $default_model_for_display = $global_settings['openrouter_model'] ?? $global_settings['openai_model'] ?? '';
-        }
         ?>
         <div class="wrap">
             <h1><?php echo esc_html($chat_id > 0 ? 'Edit Chat' : 'Create New Chat'); ?></h1>
@@ -611,17 +607,6 @@ class SNN_AI_Chat {
                             </div>
                             
                             
-                            <div class="mb-4">
-                                <label for="model" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Select the AI model for this chat. Leave blank to use the global default.">
-                                    Model
-                                </label>
-                                <input type="text" id="model" name="model" value="<?php echo esc_attr($chat_settings['model']); ?>" list="chat_models" class="w-full p-2 border border-gray-300 rounded-md model-input focus:ring-blue-500 focus:border-blue-500">
-                                <datalist id="chat_models"></datalist>
-                            </div>
-                            <div class="model-details text-gray-600 text-sm mb-4" id="chat-model-details">
-                                
-                            </div>
-
                             <div class="mb-4">
                                 <label for="initial_message" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="The first message users will see when they start this chat">
                                     Initial Message
@@ -1185,7 +1170,7 @@ class SNN_AI_Chat {
         $api_settings = $this->get_settings();
         
         $api_provider = (string)($api_settings['api_provider'] ?? 'openrouter');
-        $model = !empty($chat_settings['model']) ? (string)$chat_settings['model'] : (($api_provider === 'openai') ? (string)($api_settings['openai_model'] ?? '') : (string)($api_settings['openrouter_model'] ?? ''));
+        $model = ($api_provider === 'openai') ? (string)($api_settings['openai_model'] ?? '') : (string)($api_settings['openrouter_model'] ?? '');
         $api_key = ($api_provider === 'openai') ? (string)($api_settings['openai_api_key'] ?? '') : (string)($api_settings['openrouter_api_key'] ?? '');
 
         if (empty($api_key)) {
@@ -1258,10 +1243,10 @@ class SNN_AI_Chat {
         $session_id = 'snn_' . time() . '_' . bin2hex(random_bytes(8));
         ?>
         <div class="snn-ai-chat-widget" id="snn-chat-<?php echo esc_attr($chat->ID); ?>"
-            data-chat-id="<?php echo esc_attr($chat->ID); ?>"
-            data-session-id="<?php echo esc_attr($session_id); ?>"
-            data-initial-message="<?php echo esc_attr($settings['initial_message']); ?>"
-            data-collect-user-info="<?php echo esc_attr((int)$settings['collect_user_info']); ?>">
+             data-chat-id="<?php echo esc_attr($chat->ID); ?>"
+             data-session-id="<?php echo esc_attr($session_id); ?>"
+             data-initial-message="<?php echo esc_attr($settings['initial_message']); ?>"
+             data-collect-user-info="<?php echo esc_attr((int)$settings['collect_user_info']); ?>">
             <div class="snn-chat-toggle" id="snn-chat-toggle-<?php echo esc_attr($chat->ID); ?>">
                 <span class="dashicons dashicons-format-chat"></span>
             </div>
@@ -1449,7 +1434,6 @@ class SNN_AI_Chat {
     
     private function get_default_chat_settings() {
         return array(
-            'model' => '',
             'initial_message' => 'Hello! How can I help you today?',
             'system_prompt' => 'You are a helpful assistant.',
             'keep_conversation_history' => 1,
@@ -1768,3 +1752,11 @@ class SNN_AI_Chat {
 }
 
 new SNN_AI_Chat();
+
+
+
+
+
+
+
+// Fully Code Keep Rest Same
