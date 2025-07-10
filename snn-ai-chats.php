@@ -1728,9 +1728,9 @@ class SNN_AI_Chat {
         return get_option('snn_ai_chat_settings', array(
             'api_provider' => 'openrouter',
             'openrouter_api_key' => '',
-            'openrouter_model' => 'openai/gpt-4o-mini',
+            'openrouter_model' => 'openai/gpt-4.1-mini',
             'openai_api_key' => '',
-            'openai_model' => 'gpt-4o-mini',
+            'openai_model' => 'gpt-4.1-mini',
             'default_system_prompt' => 'You are a helpful assistant.',
             'default_initial_message' => 'Hello! How can I help you today?',
             'temperature' => 0.7,
@@ -2123,3 +2123,6 @@ class SNN_AI_Chat {
 }
 
 new SNN_AI_Chat();
+
+
+// Fully Code Keep Rest Same
