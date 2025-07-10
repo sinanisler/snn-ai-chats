@@ -34,6 +34,7 @@ class SNN_AI_Chat {
         add_action('wp_enqueue_scripts', array($this, 'frontend_enqueue_scripts'));
         add_action('wp_ajax_snn_ai_chat_api', array($this, 'handle_chat_api'));
         add_action('wp_ajax_nopriv_snn_ai_chat_api', array($this, 'handle_chat_api'));
+        // Changed visibility of get_models and get_model_details to public for AJAX calls
         add_action('wp_ajax_snn_get_models', array($this, 'get_models'));
         add_action('wp_action_snn_get_model_details', array($this, 'get_model_details'));
         add_action('wp_ajax_snn_get_model_details', array($this, 'get_model_details'));
@@ -71,8 +72,8 @@ class SNN_AI_Chat {
     }
 
     public function handle_delete_actions() {
-        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-history') {           return;        }
-        if (!current_user_can('manage_options')) {           return;          }
+        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-history') {            return;         }
+        if (!current_user_can('manage_options')) {            return;           }
         global $wpdb;
         if (isset($_POST['action']) && $_POST['action'] === 'delete_session') {
             if (!isset($_POST['snn_delete_session_nonce']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_delete_session_nonce'] ?? '')), 'snn_delete_session')) {
@@ -554,6 +555,153 @@ class SNN_AI_Chat {
                 </div>
             </form>
         </div>
+        <script>
+            jQuery(document).ready(function($) {
+                // Function to fetch and display model details
+                function fetchAndDisplayModelDetails(provider, model, apiKey) {
+                    if (!model || !apiKey) {
+                        $('#' + provider + '-model-details').html('<p class="text-red-500">Please provide an API Key and select a model to see details.</p>');
+                        return;
+                    }
+
+                    $('#' + provider + '-model-details').html('<p class="text-blue-500">Loading model details...</p>');
+
+                    $.ajax({
+                        url: snn_ai_chat_ajax.ajax_url,
+                        type: 'POST',
+                        data: {
+                            action: 'snn_get_model_details',
+                            nonce: snn_ai_chat_ajax.nonce,
+                            provider: provider,
+                            model: model,
+                            api_key: apiKey
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                let details = response.data;
+                                let output = '';
+                                if (details) {
+                                    output += '<p><strong>ID:</strong> ' + details.id + '</p>';
+                                    if (details.context_window) {
+                                        output += '<p><strong>Context Window:</strong> ' + details.context_window + ' tokens</p>';
+                                    }
+                                    if (details.pricing && details.pricing.prompt && details.pricing.completion) {
+                                        output += '<p><strong>Pricing:</strong> Input: $' + details.pricing.prompt + '/1M tokens, Output: $' + details.pricing.completion + '/1M tokens</p>';
+                                    } else if (details.price) { // For OpenAI, price might be directly available or inferred
+                                        output += '<p><strong>Pricing:</strong> Varies by usage. Check OpenAI API docs.</p>';
+                                    }
+                                    if (details.owned_by) {
+                                        output += '<p><strong>Owned By:</strong> ' + details.owned_by + '</p>';
+                                    }
+                                    if (details.description) {
+                                        output += '<p><strong>Description:</strong> ' + details.description + '</p>';
+                                    }
+                                } else {
+                                    output = '<p class="text-red-500">Model details not found or API error.</p>';
+                                }
+                                $('#' + provider + '-model-details').html(output);
+                            } else {
+                                $('#' + provider + '-model-details').html('<p class="text-red-500">Error: ' + (response.data || 'Could not fetch model details.') + '</p>');
+                            }
+                        },
+                        error: function(jqXHR, textStatus, errorThrown) {
+                            console.error("AJAX error fetching model details:", textStatus, errorThrown);
+                            $('#' + provider + '-model-details').html('<p class="text-red-500">Failed to fetch model details. Network error or invalid API key.</p>');
+                        }
+                    });
+                }
+
+                // Function to fetch models for datalist
+                function fetchModelsForDatalist(provider, apiKey) {
+                    if (!apiKey) {
+                        $('#' + provider + '_models').empty();
+                        return;
+                    }
+
+                    $.ajax({
+                        url: snn_ai_chat_ajax.ajax_url,
+                        type: 'POST',
+                        data: {
+                            action: 'snn_get_models',
+                            nonce: snn_ai_chat_ajax.nonce,
+                            provider: provider,
+                            api_key: apiKey
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                let datalist = $('#' + provider + '_models');
+                                datalist.empty();
+                                response.data.forEach(function(model) {
+                                    datalist.append('<option value="' + model.id + '">');
+                                });
+                            } else {
+                                console.error('Error fetching models:', response.data);
+                            }
+                        },
+                        error: function(jqXHR, textStatus, errorThrown) {
+                            console.error("AJAX error fetching models:", textStatus, errorThrown);
+                        }
+                    });
+                }
+
+                // Initial load: Fetch models and details for the currently selected provider
+                const initialProvider = snn_ai_chat_ajax.global_api_provider;
+                if (initialProvider === 'openrouter') {
+                    fetchModelsForDatalist('openrouter', snn_ai_chat_ajax.global_openrouter_api_key);
+                    fetchAndDisplayModelDetails('openrouter', snn_ai_chat_ajax.global_openrouter_model, snn_ai_chat_ajax.global_openrouter_api_key);
+                } else if (initialProvider === 'openai') {
+                    fetchModelsForDatalist('openai', snn_ai_chat_ajax.global_openai_api_key);
+                    fetchAndDisplayModelDetails('openai', snn_ai_chat_ajax.global_openai_model, snn_ai_chat_ajax.global_openai_api_key);
+                }
+
+                // Event listeners for API provider radio buttons
+                $('input[name="api_provider"]').on('change', function() {
+                    const selectedProvider = $(this).val();
+                    $('.api-settings').addClass('hidden');
+                    $('#snn-' + selectedProvider + '-settings').removeClass('hidden');
+
+                    // Fetch models and details for the newly selected provider
+                    if (selectedProvider === 'openrouter') {
+                        const apiKey = $('#openrouter_api_key').val();
+                        const model = $('#openrouter_model').val();
+                        fetchModelsForDatalist('openrouter', apiKey);
+                        fetchAndDisplayModelDetails('openrouter', model, apiKey);
+                    } else if (selectedProvider === 'openai') {
+                        const apiKey = $('#openai_api_key').val();
+                        const model = $('#openai_model').val();
+                        fetchModelsForDatalist('openai', apiKey);
+                        fetchAndDisplayModelDetails('openai', model, apiKey);
+                    }
+                });
+
+                // Event listeners for API key and model input changes
+                $('#openrouter_api_key').on('input', function() {
+                    const apiKey = $(this).val();
+                    const model = $('#openrouter_model').val();
+                    fetchModelsForDatalist('openrouter', apiKey);
+                    fetchAndDisplayModelDetails('openrouter', model, apiKey);
+                });
+
+                $('#openrouter_model').on('change', function() {
+                    const model = $(this).val();
+                    const apiKey = $('#openrouter_api_key').val();
+                    fetchAndDisplayModelDetails('openrouter', model, apiKey);
+                });
+
+                $('#openai_api_key').on('input', function() {
+                    const apiKey = $(this).val();
+                    const model = $('#openai_model').val();
+                    fetchModelsForDatalist('openai', apiKey);
+                    fetchAndDisplayModelDetails('openai', model, apiKey);
+                });
+
+                $('#openai_model').on('change', function() {
+                    const model = $(this).val();
+                    const apiKey = $('#openai_api_key').val();
+                    fetchAndDisplayModelDetails('openai', model, apiKey);
+                });
+            });
+        </script>
         <?php
     }
 
@@ -1295,6 +1443,7 @@ class SNN_AI_Chat {
         exit;
     }
     
+    // Changed visibility to public
     public function get_models() {
         check_ajax_referer('snn_ai_chat_nonce', 'nonce');
         
@@ -1316,6 +1465,7 @@ class SNN_AI_Chat {
         wp_send_json_success($models);
     }
 
+    // Changed visibility to public
     public function get_model_details() {
         check_ajax_referer('snn_ai_chat_nonce', 'nonce');
         
@@ -1398,7 +1548,7 @@ class SNN_AI_Chat {
              $conversation_history[] = array(
                  'role' => 'system',
                  'content' => (string)$chat_settings['system_prompt']
-             );
+               );
         }
 
         if (!empty($chat_settings['keep_conversation_history'])) {
@@ -1523,7 +1673,7 @@ class SNN_AI_Chat {
                 
                 <div class="snn-chat-input-container" id="snn-chat-input-container-<?php echo esc_attr($chat->ID); ?>">
                     <input type="text" class="snn-chat-input" id="snn-chat-input-<?php echo esc_attr($chat->ID); ?>" placeholder="Type your message..." <?php echo !empty($settings['collect_user_info']) ? 'disabled' : ''; ?>>
-                    <button class="snn-chat-send" id="snn-chat-send-<?php echo esc_attr($chat->ID); ?>" <?php echo !empty($settings['collect_user_info']) ? 'disabled' : ''; ?>>
+                    <button class="snn-chat-send" id="snn-chat-send-<?php echo !empty($settings['collect_user_info']) ? 'disabled' : ''; ?>">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                            <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1580,7 +1730,6 @@ class SNN_AI_Chat {
             const userInfoForm = widget.find('#snn-user-info-form-' + chatId);
             const chatInput = widget.find('#snn-chat-input-' + chatId);
             const chatSend = widget.find('#snn-chat-send-' + chatId);
-            const startChatBtn = widget.find('#snn-start-chat-btn-' + chatId);
 
             const localStorageKey = 'snn_chat_session_' + chatId;
 
@@ -1702,11 +1851,11 @@ class SNN_AI_Chat {
                     const userName = widget.find('#snn-user-name-' + chatId).val();
                     const userEmail = widget.find('#snn-user-email-' + chatId).val();
                     if (userName && userEmail) {
-                         widget.data('user-name', userName);
-                         widget.data('user-email', userEmail);
-                         // The original script will add the initial message, which the observer will catch.
-                         // But let's save the user info right away.
-                         setTimeout(saveSession, 50);
+                        widget.data('user-name', userName);
+                        widget.data('user-email', userEmail);
+                        // The original script will add the initial message, which the observer will catch.
+                        // But let's save the user info right away.
+                        setTimeout(saveSession, 50);
                     }
                 });
             }
