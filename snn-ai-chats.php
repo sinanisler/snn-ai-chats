@@ -3,7 +3,7 @@
  * Plugin Name: SNN AI CHAT
  * Plugin URI: https://sinanisler.com
  * Description: Advanced AI Chat Plugin with OpenRouter and OpenAI support
- * Version: 0.2.3
+ * Version: 0.2.5
  * Author: sinanisler
  * Author URI: https://sinanisler.com
  * License: GPL v3
@@ -12,7 +12,7 @@
 
 if (!defined('ABSPATH')) { exit; }
 
-define('SNN_AI_CHAT_VERSION', '1.0.5');
+define('SNN_AI_CHAT_VERSION', '1.0.7');
 define('SNN_AI_CHAT_PLUGIN_DIR', plugin_dir_path((string)__FILE__));
 define('SNN_AI_CHAT_PLUGIN_URL', plugin_dir_url((string)__FILE__));
 
@@ -1067,11 +1067,11 @@ class SNN_AI_Chat {
                             <div class="snn-chat-message-detail <?php echo !empty($msg->message) ? 'snn-user-message-detail' : 'snn-ai-message-detail'; ?> p-3 rounded-lg shadow-sm" id="snn-session-message-<?php echo esc_attr($index); ?>">
                                 <?php if (!empty($msg->message)) : ?>
                                     <p class="font-semibold text-blue-700">You:</p>
-                                    <p class="text-gray-800"><?php echo esc_html($msg->message); ?></p>
+                                    <p class="text-gray-800"><?php echo nl2br(esc_html($msg->message)); ?></p>
                                 <?php endif; ?>
                                 <?php if (!empty($msg->response)) : ?>
                                     <p class="font-semibold text-green-700 mt-2">AI:</p>
-                                    <p class="text-gray-800"><?php echo esc_html($msg->response); ?></p>
+                                    <div class="text-gray-800"><?php echo nl2br(esc_html($msg->response)); ?></div>
                                 <?php endif; ?>
                                 <p class="text-xs text-gray-500 mt-1">Tokens: <?php echo esc_html($msg->tokens_used); ?> | Time: <?php echo esc_html(date('H:i:s', strtotime($msg->created_at))); ?></p>
                             </div>
@@ -1375,7 +1375,7 @@ class SNN_AI_Chat {
              $conversation_history[] = array(
                  'role' => 'system',
                  'content' => (string)$chat_settings['system_prompt']
-               );
+             );
         }
 
         if (!empty($chat_settings['keep_conversation_history'])) {
@@ -1441,28 +1441,28 @@ class SNN_AI_Chat {
              data-initial-message="<?php echo esc_attr($settings['initial_message']); ?>"
              data-collect-user-info="<?php echo esc_attr((int)$settings['collect_user_info']); ?>"
              style="
-                --snn-primary-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>;
-                --snn-primary-color-hover: <?php echo esc_attr($this->adjust_brightness((string)($settings['primary_color'] ?? '#3b82f6'), -20)); ?>;
-                --snn-secondary-color: <?php echo esc_attr((string)($settings['secondary_color'] ?? '#e5e7eb')); ?>;
-                --snn-text-color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>;
-                --snn-chat-widget-bg-color: <?php echo esc_attr((string)($settings['chat_widget_bg_color'] ?? '#ffffff')); ?>;
-                --snn-chat-text-color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>;
-                --snn-user-message-bg-color: <?php echo esc_attr((string)($settings['user_message_bg_color'] ?? '#3b82f6')); ?>;
-                --snn-user-message-text-color: <?php echo esc_attr((string)($settings['user_message_text_color'] ?? '#ffffff')); ?>;
-                --snn-ai-message-bg-color: <?php echo esc_attr((string)($settings['ai_message_bg_color'] ?? '#e5e7eb')); ?>;
-                --snn-ai-message-text-color: <?php echo esc_attr((string)($settings['ai_message_text_color'] ?? '#374151')); ?>;
-                --snn-chat-input-bg-color: <?php echo esc_attr((string)($settings['chat_input_bg_color'] ?? '#f9fafb')); ?>;
-                --snn-chat-input-text-color: <?php echo esc_attr((string)($settings['chat_input_text_color'] ?? '#1f2937')); ?>;
-                --snn-chat-send-button-color: <?php echo esc_attr((string)($settings['chat_send_button_color'] ?? '#3b82f6')); ?>;
-                --snn-font-size: <?php echo esc_attr((string)($settings['font_size'] ?? 14)); ?>px;
-                --snn-border-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px;
-                --snn-widget-width: <?php echo esc_attr((string)($settings['widget_width'] ?? 350)); ?>px;
-                --snn-widget-height: <?php echo esc_attr((string)($settings['widget_height'] ?? 500)); ?>px;
-                --snn-input-border-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_bg_color'] ?? '#f9fafb'), -10)); ?>;
-                --snn-widget-border-top-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_widget_bg_color'] ?? '#ffffff'), -10)); ?>;
-                --snn-placeholder-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>;
-                <?php switch ((string)($settings['chat_position'] ?? 'bottom-right')) { case 'bottom-right': echo 'bottom: 20px; right: 20px;'; break; case 'bottom-left': echo 'bottom: 20px; left: 20px;'; break; case 'top-right': echo 'top: 20px; right: 20px;'; break; case 'top-left': echo 'top: 20px; left: 20px;'; break; } ?>
-             ">
+                 --snn-primary-color: <?php echo esc_attr((string)($settings['primary_color'] ?? '#3b82f6')); ?>;
+                 --snn-primary-color-hover: <?php echo esc_attr($this->adjust_brightness((string)($settings['primary_color'] ?? '#3b82f6'), -20)); ?>;
+                 --snn-secondary-color: <?php echo esc_attr((string)($settings['secondary_color'] ?? '#e5e7eb')); ?>;
+                 --snn-text-color: <?php echo esc_attr((string)($settings['text_color'] ?? '#ffffff')); ?>;
+                 --snn-chat-widget-bg-color: <?php echo esc_attr((string)($settings['chat_widget_bg_color'] ?? '#ffffff')); ?>;
+                 --snn-chat-text-color: <?php echo esc_attr((string)($settings['chat_text_color'] ?? '#374151')); ?>;
+                 --snn-user-message-bg-color: <?php echo esc_attr((string)($settings['user_message_bg_color'] ?? '#3b82f6')); ?>;
+                 --snn-user-message-text-color: <?php echo esc_attr((string)($settings['user_message_text_color'] ?? '#ffffff')); ?>;
+                 --snn-ai-message-bg-color: <?php echo esc_attr((string)($settings['ai_message_bg_color'] ?? '#e5e7eb')); ?>;
+                 --snn-ai-message-text-color: <?php echo esc_attr((string)($settings['ai_message_text_color'] ?? '#374151')); ?>;
+                 --snn-chat-input-bg-color: <?php echo esc_attr((string)($settings['chat_input_bg_color'] ?? '#f9fafb')); ?>;
+                 --snn-chat-input-text-color: <?php echo esc_attr((string)($settings['chat_input_text_color'] ?? '#1f2937')); ?>;
+                 --snn-chat-send-button-color: <?php echo esc_attr((string)($settings['chat_send_button_color'] ?? '#3b82f6')); ?>;
+                 --snn-font-size: <?php echo esc_attr((string)($settings['font_size'] ?? 14)); ?>px;
+                 --snn-border-radius: <?php echo esc_attr((string)($settings['border_radius'] ?? 8)); ?>px;
+                 --snn-widget-width: <?php echo esc_attr((string)($settings['widget_width'] ?? 350)); ?>px;
+                 --snn-widget-height: <?php echo esc_attr((string)($settings['widget_height'] ?? 500)); ?>px;
+                 --snn-input-border-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_bg_color'] ?? '#f9fafb'), -10)); ?>;
+                 --snn-widget-border-top-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_widget_bg_color'] ?? '#ffffff'), -10)); ?>;
+                 --snn-placeholder-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>;
+                 <?php switch ((string)($settings['chat_position'] ?? 'bottom-right')) { case 'bottom-right': echo 'bottom: 20px; right: 20px;'; break; case 'bottom-left': echo 'bottom: 20px; left: 20px;'; break; case 'top-right': echo 'top: 20px; right: 20px;'; break; case 'top-left': echo 'top: 20px; left: 20px;'; break; } ?>
+               ">
             <div class="snn-chat-toggle" id="snn-chat-toggle-<?php echo esc_attr($chat->ID); ?>">
                 <span class="dashicons dashicons-format-chat"></span>
             </div>
@@ -1470,11 +1470,16 @@ class SNN_AI_Chat {
             <div class="snn-chat-container" id="snn-chat-container-<?php echo esc_attr($chat->ID); ?>" style="display: none;">
                 <div class="snn-chat-header" id="snn-chat-header-<?php echo esc_attr($chat->ID); ?>">
                     <h3><?php echo esc_html($chat->post_title); ?></h3>
-                    <button class="snn-chat-close" id="snn-chat-close-<?php echo esc_attr($chat->ID); ?>">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </button>
+                    <div class="snn-header-controls">
+                        <button class="snn-new-chat" id="snn-new-chat-<?php echo esc_attr($chat->ID); ?>" title="New Chat">
+                            <span class="dashicons dashicons-plus-alt"></span>
+                        </button>
+                        <button class="snn-chat-close" id="snn-chat-close-<?php echo esc_attr($chat->ID); ?>">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="snn-chat-messages" id="snn-chat-messages-<?php echo esc_attr($chat->ID); ?>">
@@ -1544,6 +1549,9 @@ class SNN_AI_Chat {
                 display: flex;
                 flex-direction: column;
                 overflow: hidden;
+                position: absolute;
+                bottom: 0;
+                right: 0;
             }
             .snn-ai-chat-widget .snn-chat-header {
                 background-color: var(--snn-primary-color);
@@ -1554,6 +1562,32 @@ class SNN_AI_Chat {
                 align-items: center;
                 border-top-left-radius: var(--snn-border-radius);
                 border-top-right-radius: var(--snn-border-radius);
+            }
+            .snn-ai-chat-widget .snn-header-controls {
+                display: flex;
+                align-items: center;
+            }
+            .snn-ai-chat-widget .snn-new-chat {
+                background: none;
+                border: none;
+                color: var(--snn-text-color);
+                cursor: pointer;
+                padding: 0.25rem;
+                margin-right: 0.5rem;
+                border-radius: 0.25rem;
+                transition: background-color 0.3s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .snn-ai-chat-widget .snn-new-chat:hover {
+                 background-color: rgba(255, 255, 255, 0.2);
+            }
+            .snn-ai-chat-widget .snn-new-chat .dashicons {
+                font-size: 20px;
+                width: 20px;
+                height: 20px;
+                line-height: 1;
             }
             .snn-ai-chat-widget .snn-chat-header h3 {
                 margin: 0;
@@ -1596,6 +1630,7 @@ class SNN_AI_Chat {
                 padding: 0.75rem 1rem;
                 border-radius: 0.75rem;
                 word-wrap: break-word;
+                line-height: 1.5;
             }
             .snn-ai-chat-widget .snn-chat-message.snn-user-message .snn-message-content {
                 background-color: var(--snn-user-message-bg-color);
@@ -1677,12 +1712,6 @@ class SNN_AI_Chat {
                 cursor: not-allowed;
             }
             @media (max-width: 768px) {
-                .snn-ai-chat-widget {
-                    bottom: 10px;
-                    right: 10px;
-                    left: auto;
-                    top: auto;
-                }
                 .snn-ai-chat-widget .snn-chat-container {
                     width: calc(100vw - 20px);
                     height: calc(100vh - 100px);
@@ -1691,6 +1720,173 @@ class SNN_AI_Chat {
                 }
             }
         </style>
+        <script>
+        jQuery(document).ready(function($) {
+            const widget = $('#snn-chat-<?php echo esc_attr($chat->ID); ?>');
+            if (!widget.length) return;
+
+            const chatId = widget.data('chat-id');
+            const messagesContainer = widget.find('.snn-chat-messages');
+            const newChatBtn = widget.find('.snn-new-chat');
+            const initialMessage = <?php echo json_encode($settings['initial_message']); ?>;
+            const collectUserInfo = <?php echo json_encode((bool)$settings['collect_user_info']); ?>;
+            const userInfoForm = widget.find('#snn-user-info-form-' + chatId);
+            const chatInput = widget.find('#snn-chat-input-' + chatId);
+            const chatSend = widget.find('#snn-chat-send-' + chatId);
+            const startChatBtn = widget.find('#snn-start-chat-btn-' + chatId);
+
+            const localStorageKey = 'snn_chat_session_' + chatId;
+
+            function saveSession() {
+                const sessionId = widget.data('session-id');
+                const messages = [];
+                messagesContainer.find('.snn-chat-message').each(function() {
+                    const messageEl = $(this);
+                    let content = messageEl.find('.snn-message-content').html();
+                    let type = messageEl.hasClass('snn-user-message') ? 'user' : 'ai';
+                    messages.push({ type: type, content: content, id: messageEl.attr('id') });
+                });
+
+                const userInfo = {
+                    name: widget.data('user-name') || '',
+                    email: widget.data('user-email') || ''
+                };
+
+                const now = new Date();
+                // Set expiry to 30 days from now
+                const expiry = now.getTime() + (30 * 24 * 60 * 60 * 1000);
+
+                const sessionData = {
+                    sessionId: sessionId,
+                    messages: messages,
+                    userInfo: userInfo,
+                    expiry: expiry
+                };
+
+                try {
+                    localStorage.setItem(localStorageKey, JSON.stringify(sessionData));
+                } catch (e) {
+                    console.error("SNN AI Chat: Could not save session to localStorage.", e);
+                }
+            }
+
+            function loadSession() {
+                try {
+                    const savedSession = localStorage.getItem(localStorageKey);
+                    if (savedSession) {
+                        const data = JSON.parse(savedSession);
+                        const now = new Date();
+
+                        // Check if the item has expired
+                        if (now.getTime() > data.expiry) {
+                            localStorage.removeItem(localStorageKey);
+                            startNewSession(); // Start fresh if expired
+                            return;
+                        }
+
+                        widget.data('session-id', data.sessionId);
+
+                        if (collectUserInfo && data.userInfo && data.userInfo.name) {
+                            widget.data('user-name', data.userInfo.name);
+                            widget.data('user-email', data.userInfo.email);
+                            userInfoForm.hide();
+                            chatInput.prop('disabled', false);
+                            chatSend.prop('disabled', false);
+                        }
+
+                        messagesContainer.empty();
+
+                        if (data.messages && data.messages.length > 0) {
+                             data.messages.forEach(function(msg) {
+                                const messageClass = msg.type === 'user' ? 'snn-user-message' : 'snn-ai-message';
+                                const messageIdAttr = msg.id ? 'id="' + msg.id + '"' : '';
+                                const messageHTML = `<div class="snn-chat-message ${messageClass}" ${messageIdAttr}><div class="snn-message-content">${msg.content}</div></div>`;
+                                messagesContainer.append(messageHTML);
+                            });
+                        } else {
+                            // If there are no messages, show the initial one
+                            startNewSession(false); // false to not generate new session id
+                        }
+
+                        messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
+                    } else {
+                        // If no session, start a new one
+                        startNewSession();
+                    }
+                } catch (e) {
+                    console.error("SNN AI Chat: Could not load session from localStorage.", e);
+                    localStorage.removeItem(localStorageKey);
+                }
+            }
+
+            function startNewSession(generateNewId = true) {
+                localStorage.removeItem(localStorageKey);
+                
+                if(generateNewId) {
+                    const newSessionId = 'snn_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    widget.data('session-id', newSessionId);
+                }
+
+                widget.data('user-name', '');
+                widget.data('user-email', '');
+                messagesContainer.empty();
+
+                if (collectUserInfo) {
+                    userInfoForm.show();
+                    userInfoForm.find('input').val('');
+                    chatInput.prop('disabled', true);
+                    chatSend.prop('disabled', true);
+                } else {
+                    const initialMessageHTML = `<div class="snn-chat-message snn-ai-message" id="snn-initial-ai-message-${chatId}"><div class="snn-message-content">${initialMessage}</div></div>`;
+                    messagesContainer.append(initialMessageHTML);
+                    chatInput.prop('disabled', false);
+                    chatSend.prop('disabled', false);
+                }
+                // Save the new empty session immediately
+                saveSession();
+            }
+
+            newChatBtn.on('click', function() {
+                startNewSession();
+            });
+
+            if (startChatBtn.length) {
+                startChatBtn.on('click', function() {
+                    const userName = widget.find('#snn-user-name-' + chatId).val();
+                    const userEmail = widget.find('#snn-user-email-' + chatId).val();
+                    if (userName && userEmail) {
+                         widget.data('user-name', userName);
+                         widget.data('user-email', userEmail);
+                         // The original script will add the initial message, which the observer will catch.
+                         // But let's save the user info right away.
+                         setTimeout(saveSession, 50);
+                    }
+                });
+            }
+
+            if (typeof MutationObserver !== 'undefined') {
+                const observer = new MutationObserver(function(mutations) {
+                    let shouldSave = false;
+                    mutations.forEach(function(mutation) {
+                        if (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0) {
+                           shouldSave = true;
+                        }
+                    });
+                    if(shouldSave) {
+                        saveSession();
+                    }
+                });
+
+                observer.observe(messagesContainer[0], {
+                    childList: true,
+                    subtree: true
+                });
+            }
+
+            // Initial load
+            loadSession();
+        });
+        </script>
         <?php
     }
     
@@ -1728,9 +1924,9 @@ class SNN_AI_Chat {
         return get_option('snn_ai_chat_settings', array(
             'api_provider' => 'openrouter',
             'openrouter_api_key' => '',
-            'openrouter_model' => 'openai/gpt-4.1-mini',
+            'openrouter_model' => 'openai/gpt-3.5-turbo',
             'openai_api_key' => '',
-            'openai_model' => 'gpt-4.1-mini',
+            'openai_model' => 'gpt-3.5-turbo',
             'default_system_prompt' => 'You are a helpful assistant.',
             'default_initial_message' => 'Hello! How can I help you today?',
             'temperature' => 0.7,
@@ -2123,6 +2319,3 @@ class SNN_AI_Chat {
 }
 
 new SNN_AI_Chat();
-
-
-// Fully Code Keep Rest Same
