@@ -8,7 +8,6 @@
  * Author URI: https://sinanisler.com
  * License: GPL v3
  */
-// Fully Code Keep Rest Same
 
 if (!defined('ABSPATH')) { exit; }
 
@@ -840,22 +839,38 @@ class SNN_AI_Chat {
                 const chatPreviewIframe = $('#chat-preview-iframe');
                 const chatId = chatSettingsForm.find('input[name="chat_id"]').val();
 
-                function applyStyleToPreview(property, value) {
-                    if (chatPreviewIframe.length && chatPreviewIframe[0].contentWindow && chatPreviewIframe[0].contentWindow.updateChatStyle) {
-                        chatPreviewIframe[0].contentWindow.updateChatStyle(property, value, chatId);
+                function applyAllStylesToPreview() {
+                    if (!chatPreviewIframe.length || !chatPreviewIframe[0].contentWindow || !chatPreviewIframe[0].contentWindow.updateAllChatStyles) {
+                        // If the iframe or the function isn't ready, try again. This handles slow iframe loading.
+                        setTimeout(applyAllStylesToPreview, 100);
+                        return;
                     }
+
+                    const settings = {};
+                    const inputs = chatSettingsForm.find('input[type="color"], input[type="number"], input[type="text"], textarea, select, input[type="checkbox"]');
+                    
+                    inputs.each(function() {
+                        const field = $(this);
+                        const name = field.attr('name');
+                        if (name) {
+                            if (field.is(':checkbox')) {
+                                settings[name] = field.prop('checked') ? 1 : 0;
+                            } else {
+                                settings[name] = field.val();
+                            }
+                        }
+                    });
+                    
+                    chatPreviewIframe[0].contentWindow.updateAllChatStyles(settings, chatId);
                 }
 
                 // Listen for changes on all relevant input fields
-                chatSettingsForm.find('input[type="color"], input[type="number"], input[type="text"], textarea, select, input[type="checkbox"]').on('input change', function() {
-                    const fieldName = $(this).attr('name');
-                    let fieldValue = $(this).val();
+                chatSettingsForm.find('input[type="color"], input[type="number"], input[type="text"], textarea, select').on('input change', applyAllStylesToPreview);
+                chatSettingsForm.find('input[type="checkbox"]').on('change', applyAllStylesToPreview);
 
-                    if ($(this).is(':checkbox')) {
-                        fieldValue = $(this).prop('checked') ? 1 : 0;
-                    }
-
-                    applyStyleToPreview(fieldName, fieldValue);
+                // Also apply styles when the iframe has finished loading to sync it with the form's initial state.
+                chatPreviewIframe.on('load', function() {
+                    applyAllStylesToPreview();
                 });
             });
         </script>
@@ -1100,114 +1115,84 @@ class SNN_AI_Chat {
                     return '#' + rgb.map(val => ('0' + val.toString(16)).slice(-2)).join('');
                 }
 
-                window.updateChatStyle = function(property, value, targetChatId) {
+                window.updateAllChatStyles = function(settings, targetChatId) {
                     const chatWidget = document.getElementById('snn-chat-' + targetChatId);
                     if (!chatWidget) return;
 
-                    // Update CSS variables
-                    switch (property) {
-                        case 'primary_color':
-                            chatWidget.style.setProperty('--snn-primary-color', value);
-                            chatWidget.style.setProperty('--snn-primary-color-hover', adjustBrightness(value, -20));
-                            break;
-                        case 'secondary_color':
-                            chatWidget.style.setProperty('--snn-secondary-color', value);
-                            break;
-                        case 'text_color':
-                            chatWidget.style.setProperty('--snn-text-color', value);
-                            break;
-                        case 'chat_widget_bg_color':
-                            chatWidget.style.setProperty('--snn-chat-widget-bg-color', value);
-                            chatWidget.style.setProperty('--snn-widget-border-top-color', adjustBrightness(value, -10));
-                            break;
-                        case 'chat_text_color':
-                            chatWidget.style.setProperty('--snn-chat-text-color', value);
-                            break;
-                        case 'chat_input_bg_color':
-                            chatWidget.style.setProperty('--snn-chat-input-bg-color', value);
-                            chatWidget.style.setProperty('--snn-input-border-color', adjustBrightness(value, -10));
-                            break;
-                        case 'chat_input_text_color':
-                            chatWidget.style.setProperty('--snn-chat-input-text-color', value);
-                            chatWidget.style.setProperty('--snn-placeholder-color', adjustBrightness(value, 50));
-                            break;
-                        case 'chat_send_button_color':
-                            chatWidget.style.setProperty('--snn-chat-send-button-color', value);
-                            break;
-                        case 'user_message_bg_color':
-                            chatWidget.style.setProperty('--snn-user-message-bg-color', value);
-                            break;
-                        case 'user_message_text_color':
-                            chatWidget.style.setProperty('--snn-user-message-text-color', value);
-                            break;
-                        case 'ai_message_bg_color':
-                            chatWidget.style.setProperty('--snn-ai-message-bg-color', value);
-                            break;
-                        case 'ai_message_text_color':
-                            chatWidget.style.setProperty('--snn-ai-message-text-color', value);
-                            break;
-                        case 'font_size':
-                            chatWidget.style.setProperty('--snn-font-size', value + 'px');
-                            break;
-                        case 'border_radius':
-                            chatWidget.style.setProperty('--snn-border-radius', value + 'px');
-                            break;
-                        case 'widget_width':
-                            chatWidget.style.setProperty('--snn-widget-width', value + 'px');
-                            break;
-                        case 'widget_height':
-                            chatWidget.style.setProperty('--snn-widget-height', value + 'px');
-                            break;
-                        case 'chat_position':
-                            // Reset position properties before applying new one
-                            chatWidget.style.removeProperty('bottom');
-                            chatWidget.style.removeProperty('right');
-                            chatWidget.style.removeProperty('left');
-                            chatWidget.style.removeProperty('top');
-                            switch (value) {
-                                case 'bottom-right':
-                                    chatWidget.style.bottom = '20px';
-                                    chatWidget.style.right = '20px';
-                                    break;
-                                case 'bottom-left':
-                                    chatWidget.style.bottom = '20px';
-                                    chatWidget.style.left = '20px';
-                                    break;
-                                case 'top-right':
-                                    chatWidget.style.top = '20px';
-                                    chatWidget.style.right = '20px';
-                                    break;
-                                case 'top-left':
-                                    chatWidget.style.top = '20px';
-                                    chatWidget.style.left = '20px';
-                                    break;
-                            }
-                            break;
-                        case 'initial_message':
-                            const initialAiMessageContent = chatWidget.querySelector('#snn-initial-ai-message-' + targetChatId + ' .snn-message-content');
-                            if (initialAiMessageContent) {
-                                initialAiMessageContent.textContent = value;
-                            }
-                            break;
-                        case 'collect_user_info':
-                            const userInfoFormDiv = chatWidget.querySelector('#snn-user-info-form-' + targetChatId);
-                            const initialAiMessageDiv = chatWidget.querySelector('#snn-initial-ai-message-' + targetChatId);
-                            const chatInputEl = chatWidget.querySelector('#snn-chat-input-' + targetChatId);
-                            const chatSendEl = chatWidget.querySelector('#snn-chat-send-' + targetChatId);
+                    const getSetting = (key, defaultValue) => settings[key] !== undefined && settings[key] !== '' ? settings[key] : defaultValue;
 
-                            if (value == 1) { // Collect user info is checked
-                                if (userInfoFormDiv) userInfoFormDiv.style.display = 'block';
-                                if (initialAiMessageDiv) initialAiMessageDiv.style.display = 'none';
-                                if (chatInputEl) chatInputEl.disabled = true;
-                                if (chatSendEl) chatSendEl.disabled = true;
-                            } else { // Collect user info is unchecked
-                                if (userInfoFormDiv) userInfoFormDiv.style.display = 'none';
-                                if (initialAiMessageDiv) initialAiMessageDiv.style.display = 'flex'; // Assuming it's a flex item
-                                if (chatInputEl) chatInputEl.disabled = false;
-                                if (chatSendEl) chatSendEl.disabled = false;
+                    // --- Apply all styles from the settings object ---
+                    const primaryColor = getSetting('primary_color', '#3b82f6');
+                    chatWidget.style.setProperty('--snn-primary-color', primaryColor);
+                    chatWidget.style.setProperty('--snn-primary-color-hover', adjustBrightness(primaryColor, -20));
+                    
+                    chatWidget.style.setProperty('--snn-secondary-color', getSetting('secondary_color', '#e5e7eb'));
+                    chatWidget.style.setProperty('--snn-text-color', getSetting('text_color', '#ffffff'));
+
+                    const widgetBgColor = getSetting('chat_widget_bg_color', '#ffffff');
+                    chatWidget.style.setProperty('--snn-chat-widget-bg-color', widgetBgColor);
+                    chatWidget.style.setProperty('--snn-widget-border-top-color', adjustBrightness(widgetBgColor, -10));
+
+                    chatWidget.style.setProperty('--snn-chat-text-color', getSetting('chat_text_color', '#374151'));
+
+                    const inputBgColor = getSetting('chat_input_bg_color', '#f9fafb');
+                    chatWidget.style.setProperty('--snn-chat-input-bg-color', inputBgColor);
+                    chatWidget.style.setProperty('--snn-input-border-color', adjustBrightness(inputBgColor, -10));
+
+                    const inputTextColor = getSetting('chat_input_text_color', '#1f2937');
+                    chatWidget.style.setProperty('--snn-chat-input-text-color', inputTextColor);
+                    chatWidget.style.setProperty('--snn-placeholder-color', adjustBrightness(inputTextColor, 50));
+
+                    chatWidget.style.setProperty('--snn-chat-send-button-color', getSetting('chat_send_button_color', '#3b82f6'));
+                    chatWidget.style.setProperty('--snn-user-message-bg-color', getSetting('user_message_bg_color', '#3b82f6'));
+                    chatWidget.style.setProperty('--snn-user-message-text-color', getSetting('user_message_text_color', '#ffffff'));
+                    chatWidget.style.setProperty('--snn-ai-message-bg-color', getSetting('ai_message_bg_color', '#e5e7eb'));
+                    chatWidget.style.setProperty('--snn-ai-message-text-color', getSetting('ai_message_text_color', '#374151'));
+
+                    chatWidget.style.setProperty('--snn-font-size', getSetting('font_size', 14) + 'px');
+                    chatWidget.style.setProperty('--snn-border-radius', getSetting('border_radius', 8) + 'px');
+                    chatWidget.style.setProperty('--snn-widget-width', getSetting('widget_width', 350) + 'px');
+                    chatWidget.style.setProperty('--snn-widget-height', getSetting('widget_height', 500) + 'px');
+
+                    // --- Apply functional changes ---
+                    const position = getSetting('chat_position', 'bottom-right');
+                    chatWidget.style.removeProperty('bottom');
+                    chatWidget.style.removeProperty('right');
+                    chatWidget.style.removeProperty('left');
+                    chatWidget.style.removeProperty('top');
+                    const posParts = position.split('-');
+                    if (posParts.length === 2) {
+                        chatWidget.style[posParts[0]] = '20px';
+                        chatWidget.style[posParts[1]] = '20px';
+                    }
+
+                    const initialMessage = getSetting('initial_message', 'Hello! How can I help you today?');
+                    const initialAiMessageContent = chatWidget.querySelector('#snn-initial-ai-message-' + targetChatId + ' .snn-message-content');
+                    if (initialAiMessageContent) {
+                        initialAiMessageContent.textContent = initialMessage;
+                    }
+
+                    const collectUserInfo = getSetting('collect_user_info', 0);
+                    const userInfoFormDiv = chatWidget.querySelector('#snn-user-info-form-' + targetChatId);
+                    const initialAiMessageDiv = chatWidget.querySelector('#snn-initial-ai-message-' + targetChatId);
+                    const chatInputEl = chatWidget.querySelector('#snn-chat-input-' + targetChatId);
+                    const chatSendEl = chatWidget.querySelector('#snn-chat-send-' + targetChatId);
+
+                    if (userInfoFormDiv && initialAiMessageDiv && chatInputEl && chatSendEl) {
+                        const isChatActive = chatInputEl.disabled === false && userInfoFormDiv.style.display === 'none';
+                        if (!isChatActive) {
+                            if (collectUserInfo == 1) {
+                                userInfoFormDiv.style.display = 'block';
+                                initialAiMessageDiv.style.display = 'none';
+                                chatInputEl.disabled = true;
+                                chatSendEl.disabled = true;
+                            } else {
+                                userInfoFormDiv.style.display = 'none';
+                                initialAiMessageDiv.style.display = 'flex';
+                                chatInputEl.disabled = false;
+                                chatSendEl.disabled = false;
                             }
-                            break;
-                        // Add other cases for system_prompt, keep_conversation_history, etc. if needed for visual preview
+                        }
                     }
                 };
             </script>
