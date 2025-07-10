@@ -4,6 +4,8 @@
  * Plugin URI: https://sinanisler.com
  * Description: Advanced AI Chat Plugin with OpenRouter and OpenAI support
  * Version: 0.2.6
+ * Requires at least: 6.0
+ * Requires PHP:      8.0
  * Author: sinanisler
  * Author URI: https://sinanisler.com
  * License: GPL v3
