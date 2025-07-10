@@ -3,7 +3,7 @@
  * Plugin Name: SNN AI CHAT
  * Plugin URI: https://sinanisler.com
  * Description: Advanced AI Chat Plugin with OpenRouter and OpenAI support
- * Version: 0.2.6
+ * Version: 0.2.7
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author: sinanisler
@@ -22,8 +22,13 @@ class SNN_AI_Chat {
     public function __construct() {
         add_action('init', array($this, 'init'));
         add_action('admin_init', array($this, 'handle_admin_form_submissions'));
-        // Add new action for handling delete requests on admin_init
         add_action('admin_init', array($this, 'handle_delete_actions'));
+
+        add_action('admin_init', array($this, 'handle_reset_action'));
+        add_action('admin_action_snn_delete_data', array($this, 'handle_delete_data_from_link'));
+        add_action('admin_notices', array($this, 'show_admin_notices'));
+        add_filter('plugin_action_links_' . plugin_basename(__FILE__), array($this, 'add_action_links'));
+
         add_action('admin_menu', array($this, 'admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'frontend_enqueue_scripts'));
@@ -66,8 +71,8 @@ class SNN_AI_Chat {
     }
 
     public function handle_delete_actions() {
-        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-history') {            return;        }
-        if (!current_user_can('manage_options')) {            return;         }
+        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-history') {           return;        }
+        if (!current_user_can('manage_options')) {           return;          }
         global $wpdb;
         if (isset($_POST['action']) && $_POST['action'] === 'delete_session') {
             if (!isset($_POST['snn_delete_session_nonce']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_delete_session_nonce'] ?? '')), 'snn_delete_session')) {
@@ -454,7 +459,7 @@ class SNN_AI_Chat {
                             <label for="openrouter_api_key" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Your OpenRouter API key for accessing AI models">
                                 OpenRouter API Key
                             </label>
-                            <input type="password" id="openrouter_api_key" name="openrouter_api_key" value="<?php echo esc_attr($settings['openrouter_api_key']); ?>" class="w-full p-2 border border-gray-300 rounded-md api-key-input focus:ring-blue-500 focus:border-blue-500">
+                            <input type="text" id="openrouter_api_key" name="openrouter_api_key" value="<?php echo esc_attr($settings['openrouter_api_key']); ?>" class="w-[50%] p-2 border border-gray-300 rounded-md api-key-input focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         <div class="mb-4">
                             <label for="openrouter_model" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Select the AI model to use for chat responses">
@@ -472,7 +477,7 @@ class SNN_AI_Chat {
                             <label for="openai_api_key" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Your OpenAI API key for accessing GPT models">
                                 OpenAI API Key
                             </label>
-                            <input type="password" id="openai_api_key" name="openai_api_key" value="<?php echo esc_attr($settings['openai_api_key']); ?>" class="w-full p-2 border border-gray-300 rounded-md api-key-input focus:ring-blue-500 focus:border-blue-500">
+                            <input type="text" id="openai_api_key" name="openai_api_key" value="<?php echo esc_attr($settings['openai_api_key']); ?>" class="w-[50%] p-2 border border-gray-300 rounded-md api-key-input focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         <div class="mb-4">
                             <label for="openai_model" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Select the OpenAI model to use for chat responses">
@@ -539,9 +544,14 @@ class SNN_AI_Chat {
                     </div>
                 </div>
                 
-                <button type="submit" name="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md settings-save-btn hover:bg-blue-700 transition-colors duration-200" id="snn-save-settings-btn">
-                    Save Settings
-                </button>
+                <div class="flex items-center space-x-4 justify-between">
+                    <button type="submit" name="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md settings-save-btn hover:bg-blue-700 transition-colors duration-200" id="snn-save-settings-btn">
+                        Save Settings
+                    </button>
+                    <button type="submit" name="reset_plugin_data" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-md settings-reset-btn transition-colors duration-200" id="snn-reset-settings-btn" onclick="return confirm('Are you sure you want to delete ALL plugin data? This will remove all chats, history, and settings. This action cannot be undone.');">
+                        Reset and Delete Plugin Data
+                    </button>
+                </div>
             </form>
         </div>
         <?php
@@ -1388,7 +1398,7 @@ class SNN_AI_Chat {
              $conversation_history[] = array(
                  'role' => 'system',
                  'content' => (string)$chat_settings['system_prompt']
-               );
+             );
         }
 
         if (!empty($chat_settings['keep_conversation_history'])) {
@@ -1882,7 +1892,7 @@ class SNN_AI_Chat {
                     let shouldSave = false;
                     mutations.forEach(function(mutation) {
                         if (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0) {
-                           shouldSave = true;
+                            shouldSave = true;
                         }
                     });
                     if(shouldSave) {
@@ -1937,9 +1947,9 @@ class SNN_AI_Chat {
         return get_option('snn_ai_chat_settings', array(
             'api_provider' => 'openrouter',
             'openrouter_api_key' => '',
-            'openrouter_model' => 'openai/gpt-3.5-turbo',
+            'openrouter_model' => 'openai/gpt-4.1-mini',
             'openai_api_key' => '',
-            'openai_model' => 'gpt-3.5-turbo',
+            'openai_model' => 'gpt-4.1-mini',
             'default_system_prompt' => 'You are a helpful assistant.',
             'default_initial_message' => 'Hello! How can I help you today?',
             'temperature' => 0.7,
@@ -2310,6 +2320,72 @@ class SNN_AI_Chat {
             ),
             array('%s', '%s', '%s', '%d')
         );
+    }
+
+    public function show_admin_notices() {
+        if (isset($_GET['snn_data_deleted']) && $_GET['snn_data_deleted'] == '1') {
+            echo '<div class="notice notice-success is-dismissible"><p>SNN AI Chat data has been successfully deleted and the plugin has been deactivated.</p></div>';
+        }
+    }
+    public function handle_reset_action() {
+        if (isset($_POST['reset_plugin_data'])) {
+            if (!isset($_POST['snn_ai_chat_settings_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['snn_ai_chat_settings_nonce'])), 'snn_ai_chat_settings')) {
+                wp_die('Nonce verification failed.');
+            }
+
+            if (!current_user_can('manage_options')) {
+                wp_die('You do not have permission to perform this action.');
+            }
+
+            $this->delete_all_plugin_data();
+
+            deactivate_plugins(plugin_basename(__FILE__));
+
+            wp_safe_redirect(admin_url('plugins.php?snn_data_deleted=1'));
+            exit;
+        }
+    }
+
+    public function handle_delete_data_from_link() {
+        if (!isset($_GET['snn_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['snn_nonce'])), 'snn_delete_data_nonce')) {
+            wp_die('Nonce verification failed.');
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_die('You do not have permission to perform this action.');
+        }
+
+        $this->delete_all_plugin_data();
+        deactivate_plugins(plugin_basename(__FILE__));
+        wp_safe_redirect(admin_url('plugins.php?snn_data_deleted=1'));
+        exit;
+    }
+
+
+    public function add_action_links($links) {
+        $settings_link = '<a href="' . admin_url('admin.php?page=snn-ai-chat-settings') . '">' . __('Settings') . '</a>';
+        $delete_link_url = wp_nonce_url(admin_url('admin.php?action=snn_delete_data'), 'snn_delete_data_nonce', 'snn_nonce');
+        $delete_link = '<a href="' . $delete_link_url . '" onclick="return confirm(\'Are you sure you want to delete all plugin data? This will remove all chats, history, and settings. This action cannot be undone.\');" style="color:red;">' . __('Delete Plugin Data') . '</a>';
+        array_unshift($links, $settings_link);
+        $links[] = $delete_link;
+        return $links;
+    }
+
+    private function delete_all_plugin_data() {
+        global $wpdb;
+        $chat_posts = get_posts(array('post_type' => 'snn_ai_chat', 'numberposts' => -1, 'post_status' => 'any', 'fields' => 'ids'));
+        foreach ($chat_posts as $post_id) {
+            wp_delete_post($post_id, true);
+        }
+
+        $history_posts = get_posts(array('post_type' => 'snn_chat_history', 'numberposts' => -1, 'post_status' => 'any', 'fields' => 'ids'));
+        foreach ($history_posts as $post_id) {
+            wp_delete_post($post_id, true);
+        }
+        $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}snn_chat_messages");
+        $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}snn_chat_sessions");
+        delete_option('snn_ai_chat_settings');
+        flush_rewrite_rules();
     }
 
     private function adjust_brightness($hex, $steps) {
