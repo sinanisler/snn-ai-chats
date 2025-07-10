@@ -22,6 +22,8 @@ class SNN_AI_Chat {
     public function __construct() {
         add_action('init', array($this, 'init'));
         add_action('admin_init', array($this, 'handle_admin_form_submissions'));
+        // Add new action for handling delete requests on admin_init
+        add_action('admin_init', array($this, 'handle_delete_actions'));
         add_action('admin_menu', array($this, 'admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'frontend_enqueue_scripts'));
@@ -49,20 +51,61 @@ class SNN_AI_Chat {
             return;
         }
         
-        // Determine if it was a new chat before saving.
         $is_new_chat = empty($_POST['chat_id']);
         
         $saved_chat_id = $this->save_chat_settings_form_submit();
         
-        // Check if the save was successful
         if ($saved_chat_id && !is_wp_error($saved_chat_id)) {
             if ($is_new_chat) {
-                // For a new chat, redirect to the chats list page with a success message.
                 wp_safe_redirect(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $saved_chat_id . '&snn_new_chat_saved=1'));
             } else {
-                // For an existing chat, redirect back to the edit page with a success message.
                 wp_safe_redirect(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $saved_chat_id . '&snn_chat_updated=1'));
             }
+            exit;
+        }
+    }
+
+    public function handle_delete_actions() {
+        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-history') {
+            return;
+        }
+
+        if (!current_user_can('manage_options')) {
+            return; 
+        }
+
+        global $wpdb;
+
+        if (isset($_POST['action']) && $_POST['action'] === 'delete_session') {
+            if (!isset($_POST['snn_delete_session_nonce']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_delete_session_nonce'] ?? '')), 'snn_delete_session')) {
+                wp_die(esc_html__('Nonce verification failed.', 'snn-ai-chat'));
+            }
+
+            $session_id = sanitize_text_field($_POST['session_id'] ?? '');
+
+            if (!empty($session_id)) {
+                $wpdb->delete(
+                    $wpdb->prefix . 'snn_chat_messages',
+                    array('session_id' => $session_id),
+                    array('%s')
+                );
+                $wpdb->delete(
+                    $wpdb->prefix . 'snn_chat_sessions',
+                    array('session_id' => $session_id),
+                    array('%s')
+                );
+                wp_safe_redirect(admin_url('admin.php?page=snn-ai-chat-history&snn_session_deleted=1'));
+                exit;
+            }
+        }
+
+        if (isset($_POST['action']) && $_POST['action'] === 'delete_all_sessions') {
+            if (!isset($_POST['snn_delete_all_sessions_nonce']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_delete_all_sessions_nonce'] ?? '')), 'snn_delete_all_sessions')) {
+                wp_die(esc_html__('Nonce verification failed.', 'snn-ai-chat'));
+            }
+            $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}snn_chat_messages");
+            $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}snn_chat_sessions");
+            wp_safe_redirect(admin_url('admin.php?page=snn-ai-chat-history&snn_all_sessions_deleted=1'));
             exit;
         }
     }
@@ -841,6 +884,23 @@ class SNN_AI_Chat {
                 const chatPreviewIframe = $('#chat-preview-iframe');
                 const chatId = chatSettingsForm.find('input[name="chat_id"]').val();
 
+                function adjustBrightness(hex, steps) {
+                    hex = hex.replace('#', '');
+                    if (hex.length === 3) {
+                        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+                    }
+                    let rgb = [];
+                    for (let i = 0; i < 6; i += 2) {
+                        rgb.push(parseInt(hex.substr(i, 2), 16));
+                    }
+
+                    for (let i = 0; i < 3; i++) {
+                        rgb[i] = Math.max(0, Math.min(255, rgb[i] + steps));
+                    }
+
+                    return '#' + rgb.map(val => ('0' + val.toString(16)).slice(-2)).join('');
+                }
+
                 function applyAllStylesToPreview() {
                     if (!chatPreviewIframe.length || !chatPreviewIframe[0].contentWindow || !chatPreviewIframe[0].contentWindow.updateAllChatStyles) {
                         // If the iframe or the function isn't ready, try again. This handles slow iframe loading.
@@ -943,7 +1003,27 @@ class SNN_AI_Chat {
     public function chat_history_page() {
         ?>
         <div class="wrap">
-            <h1>Chat History</h1>
+            <h1 class="wp-heading-inline">Chat History</h1>
+            <div class="alignright">
+                <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" onsubmit="return confirm('Are you sure you want to delete ALL chat sessions? This action cannot be undone.');">
+                    <?php wp_nonce_field('snn_delete_all_sessions', 'snn_delete_all_sessions_nonce'); ?>
+                    <input type="hidden" name="action" value="delete_all_sessions">
+                    <button type="submit" class="button button-danger bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition-colors duration-200" id="snn-delete-all-chats-btn">
+                        Delete All Chats
+                    </button>
+                </form>
+            </div>
+            <hr class="wp-header-end">
+
+            <?php
+            // Display success notices
+            if (isset($_GET['snn_session_deleted']) && $_GET['snn_session_deleted'] == '1') {
+                echo '<div class="notice notice-success is-dismissible"><p>Chat session deleted successfully!</p></div>';
+            }
+            if (isset($_GET['snn_all_sessions_deleted']) && $_GET['snn_all_sessions_deleted'] == '1') {
+                echo '<div class="notice notice-success is-dismissible"><p>All chat sessions deleted successfully!</p></div>';
+            }
+            ?>
             
             <div class="bg-white p-6 rounded-lg shadow chat-history-table" id="snn-chat-history-table-container">
                 <div class="overflow-x-auto">
@@ -951,6 +1031,7 @@ class SNN_AI_Chat {
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Session ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chat Name</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Messages</th>
@@ -966,6 +1047,7 @@ class SNN_AI_Chat {
                                 ?>
                                 <tr class="history-row" id="snn-history-row-<?php echo esc_attr($history->session_id); ?>">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html(substr((string)$history->session_id, 0, 12)); ?>...</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html(get_the_title($history->chat_id) ?: 'N/A'); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html($history->user_name ?: 'Anonymous'); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html($history->user_email ?: 'N/A'); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html($history->message_count); ?></td>
@@ -975,6 +1057,14 @@ class SNN_AI_Chat {
                                         <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-session-history&session_id=' . $history->session_id)); ?>" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 view-history-btn transition-colors duration-200" id="snn-view-session-details-btn-<?php echo esc_attr($history->session_id); ?>">
                                             View Details
                                         </a>
+                                        <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" style="display: inline-block; margin-left: 8px;" onsubmit="return confirm('Are you sure you want to delete this chat session? This action cannot be undone.');">
+                                            <?php wp_nonce_field('snn_delete_session', 'snn_delete_session_nonce'); ?>
+                                            <input type="hidden" name="action" value="delete_session">
+                                            <input type="hidden" name="session_id" value="<?php echo esc_attr($history->session_id); ?>">
+                                            <button type="submit" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 delete-session-btn transition-colors duration-200" id="snn-delete-session-btn-<?php echo esc_attr($history->session_id); ?>">
+                                                X Delete
+                                            </button>
+                                        </form>
                                     </td>
                                 </tr>
                                 <?php
@@ -1307,7 +1397,7 @@ class SNN_AI_Chat {
              $conversation_history[] = array(
                  'role' => 'system',
                  'content' => (string)$chat_settings['system_prompt']
-             );
+               );
         }
 
         if (!empty($chat_settings['keep_conversation_history'])) {
