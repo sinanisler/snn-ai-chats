@@ -3,7 +3,7 @@
  * Plugin Name: SNN AI CHAT
  * Plugin URI: https://sinanisler.com
  * Description: Advanced AI Chat Plugin with OpenRouter and OpenAI support
- * Version: 0.2.5
+ * Version: 0.2.6
  * Author: sinanisler
  * Author URI: https://sinanisler.com
  * License: GPL v3
@@ -57,7 +57,7 @@ class SNN_AI_Chat {
         if ($saved_chat_id && !is_wp_error($saved_chat_id)) {
             if ($is_new_chat) {
                 // For a new chat, redirect to the chats list page with a success message.
-                wp_safe_redirect(admin_url('admin.php?page=snn-ai-chat-chats&snn_new_chat_saved=1'));
+                wp_safe_redirect(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $saved_chat_id . '&snn_new_chat_saved=1'));
             } else {
                 // For an existing chat, redirect back to the edit page with a success message.
                 wp_safe_redirect(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $saved_chat_id . '&snn_chat_updated=1'));
@@ -517,7 +517,7 @@ class SNN_AI_Chat {
         $chat_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
         
         if (isset($_GET['snn_new_chat_saved']) && $_GET['snn_new_chat_saved'] == '1') {
-            echo '<div class="notice notice-success is-dismissible"><p>Your new chat is saved.</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>Your new chat is saved. You can now preview it.</p></div>';
         }
         
         if (isset($_GET['snn_chat_updated']) && $_GET['snn_chat_updated'] == '1') {
@@ -633,130 +633,75 @@ class SNN_AI_Chat {
                         
                         <div class="mb-4 styling-section" id="snn-styling-appearance-section">
                             <h3 class="text-lg font-semibold mb-4">Styling & Appearance</h3>
-                            
-                            <div class="mb-4">
-                                <label for="chat_position" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Where the chat widget will appear on the page">
-                                    Chat Position
-                                </label>
-                                <select id="chat_position" name="chat_position" class="w-full p-2 border border-gray-300 rounded-md chat-position-select focus:ring-blue-500 focus:border-blue-500">
-                                    <option value="bottom-right" <?php selected($chat_settings['chat_position'], 'bottom-right'); ?>>Bottom Right</option>
-                                    <option value="bottom-left" <?php selected($chat_settings['chat_position'], 'bottom-left'); ?>>Bottom Left</option>
-                                    <option value="top-right" <?php selected($chat_settings['chat_position'], 'top-right'); ?>>Top Right</option>
-                                    <option value="top-left" <?php selected($chat_settings['chat_position'], 'top-left'); ?>>Top Left</option>
-                                </select>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div>
-                                    <label for="primary_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Main color for the chat widget toggle button and user messages">
-                                        Primary Color
-                                    </label>
-                                    <input type="color" id="primary_color" name="primary_color" value="<?php echo esc_attr($chat_settings['primary_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
-                                </div>
-                                
-                                <div>
-                                    <label for="secondary_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Background color for AI messages">
-                                        Secondary Color
-                                    </label>
-                                    <input type="color" id="secondary_color" name="secondary_color" value="<?php echo esc_attr($chat_settings['secondary_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
-                                </div>
-                                
-                                <div>
-                                    <label for="text_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Default text color for the chat widget (e.g., header text, AI message text)">
-                                        Text Color
-                                    </label>
-                                    <input type="color" id="text_color" name="text_color" value="<?php echo esc_attr($chat_settings['text_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                <div>
-                                    <label for="chat_widget_bg_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Background color of the main chat container.">
-                                        Widget Background Color
-                                    </label>
-                                    <input type="color" id="chat_widget_bg_color" name="chat_widget_bg_color" value="<?php echo esc_attr($chat_settings['chat_widget_bg_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
+                                    <label for="chat_position" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Where the chat widget will appear on the page">Chat Position</label>
+                                    <select id="chat_position" name="chat_position" class="w-full h-10 p-2 border border-gray-300 rounded-md chat-position-select focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="bottom-right" <?php selected($chat_settings['chat_position'], 'bottom-right'); ?>>Bottom Right</option>
+                                        <option value="bottom-left" <?php selected($chat_settings['chat_position'], 'bottom-left'); ?>>Bottom Left</option>
+                                        <option value="top-right" <?php selected($chat_settings['chat_position'], 'top-right'); ?>>Top Right</option>
+                                        <option value="top-left" <?php selected($chat_settings['chat_position'], 'top-left'); ?>>Top Left</option>
+                                    </select>
                                 </div>
                                 <div>
-                                    <label for="chat_input_bg_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Background color of the message input field.">
-                                        Input Background Color
-                                    </label>
-                                    <input type="color" id="chat_input_bg_color" name="chat_input_bg_color" value="<?php echo esc_attr($chat_settings['chat_input_bg_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
+                                    <label for="primary_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Main color for the chat widget toggle button and user messages">Primary Color</label>
+                                    <input type="color" id="primary_color" name="primary_color" value="<?php echo esc_attr($chat_settings['primary_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 <div>
-                                    <label for="chat_input_text_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Text color of the message input field.">
-                                        Input Text Color
-                                    </label>
-                                    <input type="color" id="chat_input_text_color" name="chat_input_text_color" value="<?php echo esc_attr($chat_settings['chat_input_text_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
-                                </div>
-                            </div>
-                            
-                            <!-- New Color Inputs for Message Bubbles and Send Button -->
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                <div>
-                                    <label for="user_message_bg_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Background color for user messages.">
-                                        User Message Background
-                                    </label>
-                                    <input type="color" id="user_message_bg_color" name="user_message_bg_color" value="<?php echo esc_attr($chat_settings['user_message_bg_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
+                                    <label for="secondary_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Background color for AI messages">Secondary Color</label>
+                                    <input type="color" id="secondary_color" name="secondary_color" value="<?php echo esc_attr($chat_settings['secondary_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 <div>
-                                    <label for="user_message_text_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Text color for user messages.">
-                                        User Message Text
-                                    </label>
-                                    <input type="color" id="user_message_text_color" name="user_message_text_color" value="<?php echo esc_attr($chat_settings['user_message_text_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
+                                    <label for="text_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Default text color for the chat widget (e.g., header text, AI message text)">Text Color</label>
+                                    <input type="color" id="text_color" name="text_color" value="<?php echo esc_attr($chat_settings['text_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 <div>
-                                    <label for="ai_message_bg_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Background color for AI messages.">
-                                        AI Message Background
-                                    </label>
-                                    <input type="color" id="ai_message_bg_color" name="ai_message_bg_color" value="<?php echo esc_attr($chat_settings['ai_message_bg_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label for="ai_message_text_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Text color for AI messages.">
-                                        AI Message Text
-                                    </label>
-                                    <input type="color" id="ai_message_text_color" name="ai_message_text_color" value="<?php echo esc_attr($chat_settings['ai_message_text_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
+                                    <label for="chat_widget_bg_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Background color of the main chat container.">Widget BG</label>
+                                    <input type="color" id="chat_widget_bg_color" name="chat_widget_bg_color" value="<?php echo esc_attr($chat_settings['chat_widget_bg_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 <div>
-                                    <label for="chat_send_button_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Color for the send button icon.">
-                                        Send Button Color
-                                    </label>
-                                    <input type="color" id="chat_send_button_color" name="chat_send_button_color" value="<?php echo esc_attr($chat_settings['chat_send_button_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input">
+                                    <label for="chat_input_bg_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Background color of the message input field.">Input BG</label>
+                                    <input type="color" id="chat_input_bg_color" name="chat_input_bg_color" value="<?php echo esc_attr($chat_settings['chat_input_bg_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input focus:ring-blue-500 focus:border-blue-500">
                                 </div>
-                            </div>
-                            <!-- End New Color Inputs -->
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div>
-                                    <label for="font_size" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Font size for chat messages">
-                                        Font Size (px)
-                                    </label>
-                                    <input type="number" id="font_size" name="font_size" value="<?php echo esc_attr($chat_settings['font_size']); ?>" class="w-full p-2 border border-gray-300 rounded-md font-size-input focus:ring-blue-500 focus:border-blue-500">
+                                    <label for="chat_input_text_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Text color of the message input field.">Input Text</label>
+                                    <input type="color" id="chat_input_text_color" name="chat_input_text_color" value="<?php echo esc_attr($chat_settings['chat_input_text_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input focus:ring-blue-500 focus:border-blue-500">
                                 </div>
-                                
                                 <div>
-                                    <label for="border_radius" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Rounded corners for the chat widget">
-                                        Border Radius (px)
-                                    </label>
-                                    <input type="number" id="border_radius" name="border_radius" value="<?php echo esc_attr($chat_settings['border_radius']); ?>" class="w-full p-2 border border-gray-30- rounded-md border-radius-input focus:ring-blue-500 focus:border-blue-500">
+                                    <label for="chat_send_button_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Color for the send button icon.">Send Button</label>
+                                    <input type="color" id="chat_send_button_color" name="chat_send_button_color" value="<?php echo esc_attr($chat_settings['chat_send_button_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input focus:ring-blue-500 focus:border-blue-500">
                                 </div>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div>
-                                    <label for="widget_width" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Width of the chat widget">
-                                        Widget Width (px)
-                                    </label>
-                                    <input type="number" id="widget_width" name="widget_width" value="<?php echo esc_attr($chat_settings['widget_width']); ?>" class="w-full p-2 border border-gray-300 rounded-md widget-width-input focus:ring-blue-500 focus:border-blue-500">
+                                    <label for="user_message_bg_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Background color for user messages.">User Message BG</label>
+                                    <input type="color" id="user_message_bg_color" name="user_message_bg_color" value="<?php echo esc_attr($chat_settings['user_message_bg_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input focus:ring-blue-500 focus:border-blue-500">
                                 </div>
-                                
                                 <div>
-                                    <label for="widget_height" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Height of the chat widget">
-                                        Widget Height (px)
-                                    </label>
-                                    <input type="number" id="widget_height" name="widget_height" value="<?php echo esc_attr($chat_settings['widget_height']); ?>" class="w-full p-2 border border-gray-300 rounded-md widget-height-input focus:ring-blue-500 focus:border-blue-500">
+                                    <label for="user_message_text_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Text color for user messages.">User Message Text</label>
+                                    <input type="color" id="user_message_text_color" name="user_message_text_color" value="<?php echo esc_attr($chat_settings['user_message_text_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="ai_message_bg_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Background color for AI messages.">AI Message BG</label>
+                                    <input type="color" id="ai_message_bg_color" name="ai_message_bg_color" value="<?php echo esc_attr($chat_settings['ai_message_bg_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="ai_message_text_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Text color for AI messages.">AI Message Text</label>
+                                    <input type="color" id="ai_message_text_color" name="ai_message_text_color" value="<?php echo esc_attr($chat_settings['ai_message_text_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="font_size" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Font size for chat messages">Font Size (px)</label>
+                                    <input type="number" id="font_size" name="font_size" value="<?php echo esc_attr($chat_settings['font_size']); ?>" class="w-full h-10 p-2 border border-gray-300 rounded-md font-size-input focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="border_radius" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Rounded corners for the chat widget">Border Radius (px)</label>
+                                    <input type="number" id="border_radius" name="border_radius" value="<?php echo esc_attr($chat_settings['border_radius']); ?>" class="w-full h-10 p-2 border border-gray-300 rounded-md border-radius-input focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="widget_width" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Width of the chat widget">Widget Width (px)</label>
+                                    <input type="number" id="widget_width" name="widget_width" value="<?php echo esc_attr($chat_settings['widget_width']); ?>" class="w-full h-10 p-2 border border-gray-300 rounded-md widget-width-input focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="widget_height" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Height of the chat widget">Widget Height (px)</label>
+                                    <input type="number" id="widget_height" name="widget_height" value="<?php echo esc_attr($chat_settings['widget_height']); ?>" class="w-full h-10 p-2 border border-gray-300 rounded-md widget-height-input focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                             </div>
                         </div>
@@ -1581,7 +1526,7 @@ class SNN_AI_Chat {
                 justify-content: center;
             }
             .snn-ai-chat-widget .snn-new-chat:hover {
-                 background-color: rgba(255, 255, 255, 0.2);
+                background-color: rgba(255, 255, 255, 0.2);
             }
             .snn-ai-chat-widget .snn-new-chat .dashicons {
                 font-size: 20px;
@@ -1798,11 +1743,11 @@ class SNN_AI_Chat {
 
                         if (data.messages && data.messages.length > 0) {
                              data.messages.forEach(function(msg) {
-                                const messageClass = msg.type === 'user' ? 'snn-user-message' : 'snn-ai-message';
-                                const messageIdAttr = msg.id ? 'id="' + msg.id + '"' : '';
-                                const messageHTML = `<div class="snn-chat-message ${messageClass}" ${messageIdAttr}><div class="snn-message-content">${msg.content}</div></div>`;
-                                messagesContainer.append(messageHTML);
-                            });
+                                 const messageClass = msg.type === 'user' ? 'snn-user-message' : 'snn-ai-message';
+                                 const messageIdAttr = msg.id ? 'id="' + msg.id + '"' : '';
+                                 const messageHTML = `<div class="snn-chat-message ${messageClass}" ${messageIdAttr}><div class="snn-message-content">${msg.content}</div></div>`;
+                                 messagesContainer.append(messageHTML);
+                             });
                         } else {
                             // If there are no messages, show the initial one
                             startNewSession(false); // false to not generate new session id
