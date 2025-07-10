@@ -66,23 +66,14 @@ class SNN_AI_Chat {
     }
 
     public function handle_delete_actions() {
-        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-history') {
-            return;
-        }
-
-        if (!current_user_can('manage_options')) {
-            return; 
-        }
-
+        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-history') {            return;        }
+        if (!current_user_can('manage_options')) {            return;         }
         global $wpdb;
-
         if (isset($_POST['action']) && $_POST['action'] === 'delete_session') {
             if (!isset($_POST['snn_delete_session_nonce']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_delete_session_nonce'] ?? '')), 'snn_delete_session')) {
                 wp_die(esc_html__('Nonce verification failed.', 'snn-ai-chat'));
             }
-
             $session_id = sanitize_text_field($_POST['session_id'] ?? '');
-
             if (!empty($session_id)) {
                 $wpdb->delete(
                     $wpdb->prefix . 'snn_chat_messages',
