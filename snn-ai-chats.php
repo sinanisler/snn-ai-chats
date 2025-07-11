@@ -72,8 +72,8 @@ class SNN_AI_Chat {
     }
 
     public function handle_delete_actions() {
-        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-history') {            return;           }
-        if (!current_user_can('manage_options')) {            return;            }
+        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-history') {            return;         }
+        if (!current_user_can('manage_options')) {            return;           }
         global $wpdb;
         if (isset($_POST['action']) && $_POST['action'] === 'delete_session') {
             if (!isset($_POST['snn_delete_session_nonce']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_delete_session_nonce'] ?? '')), 'snn_delete_session')) {
@@ -283,13 +283,6 @@ class SNN_AI_Chat {
             'global_top_p' => $global_settings['top_p'] ?? 1.0,
             'global_frequency_penalty' => $global_settings['frequency_penalty'] ?? 0.0,
             'global_presence_penalty' => $global_settings['presence_penalty'] ?? 0.0,
-            // New reasoning settings
-            'global_openrouter_reasoning_enabled' => (bool)($global_settings['openrouter_reasoning_enabled'] ?? false),
-            'global_openrouter_reasoning_effort' => $global_settings['openrouter_reasoning_effort'] ?? 'medium',
-            'global_openrouter_reasoning_max_tokens' => (int)($global_settings['openrouter_reasoning_max_tokens'] ?? 0),
-            'global_openai_reasoning_enabled' => (bool)($global_settings['openai_reasoning_enabled'] ?? false),
-            'global_openai_reasoning_effort' => $global_settings['openai_reasoning_effort'] ?? 'medium',
-            'global_openai_reasoning_max_tokens' => (int)($global_settings['openai_reasoning_max_tokens'] ?? 0),
         ));
 
         if ($hook === 'admin_page_snn-ai-chat-preview') {
@@ -477,34 +470,6 @@ class SNN_AI_Chat {
                             <datalist id="openrouter_models"></datalist>
                         </div>
                         <div class="model-details text-gray-600 text-sm" id="openrouter-model-details"></div>
-
-                        <div class="mt-6">
-                            <h4 class="text-md font-semibold mb-3 text-gray-800">Reasoning/Thinking Models (OpenRouter)</h4>
-                            <div class="mb-4">
-                                <label class="flex items-center text-gray-700">
-                                    <input type="checkbox" name="openrouter_reasoning_enabled" value="1" <?php checked($settings['openrouter_reasoning_enabled'], 1); ?> class="mr-2" id="snn-openrouter-reasoning-enabled">
-                                    <span class="text-sm font-medium snn-tooltip" data-tippy-content="Enable reasoning/thinking tokens for OpenRouter models. Reasoning tokens are billed as output tokens.">
-                                        Enable Reasoning
-                                    </span>
-                                </label>
-                            </div>
-                            <div class="mb-4 <?php echo empty($settings['openrouter_reasoning_enabled']) ? 'hidden' : ''; ?>" id="openrouter-reasoning-options">
-                                <label for="openrouter_reasoning_effort" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Controls the effort level for reasoning. 'Low' favors speed, 'High' favors more complete reasoning.">
-                                    Reasoning Effort
-                                </label>
-                                <select id="openrouter_reasoning_effort" name="openrouter_reasoning_effort" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                                    <option value="low" <?php selected($settings['openrouter_reasoning_effort'], 'low'); ?>>Low</option>
-                                    <option value="medium" <?php selected($settings['openrouter_reasoning_effort'], 'medium'); ?>>Medium</option>
-                                    <option value="high" <?php selected($settings['openrouter_reasoning_effort'], 'high'); ?>>High</option>
-                                </select>
-                            </div>
-                            <div class="mb-4 <?php echo empty($settings['openrouter_reasoning_enabled']) ? 'hidden' : ''; ?>" id="openrouter-reasoning-max-tokens">
-                                <label for="openrouter_reasoning_max_tokens" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Maximum number of tokens to allocate for reasoning. Overrides 'Reasoning Effort' if set.">
-                                    Reasoning Max Tokens (Optional)
-                                </label>
-                                <input type="number" id="openrouter_reasoning_max_tokens" name="openrouter_reasoning_max_tokens" value="<?php echo esc_attr($settings['openrouter_reasoning_max_tokens']); ?>" min="0" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                            </div>
-                        </div>
                     </div>
                     
                     <div class="api-settings <?php echo ($settings['api_provider'] !== 'openai') ? 'hidden' : ''; ?> bg-gray-50 p-4 rounded-md border border-gray-200" id="snn-openai-settings">
@@ -523,34 +488,6 @@ class SNN_AI_Chat {
                             <datalist id="openai_models"></datalist>
                         </div>
                         <div class="model-details text-gray-600 text-sm" id="openai-model-details"></div>
-
-                        <div class="mt-6">
-                            <h4 class="text-md font-semibold mb-3 text-gray-800">Reasoning/Thinking Models (OpenAI)</h4>
-                            <div class="mb-4">
-                                <label class="flex items-center text-gray-700">
-                                    <input type="checkbox" name="openai_reasoning_enabled" value="1" <?php checked($settings['openai_reasoning_enabled'], 1); ?> class="mr-2" id="snn-openai-reasoning-enabled">
-                                    <span class="text-sm font-medium snn-tooltip" data-tippy-content="Enable reasoning/thinking tokens for OpenAI models. Note: OpenAI's reasoning models might require a specific API endpoint or configuration not fully supported by the standard chat completions API. Reasoning tokens are billed as output tokens.">
-                                        Enable Reasoning
-                                    </span>
-                                </label>
-                            </div>
-                            <div class="mb-4 <?php echo empty($settings['openai_reasoning_enabled']) ? 'hidden' : ''; ?>" id="openai-reasoning-options">
-                                <label for="openai_reasoning_effort" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Controls the effort level for reasoning. 'Low' favors speed, 'High' favors more complete reasoning.">
-                                    Reasoning Effort
-                                </label>
-                                <select id="openai_reasoning_effort" name="openai_reasoning_effort" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                                    <option value="low" <?php selected($settings['openai_reasoning_effort'], 'low'); ?>>Low</option>
-                                    <option value="medium" <?php selected($settings['openai_reasoning_effort'], 'medium'); ?>>Medium</option>
-                                    <option value="high" <?php selected($settings['openai_reasoning_effort'], 'high'); ?>>High</option>
-                                </select>
-                            </div>
-                            <div class="mb-4 <?php echo empty($settings['openai_reasoning_enabled']) ? 'hidden' : ''; ?>" id="openai-reasoning-max-tokens">
-                                <label for="openai_reasoning_max_tokens" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Maximum number of tokens to allocate for reasoning. Overrides 'Reasoning Effort' if set.">
-                                    Reasoning Max Tokens (Optional)
-                                </label>
-                                <input type="number" id="openai_reasoning_max_tokens" name="openai_reasoning_max_tokens" value="<?php echo esc_attr($settings['openai_reasoning_max_tokens']); ?>" min="0" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -763,27 +700,6 @@ class SNN_AI_Chat {
                     const apiKey = $('#openai_api_key').val();
                     fetchAndDisplayModelDetails('openai', model, apiKey);
                 });
-
-                // Toggle visibility of reasoning options based on checkbox
-                $('#snn-openrouter-reasoning-enabled').on('change', function() {
-                    if ($(this).is(':checked')) {
-                        $('#openrouter-reasoning-options').removeClass('hidden');
-                        $('#openrouter-reasoning-max-tokens').removeClass('hidden');
-                    } else {
-                        $('#openrouter-reasoning-options').addClass('hidden');
-                        $('#openrouter-reasoning-max-tokens').addClass('hidden');
-                    }
-                });
-
-                $('#snn-openai-reasoning-enabled').on('change', function() {
-                    if ($(this).is(':checked')) {
-                        $('#openai-reasoning-options').removeClass('hidden');
-                        $('#openai-reasoning-max-tokens').removeClass('hidden');
-                    } else {
-                        $('#openai-reasoning-options').addClass('hidden');
-                        $('#openai-reasoning-max-tokens').addClass('hidden');
-                    }
-                });
             });
         </script>
         <?php
@@ -862,7 +778,7 @@ class SNN_AI_Chat {
         $defaults = $this->get_default_chat_settings();
         $chat_settings = wp_parse_args(is_array($chat_settings_raw) ? $chat_settings_raw : [], $defaults);
         
-        $global_settings = $this->get_settings(); // Get global settings for default values
+        $global_settings = $this->get_settings();
         ?>
         <div class="wrap">
             <h1><?php echo esc_html($chat_id > 0 ? 'Edit Chat' : 'Create New Chat'); ?></h1>
@@ -905,70 +821,6 @@ class SNN_AI_Chat {
                                         Keep conversation history during session
                                     </span>
                                 </label>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-4 api-parameters-section" id="snn-api-parameters-section">
-                            <h3 class="text-lg font-semibold mb-4">API Parameters (Overrides Global Settings)</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="mb-4">
-                                    <label for="chat_temperature" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Controls randomness. Lower values mean more deterministic responses, higher values mean more creative responses. (0.0 - 2.0)">
-                                        Temperature
-                                    </label>
-                                    <input type="number" step="0.1" min="0.0" max="2.0" id="chat_temperature" name="temperature" value="<?php echo esc_attr($chat_settings['temperature']); ?>" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                                </div>
-                                <div class="mb-4">
-                                    <label for="chat_max_tokens" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="The maximum number of tokens to generate in the chat completion.">
-                                        Max Response Tokens
-                                    </label>
-                                    <input type="number" id="chat_max_tokens" name="max_tokens" value="<?php echo esc_attr($chat_settings['max_tokens']); ?>" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                                </div>
-                                <div class="mb-4">
-                                    <label for="chat_top_p" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. (0.0 - 1.0)">
-                                        Top P
-                                    </label>
-                                    <input type="number" step="0.01" min="0.0" max="1.0" id="chat_top_p" name="top_p" value="<?php echo esc_attr($chat_settings['top_p']); ?>" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                                </div>
-                                <div class="mb-4">
-                                    <label for="chat_frequency_penalty" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Penalize new tokens based on their existing frequency in the text so far. ( -2.0 to 2.0)">
-                                        Frequency Penalty
-                                    </label>
-                                    <input type="number" step="0.1" min="-2.0" max="2.0" id="chat_frequency_penalty" name="frequency_penalty" value="<?php echo esc_attr($chat_settings['frequency_penalty']); ?>" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                                </div>
-                                <div class="mb-4">
-                                    <label for="chat_presence_penalty" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Penalize new tokens based on whether they appear in the text so far. ( -2.0 to 2.0)">
-                                        Presence Penalty
-                                    </label>
-                                    <input type="number" step="0.1" min="-2.0" max="2.0" id="chat_presence_penalty" name="presence_penalty" value="<?php echo esc_attr($chat_settings['presence_penalty']); ?>" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                                </div>
-                            </div>
-                            <div class="mt-6">
-                                <h4 class="text-md font-semibold mb-3 text-gray-800">Reasoning/Thinking Models (Chat Specific)</h4>
-                                <p class="text-sm text-gray-600 mb-4">These settings override the global reasoning settings for this specific chat.</p>
-                                <div class="mb-4">
-                                    <label class="flex items-center text-gray-700">
-                                        <input type="checkbox" name="chat_reasoning_enabled" value="1" <?php checked($chat_settings['chat_reasoning_enabled'], 1); ?> class="mr-2" id="snn-chat-reasoning-enabled">
-                                        <span class="text-sm font-medium snn-tooltip" data-tippy-content="Enable reasoning/thinking tokens for this chat. Reasoning tokens are billed as output tokens.">
-                                            Enable Reasoning
-                                        </span>
-                                    </label>
-                                </div>
-                                <div class="mb-4 <?php echo empty($chat_settings['chat_reasoning_enabled']) ? 'hidden' : ''; ?>" id="chat-reasoning-options">
-                                    <label for="chat_reasoning_effort" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Controls the effort level for reasoning. 'Low' favors speed, 'High' favors more complete reasoning.">
-                                        Reasoning Effort
-                                    </label>
-                                    <select id="chat_reasoning_effort" name="chat_reasoning_effort" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                                        <option value="low" <?php selected($chat_settings['chat_reasoning_effort'], 'low'); ?>>Low</option>
-                                        <option value="medium" <?php selected($chat_settings['chat_reasoning_effort'], 'medium'); ?>>Medium</option>
-                                        <option value="high" <?php selected($chat_settings['chat_reasoning_effort'], 'high'); ?>>High</option>
-                                    </select>
-                                </div>
-                                <div class="mb-4 <?php echo empty($chat_settings['chat_reasoning_enabled']) ? 'hidden' : ''; ?>" id="chat-reasoning-max-tokens">
-                                    <label for="chat_reasoning_max_tokens" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Maximum number of tokens to allocate for reasoning. Overrides 'Reasoning Effort' if set.">
-                                        Reasoning Max Tokens (Optional)
-                                    </label>
-                                    <input type="number" id="chat_reasoning_max_tokens" name="chat_reasoning_max_tokens" value="<?php echo esc_attr($chat_settings['chat_reasoning_max_tokens']); ?>" min="0" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                                </div>
                             </div>
                         </div>
                         
@@ -1226,17 +1078,6 @@ class SNN_AI_Chat {
                 // Listen for changes on all relevant input fields
                 chatSettingsForm.find('input[type="color"], input[type="number"], input[type="text"], textarea, select').on('input change', applyAllStylesToPreview);
                 chatSettingsForm.find('input[type="checkbox"]').on('change', applyAllStylesToPreview);
-
-                // Toggle visibility of reasoning options based on checkbox
-                $('#snn-chat-reasoning-enabled').on('change', function() {
-                    if ($(this).is(':checked')) {
-                        $('#chat-reasoning-options').removeClass('hidden');
-                        $('#chat-reasoning-max-tokens').removeClass('hidden');
-                    } else {
-                        $('#chat-reasoning-options').addClass('hidden');
-                        $('#chat-reasoning-max-tokens').addClass('hidden');
-                    }
-                });
 
                 // Also apply styles when the iframe has finished loading to sync it with the form's initial state.
                 chatPreviewIframe.on('load', function() {
@@ -1722,34 +1563,18 @@ class SNN_AI_Chat {
         
         
         $api_params = [
-            'temperature' => floatval($chat_settings['temperature'] ?? $api_settings['temperature'] ?? 0.7),
-            'max_tokens' => intval($chat_settings['max_tokens'] ?? $api_settings['max_tokens'] ?? 500),
-            'top_p' => floatval($chat_settings['top_p'] ?? $api_settings['top_p'] ?? 1.0),
-            'frequency_penalty' => floatval($chat_settings['frequency_penalty'] ?? $api_settings['frequency_penalty'] ?? 0.0),
-            'presence_penalty' => floatval($chat_settings['presence_penalty'] ?? $api_settings['presence_penalty'] ?? 0.0),
+            'temperature' => floatval($api_settings['temperature'] ?? 0.7),
+            'max_tokens' => intval($api_settings['max_tokens'] ?? 500),
+            'top_p' => floatval($api_settings['top_p'] ?? 1.0),
+            'frequency_penalty' => floatval($api_settings['frequency_penalty'] ?? 0.0),
+            'presence_penalty' => floatval($api_settings['presence_penalty'] ?? 0.0),
         ];
 
-        // Determine reasoning settings (chat-specific overrides global)
-        $reasoning_enabled = (bool)($chat_settings['chat_reasoning_enabled'] ?? $api_settings[$api_provider . '_reasoning_enabled'] ?? false);
-        $reasoning_effort = (string)($chat_settings['chat_reasoning_effort'] ?? $api_settings[$api_provider . '_reasoning_effort'] ?? 'medium');
-        $reasoning_max_tokens = (int)($chat_settings['chat_reasoning_max_tokens'] ?? $api_settings[$api_provider . '_reasoning_max_tokens'] ?? 0);
-
-        $reasoning_config = [];
-        if ($reasoning_enabled) {
-            if ($reasoning_max_tokens > 0) {
-                $reasoning_config['max_tokens'] = $reasoning_max_tokens;
-            } else {
-                $reasoning_config['effort'] = $reasoning_effort;
-            }
-            // OpenRouter defaults to including reasoning, OpenAI docs imply it's not directly in chat/completions response
-            // For now, we don't add 'exclude' option unless explicitly requested by user.
-        }
-
         if ($api_provider === 'openrouter') {
-            $response = $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params, $reasoning_config);
+            $response = $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params);
 
-        } else { // OpenAI
-            $response = $this->send_to_openai($conversation_history, $model, $api_key, $api_params, $reasoning_config);
+        } else {
+            $response = $this->send_to_openai($conversation_history, $model, $api_key, $api_params);
         }
         
         if ($response && isset($response['content'])) {
@@ -1810,7 +1635,7 @@ class SNN_AI_Chat {
                  --snn-widget-border-top-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_widget_bg_color'] ?? '#ffffff'), -10)); ?>;
                  --snn-placeholder-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>;
                  <?php switch ((string)($settings['chat_position'] ?? 'bottom-right')) { case 'bottom-right': echo 'bottom: 20px; right: 20px;'; break; case 'bottom-left': echo 'bottom: 20px; left: 20px;'; break; case 'top-right': echo 'top: 20px; right: 20px;'; break; case 'top-left': echo 'top: 20px; left: 20px;'; break; } ?>
-                ">
+               ">
             <div class="snn-chat-toggle" id="snn-chat-toggle-<?php echo esc_attr($chat->ID); ?>">
                 <span class="dashicons dashicons-format-chat"></span>
             </div>
@@ -1905,7 +1730,6 @@ class SNN_AI_Chat {
             const userInfoForm = widget.find('#snn-user-info-form-' + chatId);
             const chatInput = widget.find('#snn-chat-input-' + chatId);
             const chatSend = widget.find('#snn-chat-send-' + chatId);
-            const startChatBtn = widget.find('#snn-start-chat-btn-' + chatId); // Define startChatBtn
 
             const localStorageKey = 'snn_chat_session_' + chatId;
 
@@ -2106,13 +1930,6 @@ class SNN_AI_Chat {
             'top_p' => 1.0,
             'frequency_penalty' => 0.0,
             'presence_penalty' => 0.0,
-            // New reasoning settings for global
-            'openrouter_reasoning_enabled' => 0,
-            'openrouter_reasoning_effort' => 'medium',
-            'openrouter_reasoning_max_tokens' => 0,
-            'openai_reasoning_enabled' => 0,
-            'openai_reasoning_effort' => 'medium',
-            'openai_reasoning_max_tokens' => 0,
         ));
     }
     
@@ -2134,13 +1951,6 @@ class SNN_AI_Chat {
             'top_p' => floatval(wp_unslash($_POST['top_p'] ?? 1.0)),
             'frequency_penalty' => floatval(wp_unslash($_POST['frequency_penalty'] ?? 0.0)),
             'presence_penalty' => floatval(wp_unslash($_POST['presence_penalty'] ?? 0.0)),
-            // Save new reasoning settings for global
-            'openrouter_reasoning_enabled' => isset($_POST['openrouter_reasoning_enabled']) ? 1 : 0,
-            'openrouter_reasoning_effort' => sanitize_text_field(wp_unslash($_POST['openrouter_reasoning_effort'] ?? 'medium')),
-            'openrouter_reasoning_max_tokens' => intval(wp_unslash($_POST['openrouter_reasoning_max_tokens'] ?? 0)),
-            'openai_reasoning_enabled' => isset($_POST['openai_reasoning_enabled']) ? 1 : 0,
-            'openai_reasoning_effort' => sanitize_text_field(wp_unslash($_POST['openai_reasoning_effort'] ?? 'medium')),
-            'openai_reasoning_max_tokens' => intval(wp_unslash($_POST['openai_reasoning_max_tokens'] ?? 0)),
         );
         
         update_option('snn_ai_chat_settings', $settings);
@@ -2186,11 +1996,9 @@ class SNN_AI_Chat {
     }
     
     private function get_default_chat_settings() {
-        $global_settings = $this->get_settings(); // Get global settings for default values
-
         return array(
-            'initial_message' => $global_settings['default_initial_message'],
-            'system_prompt' => $global_settings['default_system_prompt'],
+            'initial_message' => 'Hello! How can I help you today?',
+            'system_prompt' => 'You are a helpful assistant.',
             'keep_conversation_history' => 1,
             'chat_position' => 'bottom-right',
             'primary_color' => '#3b82f6',
@@ -2223,15 +2031,11 @@ class SNN_AI_Chat {
             'max_chats_per_ip_daily' => 50,
             'rate_limit_per_minute' => 10,
             'collect_user_info' => 0,
-            'temperature' => $global_settings['temperature'], // Default from global settings
-            'max_tokens' => $global_settings['max_tokens'], // Default from global settings
-            'top_p' => $global_settings['top_p'], // Default from global settings
-            'frequency_penalty' => $global_settings['frequency_penalty'], // Default from global settings
-            'presence_penalty' => $global_settings['presence_penalty'], // Default from global settings
-            // New reasoning settings for chat-specific (default to global settings)
-            'chat_reasoning_enabled' => $global_settings['openrouter_reasoning_enabled'], // Using OpenRouter as default provider
-            'chat_reasoning_effort' => $global_settings['openrouter_reasoning_effort'],
-            'chat_reasoning_max_tokens' => $global_settings['openrouter_reasoning_max_tokens'],
+            'temperature' => 0.7,
+            'max_tokens' => 500,
+            'top_p' => 1.0,
+            'frequency_penalty' => 0.0,
+            'presence_penalty' => 0.0,
         );
     }
     
@@ -2384,27 +2188,21 @@ class SNN_AI_Chat {
         return $history;
     }
     
-    private function send_to_openrouter($messages, $model, $api_key, $api_params, $reasoning_config = []) {
-        $body_data = array(
-            'model' => (string)$model,
-            'messages' => $messages,
-            'temperature' => floatval($api_params['temperature'] ?? 0.7),
-            'max_tokens' => intval($api_params['max_tokens'] ?? 500),
-            'top_p' => floatval($api_params['top_p'] ?? 1.0),
-            'frequency_penalty' => floatval($api_params['frequency_penalty'] ?? 0.0),
-            'presence_penalty' => floatval($api_params['presence_penalty'] ?? 0.0),
-        );
-
-        if (!empty($reasoning_config)) {
-            $body_data['reasoning'] = $reasoning_config;
-        }
-
+    private function send_to_openrouter($messages, $model, $api_key, $api_params) {
         $response = wp_remote_post('https://openrouter.ai/api/v1/chat/completions', array(
             'headers' => array(
                 'Authorization' => 'Bearer ' . (string)$api_key,
                 'Content-Type' => 'application/json'
             ),
-            'body' => json_encode($body_data),
+            'body' => json_encode(array(
+                'model' => (string)$model,
+                'messages' => $messages,
+                'temperature' => floatval($api_params['temperature'] ?? 0.7),
+                'max_tokens' => intval($api_params['max_tokens'] ?? 500),
+                'top_p' => floatval($api_params['top_p'] ?? 1.0),
+                'frequency_penalty' => floatval($api_params['frequency_penalty'] ?? 0.0),
+                'presence_penalty' => floatval($api_params['presence_penalty'] ?? 0.0),
+            )),
             'timeout' => 30,
         ));
         
@@ -2427,32 +2225,21 @@ class SNN_AI_Chat {
         return false;
     }
     
-    private function send_to_openai($messages, $model, $api_key, $api_params, $reasoning_config = []) {
-        $body_data = array(
-            'model' => (string)$model,
-            'messages' => $messages,
-            'temperature' => floatval($api_params['temperature'] ?? 0.7),
-            'max_tokens' => intval($api_params['max_tokens'] ?? 500),
-            'top_p' => floatval($api_params['top_p'] ?? 1.0),
-            'frequency_penalty' => floatval($api_params['frequency_penalty'] ?? 0.0),
-            'presence_penalty' => floatval($api_params['presence_penalty'] ?? 0.0),
-        );
-
-        // OpenAI's "Reasoning Models" documentation refers to a /v1/responses endpoint.
-        // However, the existing code uses /v1/chat/completions.
-        // We will pass the 'reasoning' parameter to chat/completions.
-        // Note: It might be ignored by OpenAI's standard chat completions API,
-        // or its behavior might be different from their dedicated reasoning models API.
-        if (!empty($reasoning_config)) {
-            $body_data['reasoning'] = $reasoning_config;
-        }
-
+    private function send_to_openai($messages, $model, $api_key, $api_params) {
         $response = wp_remote_post('https://api.openai.com/v1/chat/completions', array(
             'headers' => array(
                 'Authorization' => 'Bearer ' . (string)$api_key,
                 'Content-Type' => 'application/json'
             ),
-            'body' => json_encode($body_data),
+            'body' => json_encode(array(
+                'model' => (string)$model,
+                'messages' => $messages,
+                'temperature' => floatval($api_params['temperature'] ?? 0.7),
+                'max_tokens' => intval($api_params['max_tokens'] ?? 500),
+                'top_p' => floatval($api_params['top_p'] ?? 1.0),
+                'frequency_penalty' => floatval($api_params['frequency_penalty'] ?? 0.0),
+                'presence_penalty' => floatval($api_params['presence_penalty'] ?? 0.0),
+            )),
             'timeout' => 30,
         ));
         
