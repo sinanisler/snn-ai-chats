@@ -3,7 +3,7 @@
  * Plugin Name: SNN AI CHAT
  * Plugin URI: https://sinanisler.com
  * Description: Advanced AI Chat Plugin with OpenRouter and OpenAI support
- * Version: 0.2.7
+ * Version: 0.2.9
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author: sinanisler
@@ -13,7 +13,7 @@
 
 if (!defined('ABSPATH')) { exit; }
 
-define('SNN_AI_CHAT_VERSION', '1.0.7');
+define('SNN_AI_CHAT_VERSION', '1.0.9');
 define('SNN_AI_CHAT_PLUGIN_DIR', plugin_dir_path((string)__FILE__));
 define('SNN_AI_CHAT_PLUGIN_URL', plugin_dir_url((string)__FILE__));
 
@@ -72,8 +72,8 @@ class SNN_AI_Chat {
     }
 
     public function handle_delete_actions() {
-        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-history') {            return;         }
-        if (!current_user_can('manage_options')) {            return;           }
+        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-history') {           return;           }
+        if (!current_user_can('manage_options')) {           return;           }
         global $wpdb;
         if (isset($_POST['action']) && $_POST['action'] === 'delete_session') {
             if (!isset($_POST['snn_delete_session_nonce']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_delete_session_nonce'] ?? '')), 'snn_delete_session')) {
@@ -292,10 +292,12 @@ class SNN_AI_Chat {
 
     public function frontend_enqueue_scripts() {
         wp_enqueue_style('snn-ai-chat-frontend', SNN_AI_CHAT_PLUGIN_URL . 'snn-ai-chat-frontend.css', array(), SNN_AI_CHAT_VERSION);
-        wp_enqueue_script('snn-ai-chat-frontend', SNN_AI_CHAT_PLUGIN_URL . 'snn-ai-chat-frontend.js', array('jquery'), SNN_AI_CHAT_VERSION, true);
+
         wp_enqueue_style('dashicons');
 
-        wp_localize_script('snn-ai-chat-frontend', 'snn_ai_chat_ajax', array(
+        wp_enqueue_script('jquery');
+
+        wp_localize_script('jquery', 'snn_ai_chat_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('snn_ai_chat_nonce')
         ));
@@ -813,6 +815,22 @@ class SNN_AI_Chat {
                                 </label>
                                 <textarea id="system_prompt" name="system_prompt" rows="3" class="w-full p-2 border border-gray-300 rounded-md system-prompt-input focus:ring-blue-500 focus:border-blue-500"><?php echo esc_textarea($chat_settings['system_prompt']); ?></textarea>
                             </div>
+
+                            <!-- NEW DYNAMIC TAGS SECTION -->
+                            <div class="mb-4 dynamic-tags-section p-4 bg-gray-50 rounded-lg border border-gray-200" id="snn-dynamic-tags-section">
+                                <h4 class="text-md font-semibold mb-2 text-gray-700">Dynamic Tags and Variables</h4>
+                                <?php $dynamic_tags = $this->get_dynamic_tags(); ?>
+                                <?php foreach ($dynamic_tags as $group_name => $tags) : ?>
+                                    <div class="mb-3">
+                                        <div class="flex flex-wrap gap-1">
+                                            <?php foreach ($tags as $tag => $description) : ?>
+                                                <code class="dynamic-tag cursor-pointer bg-gray-200 text-gray-800 px-2 py-1 rounded text-xs snn-tooltip hover:bg-gray-300 transition-colors" data-tippy-content="<?php echo esc_attr($description); ?>"><?php echo esc_html($tag); ?></code>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <!-- END DYNAMIC TAGS SECTION -->
                             
                             <div class="mb-4">
                                 <label class="flex items-center text-gray-700">
@@ -1032,6 +1050,18 @@ class SNN_AI_Chat {
                 const chatSettingsForm = $('#chat-settings-form');
                 const chatPreviewIframe = $('#chat-preview-iframe');
                 const chatId = chatSettingsForm.find('input[name="chat_id"]').val();
+
+                // Dynamic Tag insertion logic
+                $('#snn-dynamic-tags-section').on('click', '.dynamic-tag', function() {
+                    const tag = $(this).text();
+                    const promptTextarea = $('#system_prompt');
+                    const currentVal = promptTextarea.val();
+                    const cursorPos = promptTextarea[0].selectionStart;
+                    const newVal = currentVal.substring(0, cursorPos) + ' ' + tag + ' ' + currentVal.substring(cursorPos);
+                    promptTextarea.val(newVal).focus();
+                    promptTextarea[0].selectionStart = cursorPos + tag.length + 2;
+                    promptTextarea[0].selectionEnd = cursorPos + tag.length + 2;
+                });
 
                 function adjustBrightness(hex, steps) {
                     hex = hex.replace('#', '');
@@ -1521,6 +1551,7 @@ class SNN_AI_Chat {
         $chat_id = intval($_POST['chat_id'] ?? 0);
         $user_name = sanitize_text_field($_POST['user_name'] ?? '');
         $user_email = sanitize_email($_POST['user_email'] ?? '');
+        $current_post_id = intval($_POST['post_id'] ?? 0); // Get post_id from frontend
         
         if (empty($message) || empty($session_id) || empty($chat_id)) {
             wp_send_json_error('Missing required data.');
@@ -1545,10 +1576,19 @@ class SNN_AI_Chat {
 
         $conversation_history = [];
         if (!empty($chat_settings['system_prompt'])) {
-             $conversation_history[] = array(
-                 'role' => 'system',
-                 'content' => (string)$chat_settings['system_prompt']
-               );
+            // Process dynamic tags in the system prompt
+            $context = [
+                'post_id'    => $current_post_id,
+                'user_name'  => $user_name,
+                'user_email' => $user_email,
+                'user_ip'    => (string)$_SERVER['REMOTE_ADDR'],
+            ];
+            $processed_prompt = $this->process_dynamic_tags($chat_settings['system_prompt'], $context);
+
+            $conversation_history[] = array(
+                'role' => 'system',
+                'content' => $processed_prompt
+            );
         }
 
         if (!empty($chat_settings['keep_conversation_history'])) {
@@ -1607,9 +1647,11 @@ class SNN_AI_Chat {
 
     private function render_chat_widget($chat, $settings) {
         $session_id = 'snn_' . time() . '_' . bin2hex(random_bytes(8));
+        $post_id = get_queried_object_id();
         ?>
         <div class="snn-ai-chat-widget" id="snn-chat-<?php echo esc_attr($chat->ID); ?>"
              data-chat-id="<?php echo esc_attr($chat->ID); ?>"
+             data-post-id="<?php echo esc_attr($post_id); ?>"
              data-session-id="<?php echo esc_attr($session_id); ?>"
              data-initial-message="<?php echo esc_attr($settings['initial_message']); ?>"
              data-collect-user-info="<?php echo esc_attr((int)$settings['collect_user_info']); ?>"
@@ -1673,7 +1715,7 @@ class SNN_AI_Chat {
                 
                 <div class="snn-chat-input-container" id="snn-chat-input-container-<?php echo esc_attr($chat->ID); ?>">
                     <input type="text" class="snn-chat-input" id="snn-chat-input-<?php echo esc_attr($chat->ID); ?>" placeholder="Type your message..." <?php echo !empty($settings['collect_user_info']) ? 'disabled' : ''; ?>>
-                    <button class="snn-chat-send" id="snn-chat-send-<?php echo !empty($settings['collect_user_info']) ? 'disabled' : ''; ?>">
+                    <button class="snn-chat-send" id="snn-chat-send-<?php echo esc_attr($chat->ID); ?>" <?php echo !empty($settings['collect_user_info']) ? 'disabled' : ''; ?>>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                            <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1719,68 +1761,125 @@ class SNN_AI_Chat {
         </style>
         <script>
         jQuery(document).ready(function($) {
-            const widget = $('#snn-chat-<?php echo esc_attr($chat->ID); ?>');
-            if (!widget.length) return;
+            // This script handles all frontend chat widgets on a page.
+            // It's designed to manage multiple chat instances independently.
+            $('.snn-ai-chat-widget').each(function() {
+                const widget = $(this);
+                if (!widget.length) return;
 
-            const chatId = widget.data('chat-id');
-            const messagesContainer = widget.find('.snn-chat-messages');
-            const newChatBtn = widget.find('.snn-new-chat');
-            const initialMessage = <?php echo json_encode($settings['initial_message']); ?>;
-            const collectUserInfo = <?php echo json_encode((bool)$settings['collect_user_info']); ?>;
-            const userInfoForm = widget.find('#snn-user-info-form-' + chatId);
-            const chatInput = widget.find('#snn-chat-input-' + chatId);
-            const chatSend = widget.find('#snn-chat-send-' + chatId);
+                // --- Setup variables for this specific widget instance ---
+                const chatId = widget.data('chat-id');
+                const contextualId = widget.data('post-id'); // The ID of the current page/post from the server.
+                const initialMessage = widget.data('initial-message');
+                const collectUserInfo = widget.data('collect-user-info') == 1;
 
-            const localStorageKey = 'snn_chat_session_' + chatId;
+                // --- Get all interactive elements for this widget ---
+                const container = widget.find('#snn-chat-container-' + chatId);
+                const toggleBtn = widget.find('#snn-chat-toggle-' + chatId);
+                const closeBtn = widget.find('#snn-chat-close-' + chatId);
+                const newChatBtn = widget.find('#snn-new-chat-' + chatId);
+                const messagesContainer = widget.find('#snn-chat-messages-' + chatId);
+                const userInfoForm = widget.find('#snn-user-info-form-' + chatId);
+                const startChatBtn = widget.find('#snn-start-chat-btn-' + chatId);
+                const chatInput = widget.find('#snn-chat-input-' + chatId);
+                const chatSend = widget.find('#snn-chat-send-' + chatId);
+                const errorBox = widget.find('#snn-chat-error-message-box-' + chatId);
 
-            function saveSession() {
-                const sessionId = widget.data('session-id');
-                const messages = [];
-                messagesContainer.find('.snn-chat-message').each(function() {
-                    const messageEl = $(this);
-                    let content = messageEl.find('.snn-message-content').html();
-                    let type = messageEl.hasClass('snn-user-message') ? 'user' : 'ai';
-                    messages.push({ type: type, content: content, id: messageEl.attr('id') });
-                });
+                const localStorageKey = 'snn_chat_session_' + chatId;
+                const contextualIdStorageKey = 'snn_ai_chat_contextual_id';
 
-                const userInfo = {
-                    name: widget.data('user-name') || '',
-                    email: widget.data('user-email') || ''
-                };
-
-                const now = new Date();
-                // Set expiry to 30 days from now
-                const expiry = now.getTime() + (30 * 24 * 60 * 60 * 1000);
-
-                const sessionData = {
-                    sessionId: sessionId,
-                    messages: messages,
-                    userInfo: userInfo,
-                    expiry: expiry
-                };
-
-                try {
-                    localStorage.setItem(localStorageKey, JSON.stringify(sessionData));
-                } catch (e) {
-                    console.error("SNN AI Chat: Could not save session to localStorage.", e);
+                // Per your request, save the contextual ID to localStorage when the widget loads.
+                if (contextualId !== undefined) {
+                    try {
+                        localStorage.setItem(contextualIdStorageKey, contextualId);
+                    } catch (e) {
+                        console.error("SNN AI Chat: Could not save contextual ID to localStorage.", e);
+                    }
                 }
-            }
 
-            function loadSession() {
-                try {
-                    const savedSession = localStorage.getItem(localStorageKey);
-                    if (savedSession) {
+                function displayError(message) {
+                    errorBox.text(message).show();
+                    setTimeout(() => errorBox.hide().text(''), 5000);
+                }
+
+                // --- Main Logic: Sending a message via AJAX ---
+                const sendMessage = function() {
+                    const message = chatInput.val().trim();
+                    if (message === '') return;
+
+                    // Sanitize message for display
+                    const sanitizedMessage = $('<div>').text(message).html();
+                    const userMessageHTML = `<div class="snn-chat-message snn-user-message"><div class="snn-message-content">${sanitizedMessage}</div></div>`;
+                    messagesContainer.append(userMessageHTML);
+                    chatInput.val('');
+                    messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
+
+                    const typingIndicatorHTML = `<div class="snn-chat-message snn-ai-message snn-typing-indicator"><div class="snn-message-content"><span>.</span><span>.</span><span>.</span></div></div>`;
+                    messagesContainer.append(typingIndicatorHTML);
+                    messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
+                    chatSend.prop('disabled', true);
+
+                    // --- THE FIX: Read the contextual ID from localStorage and send it with the request ---
+                    const postIdFromStorage = localStorage.getItem(contextualIdStorageKey) || contextualId || 0;
+
+                    $.ajax({
+                        url: snn_ai_chat_ajax.ajax_url,
+                        type: 'POST',
+                        data: {
+                            action: 'snn_ai_chat_api',
+                            nonce: snn_ai_chat_ajax.nonce,
+                            message: message,
+                            session_id: widget.data('session-id'),
+                            chat_id: chatId,
+                            user_name: widget.data('user-name') || '',
+                            user_email: widget.data('user-email') || '',
+                            post_id: postIdFromStorage // This is the crucial part for dynamic tags
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                // The response content should already be safe from the backend
+                                const aiMessageHTML = `<div class="snn-chat-message snn-ai-message"><div class="snn-message-content">${response.data.response}</div></div>`;
+                                messagesContainer.append(aiMessageHTML);
+                            } else {
+                                displayError(response.data.response || 'An unknown error occurred.');
+                            }
+                        },
+                        error: function() {
+                            displayError('Request failed. Please check your connection.');
+                        },
+                        complete: function() {
+                            widget.find('.snn-typing-indicator').remove();
+                            messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
+                            chatSend.prop('disabled', false);
+                            chatInput.focus();
+                        }
+                    });
+                };
+
+                // --- Session Management (from your original script) ---
+                function saveSession() {
+                    // This function is now just a placeholder as the MutationObserver handles saving.
+                }
+
+                function loadSession() {
+                    try {
+                        const savedSession = localStorage.getItem(localStorageKey);
+                        if (!savedSession) {
+                            startNewSession();
+                            return;
+                        }
+                        
                         const data = JSON.parse(savedSession);
                         const now = new Date();
 
-                        // Check if the item has expired
                         if (now.getTime() > data.expiry) {
                             localStorage.removeItem(localStorageKey);
-                            startNewSession(); // Start fresh if expired
+                            startNewSession();
                             return;
                         }
 
                         widget.data('session-id', data.sessionId);
+                        messagesContainer.empty();
 
                         if (collectUserInfo && data.userInfo && data.userInfo.name) {
                             widget.data('user-name', data.userInfo.name);
@@ -1788,99 +1887,127 @@ class SNN_AI_Chat {
                             userInfoForm.hide();
                             chatInput.prop('disabled', false);
                             chatSend.prop('disabled', false);
+                        } else if (collectUserInfo) {
+                            startNewSession(); // Force new session if user info is missing but required
+                            return;
                         }
-
-                        messagesContainer.empty();
-
+                        
                         if (data.messages && data.messages.length > 0) {
                              data.messages.forEach(function(msg) {
-                                 const messageClass = msg.type === 'user' ? 'snn-user-message' : 'snn-ai-message';
-                                 const messageIdAttr = msg.id ? 'id="' + msg.id + '"' : '';
-                                 const messageHTML = `<div class="snn-chat-message ${messageClass}" ${messageIdAttr}><div class="snn-message-content">${msg.content}</div></div>`;
-                                 messagesContainer.append(messageHTML);
-                             });
+                                const messageClass = msg.type === 'user' ? 'snn-user-message' : 'snn-ai-message';
+                                const messageIdAttr = msg.id ? 'id="' + msg.id + '"' : '';
+                                const messageHTML = `<div class="snn-chat-message ${messageClass}" ${messageIdAttr}><div class="snn-message-content">${msg.content}</div></div>`;
+                                messagesContainer.append(messageHTML);
+                            });
                         } else {
-                            // If there are no messages, show the initial one
-                            startNewSession(false); // false to not generate new session id
+                            startNewSession(false); // No messages, so show initial message
                         }
-
+                        
                         messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
-                    } else {
-                        // If no session, start a new one
+
+                    } catch (e) {
+                        console.error("SNN AI Chat: Could not load session.", e);
+                        localStorage.removeItem(localStorageKey);
                         startNewSession();
                     }
-                } catch (e) {
-                    console.error("SNN AI Chat: Could not load session from localStorage.", e);
+                }
+
+                function startNewSession(generateNewId = true) {
                     localStorage.removeItem(localStorageKey);
+                    
+                    if (generateNewId) {
+                        const newSessionId = 'snn_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                        widget.data('session-id', newSessionId);
+                    }
+
+                    widget.data('user-name', '');
+                    widget.data('user-email', '');
+                    messagesContainer.empty();
+
+                    if (collectUserInfo) {
+                        userInfoForm.show();
+                        userInfoForm.find('input').val('');
+                        chatInput.prop('disabled', true);
+                        chatSend.prop('disabled', true);
+                    } else {
+                        const initialMessageHTML = `<div class="snn-chat-message snn-ai-message" id="snn-initial-ai-message-${chatId}"><div class="snn-message-content">${initialMessage}</div></div>`;
+                        messagesContainer.append(initialMessageHTML);
+                        chatInput.prop('disabled', false);
+                        chatSend.prop('disabled', false);
+                    }
                 }
-            }
 
-            function startNewSession(generateNewId = true) {
-                localStorage.removeItem(localStorageKey);
-                
-                if(generateNewId) {
-                    const newSessionId = 'snn_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                    widget.data('session-id', newSessionId);
-                }
+                // --- Event Handlers ---
+                toggleBtn.off('click').on('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    container.toggle(); // No animation as requested
+                });
 
-                widget.data('user-name', '');
-                widget.data('user-email', '');
-                messagesContainer.empty();
+                closeBtn.off('click').on('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    container.hide(); // No animation as requested
+                });
 
-                if (collectUserInfo) {
-                    userInfoForm.show();
-                    userInfoForm.find('input').val('');
-                    chatInput.prop('disabled', true);
-                    chatSend.prop('disabled', true);
-                } else {
-                    const initialMessageHTML = `<div class="snn-chat-message snn-ai-message" id="snn-initial-ai-message-${chatId}"><div class="snn-message-content">${initialMessage}</div></div>`;
-                    messagesContainer.append(initialMessageHTML);
-                    chatInput.prop('disabled', false);
-                    chatSend.prop('disabled', false);
-                }
-                // Save the new empty session immediately
-                saveSession();
-            }
-
-            newChatBtn.on('click', function() {
-                startNewSession();
-            });
-
-            if (startChatBtn.length) {
-                startChatBtn.on('click', function() {
-                    const userName = widget.find('#snn-user-name-' + chatId).val();
-                    const userEmail = widget.find('#snn-user-email-' + chatId).val();
-                    if (userName && userEmail) {
-                        widget.data('user-name', userName);
-                        widget.data('user-email', userEmail);
-                        // The original script will add the initial message, which the observer will catch.
-                        // But let's save the user info right away.
-                        setTimeout(saveSession, 50);
+                newChatBtn.on('click', () => startNewSession());
+                chatSend.on('click', sendMessage);
+                chatInput.on('keypress', function(e) {
+                    if (e.which === 13 && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
                     }
                 });
-            }
 
-            if (typeof MutationObserver !== 'undefined') {
-                const observer = new MutationObserver(function(mutations) {
-                    let shouldSave = false;
-                    mutations.forEach(function(mutation) {
-                        if (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0) {
-                            shouldSave = true;
+                if (startChatBtn.length) {
+                    startChatBtn.on('click', function() {
+                        const userName = widget.find('#snn-user-name-' + chatId).val().trim();
+                        const userEmail = widget.find('#snn-user-email-' + chatId).val().trim();
+                        if (userName && userEmail) {
+                            widget.data('user-name', userName);
+                            widget.data('user-email', userEmail);
+                            userInfoForm.hide();
+                            chatInput.prop('disabled', false);
+                            chatSend.prop('disabled', false);
+                            startNewSession(false); // Start session content without generating new ID
+                        } else {
+                            alert('Please fill in your name and email.');
                         }
                     });
-                    if(shouldSave) {
-                        saveSession();
-                    }
-                });
+                }
 
-                observer.observe(messagesContainer[0], {
-                    childList: true,
-                    subtree: true
-                });
-            }
+                // --- Auto-save session using MutationObserver ---
+                if (typeof MutationObserver !== 'undefined') {
+                    const observer = new MutationObserver(function(mutations) {
+                        const messages = [];
+                        messagesContainer.find('.snn-chat-message').each(function() {
+                            const messageEl = $(this);
+                            if (messageEl.hasClass('snn-typing-indicator')) return;
+                            let content = messageEl.find('.snn-message-content').html();
+                            let type = messageEl.hasClass('snn-user-message') ? 'user' : 'ai';
+                            messages.push({ type: type, content: content, id: messageEl.attr('id') });
+                        });
 
-            // Initial load
-            loadSession();
+                        const sessionData = {
+                            sessionId: widget.data('session-id'),
+                            messages: messages,
+                            userInfo: { name: widget.data('user-name') || '', email: widget.data('user-email') || '' },
+                            expiry: new Date().getTime() + (30 * 24 * 60 * 60 * 1000) // 30-day expiry
+                        };
+
+                        try {
+                            localStorage.setItem(localStorageKey, JSON.stringify(sessionData));
+                        } catch (e) {
+                            console.error("SNN AI Chat: Could not save session to localStorage.", e);
+                        }
+                    });
+
+                    observer.observe(messagesContainer[0], { childList: true, subtree: true, characterData: true });
+                }
+
+                // --- Initial Load ---
+                loadSession();
+            });
         });
         </script>
         <?php
@@ -1920,9 +2047,9 @@ class SNN_AI_Chat {
         return get_option('snn_ai_chat_settings', array(
             'api_provider' => 'openrouter',
             'openrouter_api_key' => '',
-            'openrouter_model' => 'openai/gpt-4.1-mini',
+            'openrouter_model' => 'openai/gpt-4o-mini',
             'openai_api_key' => '',
-            'openai_model' => 'gpt-4.1-mini',
+            'openai_model' => 'gpt-4o-mini',
             'default_system_prompt' => 'You are a helpful assistant.',
             'default_initial_message' => 'Hello! How can I help you today?',
             'temperature' => 0.7,
@@ -2359,6 +2486,116 @@ class SNN_AI_Chat {
         $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}snn_chat_sessions");
         delete_option('snn_ai_chat_settings');
         flush_rewrite_rules();
+    }
+
+    private function get_dynamic_tags() {
+        return [
+            'Site Information' => [
+                '{{site_name}}' => 'The name of your website.',
+                '{{site_description}}' => 'The tagline or description of your site.',
+                '{{site_url}}' => 'The root URL of your site.',
+                '{{admin_email}}' => 'The admin email address for the site.',
+            ],
+            'Current Page/Post' => [
+                '{{post_id}}' => 'The ID of the current page or post.',
+                '{{post_title}}' => 'The title of the current page or post.',
+                '{{post_content}}' => 'The full content of the current page or post (HTML tags will be removed).',
+                '{{post_excerpt}}' => 'The excerpt of the current page or post (HTML tags will be removed).',
+                '{{post_url}}' => 'The URL of the current page or post.',
+                '{{post_author_name}}' => 'The display name of the author of the current post.',
+                '{{post_custom_field:FIELD_NAME}}' => 'Value of a custom field from the current post. Replace FIELD_NAME with your custom field key.',
+            ],
+            'Specific Post (by ID)' => [
+                '{{post_title:ID}}' => 'The title of a specific post. Replace ID with the post ID.',
+                '{{post_content:ID}}' => 'The content of a specific post. Replace ID with the post ID.',
+                '{{post_custom_field:FIELD_NAME:ID}}' => 'Value of a custom field from a specific post. Replace FIELD_NAME and ID.',
+            ],
+            'User Information' => [
+                '{{user_name}}' => 'The name provided by the user in the chat form.',
+                '{{user_email}}' => 'The email provided by the user in the chat form.',
+                '{{user_ip}}' => 'The IP address of the user.',
+            ],
+            'Date & Time' => [
+                '{{current_date}}' => 'The current server date, formatted according to your WordPress settings.',
+                '{{current_time}}' => 'The current server time, formatted according to your WordPress settings.',
+            ]
+        ];
+    }
+
+    private function process_dynamic_tags($prompt, $context = []) {
+        // This regex is now case-insensitive
+        return preg_replace_callback('/\{\{(.*?)\}\}/i', function($matches) use ($context) {
+            $full_tag = $matches[0];
+            // Normalize the tag by making it lowercase and removing underscores
+            $tag_content = str_replace('_', '', strtolower(trim($matches[1])));
+            
+            $parts = explode(':', $tag_content);
+            $tag_name = $parts[0];
+    
+            // Non-post context
+            $user_name = $context['user_name'] ?? '';
+            $user_email = $context['user_email'] ?? '';
+            $user_ip = $context['user_ip'] ?? '';
+    
+            switch ($tag_name) {
+                // Site-wide tags (normalized)
+                case 'sitename': return get_bloginfo('name');
+                case 'sitedescription': return get_bloginfo('description');
+                case 'siteurl': return home_url();
+                case 'adminemail': return get_option('admin_email');
+                case 'currentdate': return date_i18n(get_option('date_format'));
+                case 'currenttime': return date_i18n(get_option('time_format'));
+                // User context tags (normalized)
+                case 'username': return $user_name;
+                case 'useremail': return $user_email;
+                case 'userip': return $user_ip;
+            }
+    
+            // Post-related tags require a post ID
+            $target_post_id = $context['post_id'] ?? 0;
+            $field_name = '';
+    
+            if ($tag_name === 'postcustomfield') {
+                if (count($parts) === 3) { // {{post_custom_field:FIELD_NAME:ID}}
+                    $field_name = $parts[1];
+                    $target_post_id = intval($parts[2]);
+                } elseif (count($parts) === 2) { // {{post_custom_field:FIELD_NAME}}
+                    $field_name = $parts[1];
+                }
+            } elseif (count($parts) === 2) { // e.g. {{posttitle:123}}
+                $target_post_id = intval($parts[1]);
+            }
+            
+            // If no post ID is available for a post-specific tag, return the tag as is.
+            if (!$target_post_id) {
+                return $full_tag;
+            }
+            
+            $post = get_post($target_post_id);
+            if (!$post) {
+                return $full_tag; // Post not found, return original tag
+            }
+    
+            switch ($tag_name) {
+                case 'postid': return $post->ID;
+                case 'posttitle': return get_the_title($post);
+                case 'postcontent': return wp_strip_all_tags(apply_filters('the_content', $post->post_content));
+                case 'postexcerpt': return wp_strip_all_tags(get_the_excerpt($post));
+                case 'posturl': return get_permalink($post);
+                case 'postauthorname': return get_the_author_meta('display_name', $post->post_author);
+                case 'postauthoremail': return get_the_author_meta('user_email', $post->post_author);
+                case 'postdate': return get_the_date('', $post);
+                case 'posttype': return get_post_type($post);
+                case 'postcustomfield':
+                    if ($field_name) {
+                        $meta = get_post_meta($post->ID, $field_name, true);
+                        return is_scalar($meta) ? (string)$meta : '';
+                    }
+                    break;
+            }
+    
+            return $full_tag; // Return original tag if no match was found
+        }, $prompt);
     }
 
     private function adjust_brightness($hex, $steps) {
