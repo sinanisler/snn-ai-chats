@@ -3,7 +3,7 @@
  * Plugin Name: SNN AI CHAT
  * Plugin URI: https://sinanisler.com
  * Description: Advanced AI Chat Plugin with OpenRouter and OpenAI support
- * Version: 0.2.9
+ * Version: 0.3.1
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author: sinanisler
@@ -13,7 +13,7 @@
 
 if (!defined('ABSPATH')) { exit; }
 
-define('SNN_AI_CHAT_VERSION', '1.0.9');
+define('SNN_AI_CHAT_VERSION', '1.1.0');
 define('SNN_AI_CHAT_PLUGIN_DIR', plugin_dir_path((string)__FILE__));
 define('SNN_AI_CHAT_PLUGIN_URL', plugin_dir_url((string)__FILE__));
 
@@ -34,7 +34,7 @@ class SNN_AI_Chat {
         add_action('wp_enqueue_scripts', array($this, 'frontend_enqueue_scripts'));
         add_action('wp_ajax_snn_ai_chat_api', array($this, 'handle_chat_api'));
         add_action('wp_ajax_nopriv_snn_ai_chat_api', array($this, 'handle_chat_api'));
-        // Changed visibility of get_models and get_model_details to public for AJAX calls
+        
         add_action('wp_ajax_snn_get_models', array($this, 'get_models'));
         add_action('wp_action_snn_get_model_details', array($this, 'get_model_details'));
         add_action('wp_ajax_snn_get_model_details', array($this, 'get_model_details'));
@@ -1302,7 +1302,7 @@ class SNN_AI_Chat {
                                 <?php endif; ?>
                                 <?php if (!empty($msg->response)) : ?>
                                     <p class="font-semibold text-green-700 mt-2">AI:</p>
-                                    <div class="text-gray-800"><?php echo nl2br(esc_html($msg->response)); ?></div>
+                                    <div class="text-gray-800"><?php echo wp_kses_post($msg->response); // Use wp_kses_post to allow the HTML of content cards ?></div>
                                 <?php endif; ?>
                                 <p class="text-xs text-gray-500 mt-1">Tokens: <?php echo esc_html($msg->tokens_used); ?> | Time: <?php echo esc_html(date('H:i:s', strtotime($msg->created_at))); ?></p>
                             </div>
@@ -1551,7 +1551,7 @@ class SNN_AI_Chat {
         $chat_id = intval($_POST['chat_id'] ?? 0);
         $user_name = sanitize_text_field($_POST['user_name'] ?? '');
         $user_email = sanitize_email($_POST['user_email'] ?? '');
-        $current_post_id = intval($_POST['post_id'] ?? 0); // Get post_id from frontend
+        $current_post_id = intval($_POST['post_id'] ?? 0);
         
         if (empty($message) || empty($session_id) || empty($chat_id)) {
             wp_send_json_error('Missing required data.');
@@ -1563,7 +1563,6 @@ class SNN_AI_Chat {
         
         $chat_settings_raw = get_post_meta($chat_id, '_snn_chat_settings', true);
         $chat_settings = wp_parse_args(is_array($chat_settings_raw) ? $chat_settings_raw : [], $this->get_default_chat_settings());
-        
         $api_settings = $this->get_settings();
         
         $api_provider = (string)($api_settings['api_provider'] ?? 'openrouter');
@@ -1571,24 +1570,29 @@ class SNN_AI_Chat {
         $api_key = ($api_provider === 'openai') ? (string)($api_settings['openai_api_key'] ?? '') : (string)($api_settings['openrouter_api_key'] ?? '');
 
         if (empty($api_key)) {
-             wp_send_json_error(array('response' => 'API key is not configured.'));
+            wp_send_json_error(array('response' => 'API key is not configured.'));
         }
-
+        
+        // --- Conversation History Setup ---
         $conversation_history = [];
-        if (!empty($chat_settings['system_prompt'])) {
-            // Process dynamic tags in the system prompt
-            $context = [
-                'post_id'    => $current_post_id,
-                'user_name'  => $user_name,
-                'user_email' => $user_email,
-                'user_ip'    => (string)$_SERVER['REMOTE_ADDR'],
-            ];
-            $processed_prompt = $this->process_dynamic_tags($chat_settings['system_prompt'], $context);
+        $context = [
+            'post_id'    => $current_post_id,
+            'user_name'  => $user_name,
+            'user_email' => $user_email,
+            'user_ip'    => (string)$_SERVER['REMOTE_ADDR'],
+        ];
 
-            $conversation_history[] = array(
+        // Process dynamic tags in the main system prompt
+        $processed_prompt = $this->process_dynamic_tags($chat_settings['system_prompt'], $context);
+        
+        // Add the tool manifest to the system prompt
+        $system_prompt_with_tools = $processed_prompt . "\n\n" . $this->get_tool_manifest();
+
+        if (!empty($system_prompt_with_tools)) {
+            $conversation_history[] = [
                 'role' => 'system',
-                'content' => $processed_prompt
-            );
+                'content' => $system_prompt_with_tools
+            ];
         }
 
         if (!empty($chat_settings['keep_conversation_history'])) {
@@ -1596,36 +1600,73 @@ class SNN_AI_Chat {
             $conversation_history = array_merge($conversation_history, $previous_messages);
         }
         
-        $conversation_history[] = array(
+        $conversation_history[] = [
             'role' => 'user',
             'content' => (string)$message
-        );
+        ];
         
-        
+        // --- API Parameters ---
         $api_params = [
             'temperature' => floatval($api_settings['temperature'] ?? 0.7),
-            'max_tokens' => intval($api_settings['max_tokens'] ?? 500),
+            'max_tokens' => intval($api_settings['max_tokens'] ?? 1000), // Increased for tool use
             'top_p' => floatval($api_settings['top_p'] ?? 1.0),
             'frequency_penalty' => floatval($api_settings['frequency_penalty'] ?? 0.0),
             'presence_penalty' => floatval($api_settings['presence_penalty'] ?? 0.0),
         ];
 
-        if ($api_provider === 'openrouter') {
-            $response = $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params);
+        // --- AI Interaction Loop (Phase 1) ---
+        $response_content = '';
+        $tokens_used = 0;
 
-        } else {
-            $response = $this->send_to_openai($conversation_history, $model, $api_key, $api_params);
+        $initial_response = ($api_provider === 'openrouter')
+            ? $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params)
+            : $this->send_to_openai($conversation_history, $model, $api_key, $api_params);
+
+        if (!$initial_response || !isset($initial_response['content'])) {
+            wp_send_json_error(array('response' => 'Failed to get an initial AI response. Check API keys and model selection.'));
+            return;
         }
+
+        $ai_response_text = $initial_response['content'];
+        $tokens_used += $initial_response['tokens'];
         
-        if ($response && isset($response['content'])) {
-            $this->save_chat_message($session_id, $chat_id, $message, $response['content'], $response['tokens'], $user_name, $user_email);
-            
-            wp_send_json_success(array(
-                'response' => $response['content'],
-                'tokens' => $response['tokens']
-            ));
+        // --- Tool Execution Check ---
+        if (preg_match('/\[search:\s*(.*?)\]/i', $ai_response_text, $matches)) {
+            $search_query = trim($matches[1]);
+            $search_results = $this->execute_search_tool($search_query);
+
+            $conversation_history[] = ['role' => 'assistant', 'content' => $ai_response_text];
+            // The 'tool' role is specific to some models like Claude 3. For others, we present it as system/user content.
+            // A more general approach is to frame it as new information for the assistant.
+            $conversation_history[] = ['role' => 'user', 'content' => "Here are the search results for '{$search_query}':\n\n{$search_results}\n\nBased on these results, please formulate your answer to my original question."];
+
+            // --- AI Interaction Loop (Phase 2) ---
+            $final_response = ($api_provider === 'openrouter')
+                ? $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params)
+                : $this->send_to_openai($conversation_history, $model, $api_key, $api_params);
+
+            if ($final_response && isset($final_response['content'])) {
+                $response_content = $final_response['content'];
+                $tokens_used += $final_response['tokens'];
+            } else {
+                $response_content = "I found some information but had trouble processing it. Here are the raw search results:\n" . $search_results;
+            }
         } else {
-            wp_send_json_error(array('response' => 'Failed to get AI response. Please check your API settings.'));
+            $response_content = $ai_response_text;
+        }
+
+        // --- Final Processing and Response ---
+        $final_processed_content = $this->process_presentation_tags($response_content);
+
+        if (isset($final_processed_content)) {
+            $this->save_chat_message($session_id, $chat_id, $message, $final_processed_content, $tokens_used, $user_name, $user_email);
+            
+            wp_send_json_success([
+                'response' => $final_processed_content,
+                'tokens' => $tokens_used
+            ]);
+        } else {
+            wp_send_json_error(array('response' => 'Failed to get a final AI response. Please check your API settings.'));
         }
     }
 
@@ -1677,7 +1718,7 @@ class SNN_AI_Chat {
                  --snn-widget-border-top-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_widget_bg_color'] ?? '#ffffff'), -10)); ?>;
                  --snn-placeholder-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>;
                  <?php switch ((string)($settings['chat_position'] ?? 'bottom-right')) { case 'bottom-right': echo 'bottom: 20px; right: 20px;'; break; case 'bottom-left': echo 'bottom: 20px; left: 20px;'; break; case 'top-right': echo 'top: 20px; right: 20px;'; break; case 'top-left': echo 'top: 20px; left: 20px;'; break; } ?>
-               ">
+            ">
             <div class="snn-chat-toggle" id="snn-chat-toggle-<?php echo esc_attr($chat->ID); ?>">
                 <span class="dashicons dashicons-format-chat"></span>
             </div>
@@ -1758,22 +1799,25 @@ class SNN_AI_Chat {
         .snn-ai-chat-widget .snn-chat-send:hover { background-color: rgba(0, 0, 0, 0.05); }
         .snn-ai-chat-widget .snn-chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
         @media (max-width: 768px) { .snn-ai-chat-widget .snn-chat-container { width: calc(100vw - 20px); height: calc(100vh - 100px); max-width: 400px; max-height: 600px; } }
+        .snn-message-content .snn-content-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; margin: 10px 0; background-color: #f9f9f9; font-family: sans-serif; }
+        .snn-message-content .snn-content-card a { text-decoration: none; color: inherit; display: flex; align-items: center; }
+        .snn-message-content .snn-content-card img { width: 65px; height: 65px; border-radius: 4px; object-fit: cover; margin-right: 12px; }
+        .snn-message-content .snn-content-card div { flex-grow: 1; }
+        .snn-message-content .snn-content-card h4 { margin: 0 0 5px 0; font-size: 1.05em; font-weight: bold; color: #1f2937; }
+        .snn-message-content .snn-content-card p { margin: 0 0 8px 0; font-size: 0.9em; color: #555; max-height: 40px; overflow: hidden; }
+        .snn-message-content .snn-content-card span { font-size: 0.85em; color: var(--snn-primary-color, #3b82f6); font-weight: bold; }
         </style>
         <script>
         jQuery(document).ready(function($) {
-            // This script handles all frontend chat widgets on a page.
-            // It's designed to manage multiple chat instances independently.
             $('.snn-ai-chat-widget').each(function() {
                 const widget = $(this);
                 if (!widget.length) return;
 
-                // --- Setup variables for this specific widget instance ---
                 const chatId = widget.data('chat-id');
-                const contextualId = widget.data('post-id'); // The ID of the current page/post from the server.
+                const contextualId = widget.data('post-id');
                 const initialMessage = widget.data('initial-message');
                 const collectUserInfo = widget.data('collect-user-info') == 1;
 
-                // --- Get all interactive elements for this widget ---
                 const container = widget.find('#snn-chat-container-' + chatId);
                 const toggleBtn = widget.find('#snn-chat-toggle-' + chatId);
                 const closeBtn = widget.find('#snn-chat-close-' + chatId);
@@ -1788,7 +1832,6 @@ class SNN_AI_Chat {
                 const localStorageKey = 'snn_chat_session_' + chatId;
                 const contextualIdStorageKey = 'snn_ai_chat_contextual_id';
 
-                // Per your request, save the contextual ID to localStorage when the widget loads.
                 if (contextualId !== undefined) {
                     try {
                         localStorage.setItem(contextualIdStorageKey, contextualId);
@@ -1802,12 +1845,10 @@ class SNN_AI_Chat {
                     setTimeout(() => errorBox.hide().text(''), 5000);
                 }
 
-                // --- Main Logic: Sending a message via AJAX ---
                 const sendMessage = function() {
                     const message = chatInput.val().trim();
                     if (message === '') return;
 
-                    // Sanitize message for display
                     const sanitizedMessage = $('<div>').text(message).html();
                     const userMessageHTML = `<div class="snn-chat-message snn-user-message"><div class="snn-message-content">${sanitizedMessage}</div></div>`;
                     messagesContainer.append(userMessageHTML);
@@ -1819,7 +1860,6 @@ class SNN_AI_Chat {
                     messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
                     chatSend.prop('disabled', true);
 
-                    // --- THE FIX: Read the contextual ID from localStorage and send it with the request ---
                     const postIdFromStorage = localStorage.getItem(contextualIdStorageKey) || contextualId || 0;
 
                     $.ajax({
@@ -1833,11 +1873,10 @@ class SNN_AI_Chat {
                             chat_id: chatId,
                             user_name: widget.data('user-name') || '',
                             user_email: widget.data('user-email') || '',
-                            post_id: postIdFromStorage // This is the crucial part for dynamic tags
+                            post_id: postIdFromStorage
                         },
                         success: function(response) {
                             if (response.success) {
-                                // The response content should already be safe from the backend
                                 const aiMessageHTML = `<div class="snn-chat-message snn-ai-message"><div class="snn-message-content">${response.data.response}</div></div>`;
                                 messagesContainer.append(aiMessageHTML);
                             } else {
@@ -1855,11 +1894,6 @@ class SNN_AI_Chat {
                         }
                     });
                 };
-
-                // --- Session Management (from your original script) ---
-                function saveSession() {
-                    // This function is now just a placeholder as the MutationObserver handles saving.
-                }
 
                 function loadSession() {
                     try {
@@ -1888,7 +1922,7 @@ class SNN_AI_Chat {
                             chatInput.prop('disabled', false);
                             chatSend.prop('disabled', false);
                         } else if (collectUserInfo) {
-                            startNewSession(); // Force new session if user info is missing but required
+                            startNewSession();
                             return;
                         }
                         
@@ -1900,7 +1934,7 @@ class SNN_AI_Chat {
                                 messagesContainer.append(messageHTML);
                             });
                         } else {
-                            startNewSession(false); // No messages, so show initial message
+                            startNewSession(false);
                         }
                         
                         messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
@@ -1937,17 +1971,16 @@ class SNN_AI_Chat {
                     }
                 }
 
-                // --- Event Handlers ---
                 toggleBtn.off('click').on('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    container.toggle(); // No animation as requested
+                    container.toggle();
                 });
 
                 closeBtn.off('click').on('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    container.hide(); // No animation as requested
+                    container.hide();
                 });
 
                 newChatBtn.on('click', () => startNewSession());
@@ -1969,14 +2002,13 @@ class SNN_AI_Chat {
                             userInfoForm.hide();
                             chatInput.prop('disabled', false);
                             chatSend.prop('disabled', false);
-                            startNewSession(false); // Start session content without generating new ID
+                            startNewSession(false);
                         } else {
                             alert('Please fill in your name and email.');
                         }
                     });
                 }
 
-                // --- Auto-save session using MutationObserver ---
                 if (typeof MutationObserver !== 'undefined') {
                     const observer = new MutationObserver(function(mutations) {
                         const messages = [];
@@ -2005,7 +2037,6 @@ class SNN_AI_Chat {
                     observer.observe(messagesContainer[0], { childList: true, subtree: true, characterData: true });
                 }
 
-                // --- Initial Load ---
                 loadSession();
             });
         });
@@ -2050,7 +2081,7 @@ class SNN_AI_Chat {
             'openrouter_model' => 'openai/gpt-4o-mini',
             'openai_api_key' => '',
             'openai_model' => 'gpt-4o-mini',
-            'default_system_prompt' => 'You are a helpful assistant.',
+            'default_system_prompt' => 'You are a helpful assistant. When you find information on the website to answer a question, you should first provide the answer directly, and then cite your source by showing the relevant page card using the tools available to you.',
             'default_initial_message' => 'Hello! How can I help you today?',
             'temperature' => 0.7,
             'max_tokens' => 500,
@@ -2125,7 +2156,7 @@ class SNN_AI_Chat {
     private function get_default_chat_settings() {
         return array(
             'initial_message' => 'Hello! How can I help you today?',
-            'system_prompt' => 'You are a helpful assistant.',
+            'system_prompt' => 'You are a helpful assistant. When you find information on the website to answer a question, you should first provide the answer directly, and then cite your source by showing the relevant page card using the tools available to you.',
             'keep_conversation_history' => 1,
             'chat_position' => 'bottom-right',
             'primary_color' => '#3b82f6',
@@ -2133,13 +2164,13 @@ class SNN_AI_Chat {
             'text_color' => '#ffffff',
             'chat_widget_bg_color' => '#ffffff',
             'chat_text_color' => '#374151',
-            'user_message_bg_color' => '#3b82f6', // Added explicit setting
-            'user_message_text_color' => '#ffffff', // Added explicit setting
+            'user_message_bg_color' => '#3b82f6',
+            'user_message_text_color' => '#ffffff',
             'ai_message_bg_color' => '#e5e7eb',
             'ai_message_text_color' => '#374151',
             'chat_input_bg_color' => '#f9fafb',
             'chat_input_text_color' => '#1f2937',
-            'chat_send_button_color' => '#3b82f6', // Added explicit setting
+            'chat_send_button_color' => '#3b82f6',
             'font_size' => 14,
             'border_radius' => 8,
             'widget_width' => 350,
@@ -2309,7 +2340,9 @@ class SNN_AI_Chat {
         $history = array();
         foreach ($messages as $msg) {
             $history[] = array('role' => 'user', 'content' => (string)$msg->message);
-            $history[] = array('role' => 'assistant', 'content' => (string)$msg->response);
+            // We need to strip the content card HTML before adding it back to the history
+            $assistant_response = preg_replace('/<div class=[\'"]snn-content-card[\'"].*?<\/div>/s', '', (string)$msg->response);
+            $history[] = array('role' => 'assistant', 'content' => $assistant_response);
         }
         
         return $history;
@@ -2614,6 +2647,82 @@ class SNN_AI_Chat {
         return '#' . implode('', array_map(function($val) {
             return str_pad(dechex($val), 2, '0', STR_PAD_LEFT);
         }, $rgb));
+    }
+
+    private function get_tool_manifest() {
+        $tools = [];
+
+        // Search Tool
+        $tools[] = "## Tool: Search ##\n" .
+                   "- Description: Use this tool to find relevant information from the website's pages, posts, products, or any other content. It is your primary way of answering specific questions about the site's content.\n" .
+                   "- Usage: Respond with `[search: KEYWORDS]`. For example: `[search: about us]`, `[search: contact information]`, `[search: web design services]`.\n" .
+                   "- Note: Always use this tool first if the user asks a question that can be answered with the site's content.";
+
+        // Universal Content Display Tool
+        $tools[] = "## Tool: Display Content Card ##\n" .
+                   "- Description: After finding relevant content with the Search tool, use this tag to show a formatted link card. This is for citing your sources.\n" .
+                   "- Usage: Respond with `[[post:ID]]`. Replace ID with the ID from the search results.\n" .
+                   "- **Crucial Instruction:** When you find an answer on a page, first state the answer directly, and then provide the card as a source. \n" .
+                   "- Example Flow: A user asks for the phone number. You use `[search: contact]`. The system returns 'Title: Contact Us, ID: 2, Excerpt: Our phone is 555-1234...'. Your final answer should be: 'Our phone number is 555-1234. You can find more details on our contact page: [[post:2]]'";
+
+        return implode("\n\n", $tools);
+    }
+
+    private function execute_search_tool($query) {
+        $args = [
+            's' => $query,
+            'posts_per_page' => 5,
+            'post_type' => 'any', // Search all public post types
+            'post_status' => 'publish',
+        ];
+        $search_query = new WP_Query($args);
+        $results = [];
+        if ($search_query->have_posts()) {
+            while ($search_query->have_posts()) {
+                $search_query->the_post();
+                $post_id = get_the_ID();
+                $post_title = get_the_title();
+                $excerpt = has_excerpt() ? get_the_excerpt() : wp_trim_words(get_the_content(), 25);
+                $results[] = "Title: {$post_title}, ID: {$post_id}, Excerpt: " . wp_strip_all_tags($excerpt);
+            }
+            wp_reset_postdata();
+            return "Found " . count($results) . " results:\n" . implode("\n", $results);
+        } else {
+            return "No results found for '{$query}'.";
+        }
+    }
+
+    private function process_presentation_tags($content) {
+        // Looks for [[post:123]]
+        return preg_replace_callback('/\[\[post:(\d+)\]\]/i', function($matches) {
+            $post_id = intval($matches[1]);
+            $post = get_post($post_id);
+
+            if (!$post || $post->post_status !== 'publish') {
+                return ''; // If post not found or not published, remove the tag.
+            }
+
+            $post_title = esc_html(get_the_title($post));
+            $post_url = esc_url(get_permalink($post));
+            
+            $excerpt = has_excerpt($post) ? get_the_excerpt($post) : wp_trim_excerpt('', $post);
+            $post_excerpt = esc_html(strip_tags($excerpt));
+            
+            $image_url = get_the_post_thumbnail_url($post, 'thumbnail') 
+                ? esc_url(get_the_post_thumbnail_url($post, 'thumbnail')) 
+                : ''; // Leave empty if no image
+
+            // Build the universal card HTML
+            $card_html = "<div class='snn-content-card'><a href='{$post_url}' target='_blank'>";
+            
+            if ($image_url) {
+                $card_html .= "<img src='{$image_url}' alt='' />";
+            }
+
+            $card_html .= "<div><h4>{$post_title}</h4><p>{$post_excerpt}</p><span>Read More →</span></div></a></div>";
+            return $card_html;
+
+        }, $content);
     }
 }
 
