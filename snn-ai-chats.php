@@ -1688,31 +1688,31 @@ class SNN_AI_Chat {
         .snn-ai-chat-widget .snn-chat-toggle:hover { background-color: var(--snn-primary-color-hover); }
         .snn-ai-chat-widget .snn-chat-toggle .dashicons { color: var(--snn-text-color); font-size: 28px; width: 28px; height: 28px; line-height: 1; display: flex; align-items: center; justify-content: center; }
         .snn-ai-chat-widget .snn-chat-container { width: var(--snn-widget-width); height: var(--snn-widget-height); border-radius: var(--snn-border-radius); background-color: var(--snn-chat-widget-bg-color); box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; overflow: hidden; position: absolute; bottom: 0; right: 0; }
-        .snn-ai-chat-widget .snn-chat-header { background-color: var(--snn-primary-color); color: var(--snn-text-color); padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: var(--snn-border-radius); border-top-right-radius: var(--snn-border-radius); }
+        .snn-ai-chat-widget .snn-chat-header { background-color: var(--snn-primary-color); color: var(--snn-text-color); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: var(--snn-border-radius); border-top-right-radius: var(--snn-border-radius); }
         .snn-ai-chat-widget .snn-header-controls { display: flex; align-items: center; }
-        .snn-ai-chat-widget .snn-new-chat { background: none; border: none; color: var(--snn-text-color); cursor: pointer; padding: 0.25rem; margin-right: 0.5rem; border-radius: 0.25rem; transition: background-color 0.3s ease; display: flex; align-items: center; justify-content: center; }
+        .snn-ai-chat-widget .snn-new-chat { background: none; border: none; color: var(--snn-text-color); cursor: pointer; padding: 3.75px; margin-right: 7.5px; border-radius: 3.75px; transition: background-color 0.3s ease; display: flex; align-items: center; justify-content: center; }
         .snn-ai-chat-widget .snn-new-chat:hover { background-color: rgba(255, 255, 255, 0.2); }
         .snn-ai-chat-widget .snn-new-chat .dashicons { font-size: 20px; width: 20px; height: 20px; line-height: 1; }
-        .snn-ai-chat-widget .snn-chat-header h3 { margin: 0; font-size: 1.125rem; font-weight: 600; }
-        .snn-ai-chat-widget .snn-chat-close { background: none; border: none; color: var(--snn-text-color); cursor: pointer; font-size: 1.25rem; line-height: 1; padding: 0.25rem; border-radius: 0.25rem; transition: background-color 0.3s ease; }
+        .snn-ai-chat-widget .snn-chat-header h3 { margin: 0; font-size: 16.875px; font-weight: 600; }
+        .snn-ai-chat-widget .snn-chat-close { background: none; border: none; color: var(--snn-text-color); cursor: pointer; font-size: 18.75px; line-height: 1; padding: 3.75px; border-radius: 3.75px; transition: background-color 0.3s ease; }
         .snn-ai-chat-widget .snn-chat-close:hover { background-color: rgba(255, 255, 255, 0.2); }
-        .snn-ai-chat-widget .snn-chat-messages { flex-grow: 1; padding: 1rem; overflow-y: auto; font-size: var(--snn-font-size); color: var(--snn-chat-text-color); }
-        .snn-ai-chat-widget .snn-chat-message { margin-bottom: 0.75rem; display: flex; }
+        .snn-ai-chat-widget .snn-chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; font-size: var(--snn-font-size); color: var(--snn-chat-text-color); }
+        .snn-ai-chat-widget .snn-chat-message { margin-bottom: 11.25px; display: flex; }
         .snn-ai-chat-widget .snn-chat-message.snn-user-message { justify-content: flex-end; }
         .snn-ai-chat-widget .snn-chat-message.snn-ai-message { justify-content: flex-start; }
-        .snn-ai-chat-widget .snn-message-content { max-width: 80%; padding: 0.75rem 1rem; border-radius: 0.75rem; word-wrap: break-word; line-height: 1.5; }
-        .snn-ai-chat-widget .snn-chat-message.snn-user-message .snn-message-content { background-color: var(--snn-user-message-bg-color); color: var(--snn-user-message-text-color); border-bottom-right-radius: 0.25rem; }
-        .snn-ai-chat-widget .snn-chat-message.snn-ai-message .snn-message-content { background-color: var(--snn-ai-message-bg-color); color: var(--snn-ai-message-text-color); border-bottom-left-radius: 0.25rem; }
-        .snn-ai-chat-widget .snn-user-info-form { padding: 1rem; text-align: center; }
-        .snn-ai-chat-widget .snn-user-info-form p { margin-bottom: 1rem; color: var(--snn-chat-text-color); }
-        .snn-ai-chat-widget .snn-user-info-form input { width: 100%; padding: 0.75rem; margin-bottom: 0.75rem; border: 1px solid var(--snn-input-border-color); border-radius: 0.5rem; background-color: var(--snn-chat-input-bg-color); color: var(--snn-chat-input-text-color); }
+        .snn-ai-chat-widget .snn-message-content { max-width: 80%; padding: 11.25px 15px; border-radius: 11.25px; word-wrap: break-word; line-height: 1.5; }
+        .snn-ai-chat-widget .snn-chat-message.snn-user-message .snn-message-content { background-color: var(--snn-user-message-bg-color); color: var(--snn-user-message-text-color); border-bottom-right-radius: 3.75px; }
+        .snn-ai-chat-widget .snn-chat-message.snn-ai-message .snn-message-content { background-color: var(--snn-ai-message-bg-color); color: var(--snn-ai-message-text-color); border-bottom-left-radius: 3.75px; }
+        .snn-ai-chat-widget .snn-user-info-form { padding: 15px; text-align: center; }
+        .snn-ai-chat-widget .snn-user-info-form p { margin-bottom: 15px; color: var(--snn-chat-text-color); }
+        .snn-ai-chat-widget .snn-user-info-form input { width: 100%; padding: 11.25px; margin-bottom: 11.25px; border: 1px solid var(--snn-input-border-color); border-radius: 7.5px; background-color: var(--snn-chat-input-bg-color); color: var(--snn-chat-input-text-color); }
         .snn-ai-chat-widget .snn-user-info-form input::placeholder { color: var(--snn-placeholder-color); }
-        .snn-ai-chat-widget .snn-user-info-form button.snn-start-chat-btn { background-color: var(--snn-primary-color); color: var(--snn-text-color); padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; cursor: pointer; transition: background-color 0.3s ease; }
+        .snn-ai-chat-widget .snn-user-info-form button.snn-start-chat-btn { background-color: var(--snn-primary-color); color: var(--snn-text-color); padding: 11.25px 22.5px; border: none; border-radius: 7.5px; cursor: pointer; transition: background-color 0.3s ease; }
         .snn-ai-chat-widget .snn-user-info-form button.snn-start-chat-btn:hover { background-color: var(--snn-primary-color-hover); }
-        .snn-ai-chat-widget .snn-chat-input-container { display: flex; padding: 1rem; border-top: 1px solid var(--snn-widget-border-top-color); background-color: var(--snn-chat-widget-bg-color); border-bottom-left-radius: var(--snn-border-radius); border-bottom-right-radius: var(--snn-border-radius); }
-        .snn-ai-chat-widget .snn-chat-input { flex-grow: 1; padding: 0.75rem 1rem; border: 1px solid var(--snn-input-border-color); border-radius: 0.5rem; outline: none; background-color: var(--snn-chat-input-bg-color); color: var(--snn-chat-input-text-color); margin-right: 0.5rem; }
+        .snn-ai-chat-widget .snn-chat-input-container { display: flex; padding: 15px; border-top: 1px solid var(--snn-widget-border-top-color); background-color: var(--snn-chat-widget-bg-color); border-bottom-left-radius: var(--snn-border-radius); border-bottom-right-radius: var(--snn-border-radius); }
+        .snn-ai-chat-widget .snn-chat-input { flex-grow: 1; padding: 11.25px 15px; border: 1px solid var(--snn-input-border-color); border-radius: 7.5px; outline: none; background-color: var(--snn-chat-input-bg-color); color: var(--snn-chat-input-text-color); margin-right: 7.5px; }
         .snn-ai-chat-widget .snn-chat-input::placeholder { color: var(--snn-placeholder-color); }
-        .snn-ai-chat-widget .snn-chat-send { background: none; border: none; color: var(--snn-chat-send-button-color); cursor: pointer; padding: 0.5rem; border-radius: 0.5rem; transition: background-color 0.3s ease; }
+        .snn-ai-chat-widget .snn-chat-send { background: none; border: none; color: var(--snn-chat-send-button-color); cursor: pointer; padding: 7.5px; border-radius: 7.5px; transition: background-color 0.3s ease; }
         .snn-ai-chat-widget .snn-chat-send:hover { background-color: rgba(0, 0, 0, 0.05); }
         .snn-ai-chat-widget .snn-chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
         @media (max-width: 768px) { .snn-ai-chat-widget .snn-chat-container { width: calc(100vw - 20px); height: calc(100vh - 100px); max-width: 400px; max-height: 600px; } }
