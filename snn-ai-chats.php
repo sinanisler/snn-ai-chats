@@ -845,7 +845,7 @@ class SNN_AI_Chat {
                                     <input type="color" id="secondary_color" name="secondary_color" value="<?php echo esc_attr($chat_settings['secondary_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 <div>
-                                    <label for="text_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Default text color for the chat widget (e.g., header text, AI message text)">Text Color</label>
+                                    <label for="text_color" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Default text color for the chat widget (e.g., header text, AI message text)">Header Text Color</label>
                                     <input type="color" id="text_color" name="text_color" value="<?php echo esc_attr($chat_settings['text_color']); ?>" class="w-full h-10 border border-gray-300 rounded-md color-input focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 <div>
@@ -1693,7 +1693,7 @@ class SNN_AI_Chat {
         .snn-ai-chat-widget .snn-new-chat { background: none; border: none; color: var(--snn-text-color); cursor: pointer; padding: 3.75px; margin-right: 7.5px; border-radius: 3.75px; transition: background-color 0.3s ease; display: flex; align-items: center; justify-content: center; }
         .snn-ai-chat-widget .snn-new-chat:hover { background-color: rgba(255, 255, 255, 0.2); }
         .snn-ai-chat-widget .snn-new-chat .dashicons { font-size: 20px; width: 20px; height: 20px; line-height: 1; }
-        .snn-ai-chat-widget .snn-chat-header h3 { margin: 0; font-size: 16.875px; font-weight: 600; }
+        .snn-ai-chat-widget .snn-chat-header h3 { margin: 0; font-size: 16.875px; font-weight: 600; color: var(--snn-text-color);  }
         .snn-ai-chat-widget .snn-chat-close { background: none; border: none; color: var(--snn-text-color); cursor: pointer; font-size: 18.75px; line-height: 1; padding: 3.75px; border-radius: 3.75px; transition: background-color 0.3s ease; }
         .snn-ai-chat-widget .snn-chat-close:hover { background-color: rgba(255, 255, 255, 0.2); }
         .snn-ai-chat-widget .snn-chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; font-size: var(--snn-font-size); color: var(--snn-chat-text-color); }
