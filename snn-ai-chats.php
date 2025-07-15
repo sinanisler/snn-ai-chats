@@ -1808,25 +1808,32 @@ class SNN_AI_Chat {
                     </div>
                 </div>
                 
-                <div class="snn-chat-messages" id="snn-chat-messages-<?php echo esc_attr($chat->ID); ?>">
-                    <div class="snn-chat-message-box" style="display: none; background-color: #ffe0e0; border: 1px solid #ff0000; color: #cc0000; padding: 10px; margin: 0 15px 10px; border-radius: 5px;" id="snn-chat-error-message-box-<?php echo esc_attr($chat->ID); ?>"></div>
-                    
-                    <div class="snn-user-info-form-overlay" id="snn-user-info-form-overlay-<?php echo esc_attr($chat->ID); ?>" style="display: none;">
-                        <div class="snn-user-info-form" id="snn-user-info-form-<?php echo esc_attr($chat->ID); ?>">
-                            <p>Please provide your information to start the chat:</p>
-                            <input type="text" placeholder="Your Name" id="snn-user-name-<?php echo esc_attr($chat->ID); ?>" required>
-                            <input type="email" placeholder="Your Email" id="snn-user-email-<?php echo esc_attr($chat->ID); ?>" required>
-                            <button type="button" class="snn-start-chat-btn" id="snn-start-chat-btn-<?php echo esc_attr($chat->ID); ?>">Start Chat</button>
-                        </div>
+                <!-- User Info Form Overlay - Now covers the entire chat body -->
+                <div class="snn-user-info-form-overlay" id="snn-user-info-form-overlay-<?php echo esc_attr($chat->ID); ?>" style="display: none;">
+                    <div class="snn-user-info-form" id="snn-user-info-form-<?php echo esc_attr($chat->ID); ?>">
+                        <p>Please provide your information to start the chat:</p>
+                        <input type="text" placeholder="Your Name" id="snn-user-name-<?php echo esc_attr($chat->ID); ?>" required>
+                        <input type="email" placeholder="Your Email" id="snn-user-email-<?php echo esc_attr($chat->ID); ?>" required>
+                        <button type="button" class="snn-start-chat-btn" id="snn-start-chat-btn-<?php echo esc_attr($chat->ID); ?>">Start Chat</button>
+                        <div class="snn-chat-message-box" style="display: none; background-color: #ffe0e0; border: 1px solid #ff0000; color: #cc0000; padding: 10px; margin-top: 10px; border-radius: 5px;" id="snn-chat-error-message-box-<?php echo esc_attr($chat->ID); ?>"></div>
                     </div>
                 </div>
+
+                <div class="snn-chat-messages" id="snn-chat-messages-<?php echo esc_attr($chat->ID); ?>">
+                    <!-- Chat messages will be appended here -->
+                </div>
                 
+                <!-- Ready Questions Section - Now above the input field -->
+                <div class="snn-ready-questions-container" id="snn-ready-questions-container-<?php echo esc_attr($chat->ID); ?>">
+                    <!-- Ready questions will be appended here by JS -->
+                </div>
+
                 <div class="snn-chat-input-container" id="snn-chat-input-container-<?php echo esc_attr($chat->ID); ?>">
                     <input type="text" class="snn-chat-input" id="snn-chat-input-<?php echo esc_attr($chat->ID); ?>" placeholder="Type your message...">
                     <button class="snn-chat-send" id="snn-chat-send-<?php echo esc_attr($chat->ID); ?>">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                           <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                           <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </button>
                 </div>
@@ -1838,7 +1845,7 @@ class SNN_AI_Chat {
         .snn-ai-chat-widget .snn-chat-toggle:hover { background-color: var(--snn-primary-color-hover); }
         .snn-ai-chat-widget .snn-chat-toggle .dashicons { color: var(--snn-text-color); font-size: 28px; width: 28px; height: 28px; line-height: 1; display: flex; align-items: center; justify-content: center; }
         .snn-ai-chat-widget .snn-chat-container { width: var(--snn-widget-width); height: var(--snn-widget-height); border-radius: var(--snn-border-radius); background-color: var(--snn-chat-widget-bg-color); box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; overflow: hidden; position: absolute; bottom: 0; right: 0; }
-        .snn-ai-chat-widget .snn-chat-header { background-color: var(--snn-primary-color); color: var(--snn-text-color); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: var(--snn-border-radius); border-top-right-radius: var(--snn-border-radius); }
+        .snn-ai-chat-widget .snn-chat-header { background-color: var(--snn-primary-color); color: var(--snn-text-color); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: var(--snn-border-radius); border-top-right-radius: var(--snn-border-radius); z-index:  11; }
         .snn-ai-chat-widget .snn-header-controls { display: flex; align-items: center; }
         .snn-ai-chat-widget .snn-new-chat { background: none; border: none; color: var(--snn-text-color); cursor: pointer; padding: 3.75px; margin-right: 7.5px; border-radius: 3.75px; transition: background-color 0.3s ease; display: flex; align-items: center; justify-content: center; }
         .snn-ai-chat-widget .snn-new-chat:hover { background-color: rgba(255, 255, 255, 0.2); }
@@ -1847,22 +1854,68 @@ class SNN_AI_Chat {
         .snn-ai-chat-widget .snn-chat-close { background: none; border: none; color: var(--snn-text-color); cursor: pointer; font-size: 18.75px; line-height: 1; padding: 3.75px; border-radius: 3.75px; transition: background-color 0.3s ease; }
         .snn-ai-chat-widget .snn-chat-close:hover { background-color: rgba(255, 255, 255, 0.2); }
         .snn-ai-chat-widget .snn-chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; font-size: var(--snn-font-size); color: var(--snn-chat-text-color); position: relative; }
+        .snn-ai-chat-widget .snn-chat-message-box { margin: 0 15px 10px; } /* Adjust margin for error box within messages */
         .snn-ai-chat-widget .snn-chat-message { margin-bottom: 11.25px; display: flex; }
         .snn-ai-chat-widget .snn-chat-message.snn-user-message { justify-content: flex-end; }
         .snn-ai-chat-widget .snn-chat-message.snn-ai-message { justify-content: flex-start; }
         .snn-ai-chat-widget .snn-message-content { max-width: 80%; padding: 11.25px 15px; border-radius: 11.25px; word-wrap: break-word; line-height: 1.5; }
         .snn-ai-chat-widget .snn-chat-message.snn-user-message .snn-message-content { background-color: var(--snn-user-message-bg-color); color: var(--snn-user-message-text-color); border-bottom-right-radius: 3.75px; }
         .snn-ai-chat-widget .snn-chat-message.snn-ai-message .snn-message-content { background-color: var(--snn-ai-message-bg-color); color: var(--snn-ai-message-text-color); border-bottom-left-radius: 3.75px; }
-        .snn-ai-chat-widget .snn-user-info-form-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.95); z-index: 10; display: flex; align-items: center; justify-content: center; padding: 15px; }
-        .snn-ai-chat-widget .snn-user-info-form { text-align: center; background: #fff; padding: 20px; border-radius: var(--snn-border-radius); box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 90%; }
+        
+        /* User Info Form Overlay - Updated styles */
+        .snn-ai-chat-widget .snn-user-info-form-overlay { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: rgba(255, 255, 255, 0.95); /* Semi-transparent white */
+            z-index: 10; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 15px; 
+            flex-direction: column; /* Align content vertically */
+        }
+        .snn-ai-chat-widget .snn-user-info-form { 
+            text-align: center; 
+            background: #fff; 
+            padding: 20px; 
+            border-radius: var(--snn-border-radius); 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+            width: 90%; 
+            max-width: 300px; /* Limit form width */
+        }
         .snn-ai-chat-widget .snn-user-info-form p { margin-bottom: 15px; color: var(--snn-chat-text-color); }
         .snn-ai-chat-widget .snn-user-info-form input { width: 100%; padding: 11.25px; margin-bottom: 11.25px; border: 1px solid var(--snn-input-border-color); border-radius: 7.5px; background-color: var(--snn-chat-input-bg-color); color: var(--snn-chat-input-text-color); }
         .snn-ai-chat-widget .snn-user-info-form input::placeholder { color: var(--snn-placeholder-color); }
         .snn-ai-chat-widget .snn-user-info-form button.snn-start-chat-btn { background-color: var(--snn-primary-color); color: var(--snn-text-color); padding: 11.25px 22.5px; border: none; border-radius: 7.5px; cursor: pointer; transition: background-color 0.3s ease; }
         .snn-ai-chat-widget .snn-user-info-form button.snn-start-chat-btn:hover { background-color: var(--snn-primary-color-hover); }
-        .snn-ai-chat-widget .snn-ready-questions { padding: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
-        .snn-ai-chat-widget .snn-ready-question-btn { background-color: var(--snn-chat-input-bg-color); color: var(--snn-primary-color); border: 1px solid var(--snn-primary-color); padding: 8px 12px; border-radius: 20px; cursor: pointer; text-align: left; transition: all 0.2s ease; font-size: calc(var(--snn-font-size) * 0.9); width: 100%; }
+
+        /* Ready Questions Position - New styles */
+        .snn-ai-chat-widget .snn-ready-questions-container { 
+            padding: 15px; 
+            padding-bottom: 0; /* No padding at bottom as input container follows */
+            display: flex; 
+            flex-direction: column; 
+            align-items: flex-start; 
+            gap: 8px; 
+            border-top: 1px solid var(--snn-widget-border-top-color); /* Separator from messages */
+        }
+        .snn-ai-chat-widget .snn-ready-question-btn { 
+            background-color: var(--snn-chat-input-bg-color); 
+            color: var(--snn-primary-color); 
+            border: 1px solid var(--snn-primary-color); 
+            padding: 8px 12px; 
+            border-radius: 20px; 
+            cursor: pointer; 
+            text-align: left; 
+            transition: all 0.2s ease; 
+            font-size: calc(var(--snn-font-size) * 0.9); 
+            width: 100%; 
+        }
         .snn-ai-chat-widget .snn-ready-question-btn:hover { background-color: var(--snn-primary-color); color: var(--snn-text-color); }
+        
         .snn-ai-chat-widget .snn-chat-input-container { display: flex; padding: 15px; border-top: 1px solid var(--snn-widget-border-top-color); background-color: var(--snn-chat-widget-bg-color); border-bottom-left-radius: var(--snn-border-radius); border-bottom-right-radius: var(--snn-border-radius); }
         .snn-ai-chat-widget .snn-chat-input { flex-grow: 1; padding: 11.25px 15px; border: 1px solid var(--snn-input-border-color); border-radius: 7.5px; outline: none; background-color: var(--snn-chat-input-bg-color); color: var(--snn-chat-input-text-color); margin-right: 7.5px; }
         .snn-ai-chat-widget .snn-chat-input::placeholder { color: var(--snn-placeholder-color); }
@@ -1900,10 +1953,11 @@ class SNN_AI_Chat {
                 const chatInput = widget.find('#snn-chat-input-' + chatId);
                 const chatSend = widget.find('#snn-chat-send-' + chatId);
                 const errorBox = widget.find('#snn-chat-error-message-box-' + chatId);
+                const readyQuestionsContainer = widget.find('#snn-ready-questions-container-' + chatId); // New ready questions container
 
                 function displayError(message) {
                     errorBox.text(message).show();
-                    messagesContainer.scrollTop(0);
+                    // messagesContainer.scrollTop(0); // This might scroll the main message area, but error is in overlay
                     setTimeout(() => errorBox.hide().text(''), 5000);
                 }
 
@@ -1912,7 +1966,7 @@ class SNN_AI_Chat {
                     if (message === '') return;
 
                     // Hide ready questions on first message
-                    widget.find('.snn-ready-questions').remove();
+                    readyQuestionsContainer.empty(); // Clear the ready questions container
 
                     const sanitizedMessage = $('<div>').text(message).html();
                     const userMessageHTML = `<div class="snn-chat-message snn-user-message"><div class="snn-message-content">${sanitizedMessage}</div></div>`;
@@ -1960,7 +2014,8 @@ class SNN_AI_Chat {
                 }
 
                 function initializeChatUI() {
-                    messagesContainer.find('.snn-chat-message, .snn-ready-questions').remove();
+                    messagesContainer.find('.snn-chat-message').remove(); // Clear messages
+                    readyQuestionsContainer.empty(); // Clear ready questions
                     errorBox.hide();
 
                     if (collectUserInfo && !widget.data('user-name')) {
@@ -1976,10 +2031,8 @@ class SNN_AI_Chat {
                         if (readyQuestionsRaw) {
                             const questions = readyQuestionsRaw.split('\n').filter(q => q.trim() !== '');
                             if (questions.length > 0) {
-                                const questionsHTML = '<div class="snn-ready-questions">' +
-                                    questions.map(q => `<button class="snn-ready-question-btn">${$('<div>').text(q).html()}</button>`).join('') +
-                                    '</div>';
-                                messagesContainer.append(questionsHTML);
+                                const questionsHTML = questions.map(q => `<button class="snn-ready-question-btn">${$('<div>').text(q).html()}</button>`).join('');
+                                readyQuestionsContainer.append(questionsHTML); // Append to new container
                             }
                         }
 
@@ -2023,7 +2076,7 @@ class SNN_AI_Chat {
                     }
                 });
 
-                messagesContainer.on('click', '.snn-ready-question-btn', function() {
+                readyQuestionsContainer.on('click', '.snn-ready-question-btn', function() {
                     const question = $(this).text();
                     sendMessage(question);
                 });
