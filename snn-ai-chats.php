@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: SNN AI CHAT
+ * Plugin Name: SNN AI Chat
  * Plugin URI: https://sinanisler.com
  * Description: Advanced AI Chat Plugin with OpenRouter and OpenAI support
- * Version: 0.3.1
+ * Version: 0.4.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author: sinanisler
@@ -13,7 +13,7 @@
 
 if (!defined('ABSPATH')) { exit; }
 
-define('SNN_AI_CHAT_VERSION', '1.1.0');
+define('SNN_AI_CHAT_VERSION', '1.2.0');
 define('SNN_AI_CHAT_PLUGIN_DIR', plugin_dir_path((string)__FILE__));
 define('SNN_AI_CHAT_PLUGIN_URL', plugin_dir_url((string)__FILE__));
 
@@ -53,6 +53,11 @@ class SNN_AI_Chat {
     }
 
     public function handle_admin_form_submissions() {
+        // Handle saving from the main Settings, Tools, or individual Chat pages
+        if (isset($_POST['snn_ai_chat_settings_nonce'])) {
+            $this->save_settings();
+        }
+        
         if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-chats' || !isset($_POST['submit_chat_settings'])) {
             return;
         }
@@ -197,16 +202,7 @@ class SNN_AI_Chat {
             'snn-ai-chat',
             array($this, 'dashboard_page')
         );
-
-        add_submenu_page(
-            'snn-ai-chat',
-            'Settings',
-            'Settings',
-            'manage_options',
-            'snn-ai-chat-settings',
-            array($this, 'settings_page')
-        );
-
+        
         add_submenu_page(
             'snn-ai-chat',
             'Chats',
@@ -223,6 +219,25 @@ class SNN_AI_Chat {
             'manage_options',
             'snn-ai-chat-history',
             array($this, 'chat_history_page')
+        );
+        
+        // New Tools Submenu Page
+        add_submenu_page(
+            'snn-ai-chat',
+            'Tools',
+            'Tools',
+            'manage_options',
+            'snn-ai-chat-tools',
+            array($this, 'tools_page')
+        );
+
+        add_submenu_page(
+            'snn-ai-chat',
+            'Settings',
+            'Settings',
+            'manage_options',
+            'snn-ai-chat-settings',
+            array($this, 'settings_page')
         );
 
         add_submenu_page(
@@ -430,8 +445,8 @@ class SNN_AI_Chat {
     }
 
     public function settings_page() {
-        if (isset($_POST['submit'])) {
-            $this->save_settings();
+        if (isset($_GET['settings-updated'])) {
+            echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
         }
         
         $settings = $this->get_settings();
@@ -440,7 +455,7 @@ class SNN_AI_Chat {
             <h1>SNN AI Chat Settings</h1>
             
             <form method="post" action="" class="snn-settings-form" id="snn-settings-form">
-                <?php wp_nonce_field('snn_ai_chat_settings', 'snn_ai_chat_settings_nonce'); ?>
+                <?php wp_nonce_field('snn_ai_chat_settings_nonce_action', 'snn_ai_chat_settings_nonce'); ?>
                 
                 <div class="bg-white p-6 rounded-lg shadow mb-4" id="snn-api-provider-section">
                     <h2 class="text-xl font-semibold mb-4">AI Provider Selection</h2>
@@ -548,7 +563,7 @@ class SNN_AI_Chat {
                 </div>
                 
                 <div class="flex items-center space-x-4 justify-between">
-                    <button type="submit" name="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md settings-save-btn hover:bg-blue-700 transition-colors duration-200" id="snn-save-settings-btn">
+                    <button type="submit" name="submit_settings" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md settings-save-btn hover:bg-blue-700 transition-colors duration-200" id="snn-save-settings-btn">
                         Save Settings
                     </button>
                     <button type="submit" name="reset_plugin_data" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-md settings-reset-btn transition-colors duration-200" id="snn-reset-settings-btn" onclick="return confirm('Are you sure you want to delete ALL plugin data? This will remove all chats, history, and settings. This action cannot be undone.');">
@@ -704,6 +719,64 @@ class SNN_AI_Chat {
                 });
             });
         </script>
+        <?php
+    }
+
+    public function tools_page() {
+        if (isset($_GET['settings-updated'])) {
+            echo '<div class="notice notice-success is-dismissible"><p>Tool settings saved successfully!</p></div>';
+        }
+
+        $settings = $this->get_settings();
+        ?>
+        <div class="wrap">
+            <h1>AI Tools Settings</h1>
+            <p class="text-gray-600 mb-6">Enable, disable, and configure the tools your AI can use. The prompts below define how the AI understands and uses each tool.</p>
+
+            <form method="post" action="" class="snn-tools-settings-form" id="snn-tools-settings-form">
+                <?php wp_nonce_field('snn_ai_chat_settings_nonce_action', 'snn_ai_chat_settings_nonce'); ?>
+
+                <!-- Search Tool Section -->
+                <div class="bg-white p-6 rounded-lg shadow mb-6" id="snn-search-tool-section">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">Search Tool</h2>
+                        <label class="flex items-center text-gray-700 cursor-pointer">
+                            <input type="checkbox" name="tool_search_enabled" value="1" <?php checked($settings['tool_search_enabled'], 1); ?> class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="text-sm font-medium">Enable Search</span>
+                        </label>
+                    </div>
+                    <p class="text-gray-500 mb-4">Allows the AI to search your website's content to answer user questions.</p>
+                    <div>
+                        <label for="tool_search_prompt" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="This is the instruction given to the AI on how to use the search tool.">
+                            Search Tool System Prompt
+                        </label>
+                        <textarea id="tool_search_prompt" name="tool_search_prompt" rows="5" class="w-full p-2 border border-gray-300 rounded-md system-prompt-input focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"><?php echo esc_textarea($settings['tool_search_prompt']); ?></textarea>
+                    </div>
+                </div>
+
+                <!-- Display Content Card Tool Section -->
+                <div class="bg-white p-6 rounded-lg shadow mb-6" id="snn-display-tool-section">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">Display Content Card Tool</h2>
+                        <label class="flex items-center text-gray-700 cursor-pointer">
+                            <input type="checkbox" name="tool_display_enabled" value="1" <?php checked($settings['tool_display_enabled'], 1); ?> class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="text-sm font-medium">Enable Display Card</span>
+                        </label>
+                    </div>
+                    <p class="text-gray-500 mb-4">Allows the AI to display a formatted "content card" as a source after finding information.</p>
+                    <div>
+                        <label for="tool_display_prompt" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="This is the instruction given to the AI on how to display a content card.">
+                            Display Tool System Prompt
+                        </label>
+                        <textarea id="tool_display_prompt" name="tool_display_prompt" rows="6" class="w-full p-2 border border-gray-300 rounded-md system-prompt-input focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"><?php echo esc_textarea($settings['tool_display_prompt']); ?></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" name="submit_tools_settings" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md settings-save-btn hover:bg-blue-700 transition-colors duration-200" id="snn-save-tools-settings-btn">
+                    Save Tool Settings
+                </button>
+            </form>
+        </div>
         <?php
     }
 
@@ -1585,7 +1658,7 @@ class SNN_AI_Chat {
         // Process dynamic tags in the main system prompt
         $processed_prompt = $this->process_dynamic_tags($chat_settings['system_prompt'], $context);
         
-        // Add the tool manifest to the system prompt
+        // Add the tool manifest to the system prompt, based on settings
         $system_prompt_with_tools = $processed_prompt . "\n\n" . $this->get_tool_manifest();
 
         if (!empty($system_prompt_with_tools)) {
@@ -1631,7 +1704,7 @@ class SNN_AI_Chat {
         $tokens_used += $initial_response['tokens'];
         
         // --- Tool Execution Check ---
-        if (preg_match('/\[search:\s*(.*?)\]/i', $ai_response_text, $matches)) {
+        if ($api_settings['tool_search_enabled'] && preg_match('/\[search:\s*(.*?)\]/i', $ai_response_text, $matches)) {
             $search_query = trim($matches[1]);
             $search_results = $this->execute_search_tool($search_query);
 
@@ -1718,7 +1791,7 @@ class SNN_AI_Chat {
                  --snn-widget-border-top-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_widget_bg_color'] ?? '#ffffff'), -10)); ?>;
                  --snn-placeholder-color: <?php echo esc_attr($this->adjust_brightness((string)($settings['chat_input_text_color'] ?? '#1f2937'), 50)); ?>;
                  <?php switch ((string)($settings['chat_position'] ?? 'bottom-right')) { case 'bottom-right': echo 'bottom: 20px; right: 20px;'; break; case 'bottom-left': echo 'bottom: 20px; left: 20px;'; break; case 'top-right': echo 'top: 20px; right: 20px;'; break; case 'top-left': echo 'top: 20px; left: 20px;'; break; } ?>
-            ">
+             ">
             <div class="snn-chat-toggle" id="snn-chat-toggle-<?php echo esc_attr($chat->ID); ?>">
                 <span class="dashicons dashicons-format-chat"></span>
             </div>
@@ -1928,11 +2001,11 @@ class SNN_AI_Chat {
                         
                         if (data.messages && data.messages.length > 0) {
                              data.messages.forEach(function(msg) {
-                                const messageClass = msg.type === 'user' ? 'snn-user-message' : 'snn-ai-message';
-                                const messageIdAttr = msg.id ? 'id="' + msg.id + '"' : '';
-                                const messageHTML = `<div class="snn-chat-message ${messageClass}" ${messageIdAttr}><div class="snn-message-content">${msg.content}</div></div>`;
-                                messagesContainer.append(messageHTML);
-                            });
+                                 const messageClass = msg.type === 'user' ? 'snn-user-message' : 'snn-ai-message';
+                                 const messageIdAttr = msg.id ? 'id="' + msg.id + '"' : '';
+                                 const messageHTML = `<div class="snn-chat-message ${messageClass}" ${messageIdAttr}><div class="snn-message-content">${msg.content}</div></div>`;
+                                 messagesContainer.append(messageHTML);
+                             });
                         } else {
                             startNewSession(false);
                         }
@@ -2075,12 +2148,12 @@ class SNN_AI_Chat {
     }
     
     private function get_settings() {
-        return get_option('snn_ai_chat_settings', array(
+        $defaults = array(
             'api_provider' => 'openrouter',
             'openrouter_api_key' => '',
-            'openrouter_model' => 'openai/gpt-4o-mini',
+            'openrouter_model' => 'openai/gpt-4.1-mini',
             'openai_api_key' => '',
-            'openai_model' => 'gpt-4o-mini',
+            'openai_model' => 'gpt-4.1-mini',
             'default_system_prompt' => 'You are a helpful assistant. When you find information on the website to answer a question, you should first provide the answer directly, and then cite your source by showing the relevant page card using the tools available to you.',
             'default_initial_message' => 'Hello! How can I help you today?',
             'temperature' => 0.7,
@@ -2088,32 +2161,52 @@ class SNN_AI_Chat {
             'top_p' => 1.0,
             'frequency_penalty' => 0.0,
             'presence_penalty' => 0.0,
-        ));
+            // New Tool Settings
+            'tool_search_enabled' => 1,
+            'tool_display_enabled' => 1,
+            'tool_search_prompt' => "## Tool: Search ##\n- Description: Use this tool to find relevant information from the website's pages, posts, products, or any other content. It is your primary way of answering specific questions about the site's content.\n- Usage: Respond with `[search: KEYWORDS]`. Use concise keywords that best describe what you are looking for (e.g., `[search: blue nike shoe]`, `[search: contact info]`.\n- Note: Always use this tool first if the user asks a question that can be answered with the site's content.",
+            'tool_display_prompt' => "## Tool: Display Content Card ##\n- Description: After finding relevant content with the Search tool, use this tag to show a formatted link card. This is for citing your sources.\n- Usage: Respond with `[[post:ID]]`. Replace ID with the ID from the search results.\n- **Crucial Instruction:** When you find an answer on a page, first state the answer directly, and then provide the card as a source. \n- Example Flow: A user asks for the phone number. You use `[search: contact]`. The system returns 'Title: Contact Us, ID: 2, Excerpt: Our phone is 555-1234...'. Your final answer should be: 'Our phone number is 555-1234. You can find more details on our contact page: [[post:2]]'",
+        );
+        return get_option('snn_ai_chat_settings', $defaults);
     }
     
     private function save_settings() {
-        if (!isset($_POST['snn_ai_chat_settings_nonce']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_ai_chat_settings_nonce'] ?? '')), 'snn_ai_chat_settings')) {
+        if (!isset($_POST['snn_ai_chat_settings_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['snn_ai_chat_settings_nonce'])), 'snn_ai_chat_settings_nonce_action')) {
             return;
         }
+
+        $current_settings = $this->get_settings();
+        $new_settings = [];
+
+        // Loop through all possible settings keys (from defaults) to ensure we process all of them
+        foreach ($current_settings as $key => $default_value) {
+            if (isset($_POST[$key])) {
+                if (is_int($default_value)) {
+                     $new_settings[$key] = intval($_POST[$key]);
+                } elseif (is_float($default_value)) {
+                     $new_settings[$key] = floatval($_POST[$key]);
+                } elseif ($key === 'tool_search_prompt' || $key === 'tool_display_prompt' || $key === 'default_system_prompt') {
+                    $new_settings[$key] = sanitize_textarea_field(wp_unslash($_POST[$key]));
+                } else {
+                    $new_settings[$key] = sanitize_text_field(wp_unslash($_POST[$key]));
+                }
+            } else {
+                // Handle checkboxes that are not sent when unchecked
+                if (is_int($default_value) && ($key === 'tool_search_enabled' || $key === 'tool_display_enabled')) {
+                    $new_settings[$key] = 0;
+                } else {
+                    // If the key wasn't in the form, keep the old value
+                    $new_settings[$key] = $current_settings[$key];
+                }
+            }
+        }
         
-        $settings = array(
-            'api_provider' => sanitize_text_field(wp_unslash($_POST['api_provider'] ?? 'openrouter')),
-            'openrouter_api_key' => sanitize_text_field(wp_unslash($_POST['openrouter_api_key'] ?? '')),
-            'openrouter_model' => sanitize_text_field(wp_unslash($_POST['openrouter_model'] ?? '')),
-            'openai_api_key' => sanitize_text_field(wp_unslash($_POST['openai_api_key'] ?? '')),
-            'openai_model' => sanitize_text_field(wp_unslash($_POST['openai_model'] ?? '')),
-            'default_system_prompt' => sanitize_textarea_field(wp_unslash($_POST['default_system_prompt'] ?? '')),
-            'default_initial_message' => sanitize_text_field(wp_unslash($_POST['default_initial_message'] ?? '')),
-            'temperature' => floatval(wp_unslash($_POST['temperature'] ?? 0.7)),
-            'max_tokens' => intval(wp_unslash($_POST['max_tokens'] ?? 500)),
-            'top_p' => floatval(wp_unslash($_POST['top_p'] ?? 1.0)),
-            'frequency_penalty' => floatval(wp_unslash($_POST['frequency_penalty'] ?? 0.0)),
-            'presence_penalty' => floatval(wp_unslash($_POST['presence_penalty'] ?? 0.0)),
-        );
-        
-        update_option('snn_ai_chat_settings', $settings);
-        
-        echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
+        update_option('snn_ai_chat_settings', $new_settings);
+
+        // Redirect with a success message
+        $current_page_url = remove_query_arg('settings-updated', wp_get_referer());
+        wp_safe_redirect(add_query_arg('settings-updated', 'true', $current_page_url));
+        exit;
     }
     
     private function get_all_chats() {
@@ -2462,7 +2555,7 @@ class SNN_AI_Chat {
     }
     public function handle_reset_action() {
         if (isset($_POST['reset_plugin_data'])) {
-            if (!isset($_POST['snn_ai_chat_settings_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['snn_ai_chat_settings_nonce'])), 'snn_ai_chat_settings')) {
+            if (!isset($_POST['snn_ai_chat_settings_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['snn_ai_chat_settings_nonce'])), 'snn_ai_chat_settings_nonce_action')) {
                 wp_die('Nonce verification failed.');
             }
 
@@ -2650,20 +2743,16 @@ class SNN_AI_Chat {
     }
 
     private function get_tool_manifest() {
+        $settings = $this->get_settings();
         $tools = [];
 
-        // Search Tool
-        $tools[] = "## Tool: Search ##\n" .
-                   "- Description: Use this tool to find relevant information from the website's pages, posts, products, or any other content. It is your primary way of answering specific questions about the site's content.\n" .
-                   "- Usage: Respond with `[search: KEYWORDS]`. For example: `[search: about us]`, `[search: contact information]`, `[search: web design services]`.\n" .
-                   "- Note: Always use this tool first if the user asks a question that can be answered with the site's content.";
+        if (!empty($settings['tool_search_enabled']) && !empty($settings['tool_search_prompt'])) {
+            $tools[] = $settings['tool_search_prompt'];
+        }
 
-        // Universal Content Display Tool
-        $tools[] = "## Tool: Display Content Card ##\n" .
-                   "- Description: After finding relevant content with the Search tool, use this tag to show a formatted link card. This is for citing your sources.\n" .
-                   "- Usage: Respond with `[[post:ID]]`. Replace ID with the ID from the search results.\n" .
-                   "- **Crucial Instruction:** When you find an answer on a page, first state the answer directly, and then provide the card as a source. \n" .
-                   "- Example Flow: A user asks for the phone number. You use `[search: contact]`. The system returns 'Title: Contact Us, ID: 2, Excerpt: Our phone is 555-1234...'. Your final answer should be: 'Our phone number is 555-1234. You can find more details on our contact page: [[post:2]]'";
+        if (!empty($settings['tool_display_enabled']) && !empty($settings['tool_display_prompt'])) {
+            $tools[] = $settings['tool_display_prompt'];
+        }
 
         return implode("\n\n", $tools);
     }
@@ -2693,6 +2782,13 @@ class SNN_AI_Chat {
     }
 
     private function process_presentation_tags($content) {
+        $settings = $this->get_settings();
+
+        // Only process the tag if the tool is enabled
+        if (empty($settings['tool_display_enabled'])) {
+            return $content;
+        }
+
         // Looks for [[post:123]]
         return preg_replace_callback('/\[\[post:(\d+)\]\]/i', function($matches) {
             $post_id = intval($matches[1]);
