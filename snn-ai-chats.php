@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SNN AI Chat
  * Plugin URI: https://sinanisler.com
- * Description: Advanced AI Chat Plugin with OpenRouter and OpenAI support
+ * Description: Advanced AI Chat Plugin with OpenRouter, OpenAI, and Custom API support
  * Version: 0.4.1
  * Requires at least: 6.0
  * Requires PHP:      8.0
@@ -291,8 +291,11 @@ class SNN_AI_Chat {
             'global_api_provider' => $global_settings['api_provider'],
             'global_openrouter_api_key' => $global_settings['openrouter_api_key'],
             'global_openai_api_key' => $global_settings['openai_api_key'],
+            'global_custom_api_endpoint' => $global_settings['custom_api_endpoint'], // New
+            'global_custom_api_key' => $global_settings['custom_api_key'], // New
             'global_openrouter_model' => $global_settings['openrouter_model'],
             'global_openai_model' => $global_settings['openai_model'],
+            'global_custom_model' => $global_settings['custom_model'], // New
             'global_temperature' => $global_settings['temperature'] ?? 0.7,
             'global_max_tokens' => $global_settings['max_tokens'] ?? 500,
             'global_top_p' => $global_settings['top_p'] ?? 1.0,
@@ -465,9 +468,13 @@ class SNN_AI_Chat {
                             <input type="radio" name="api_provider" value="openrouter" <?php checked($settings['api_provider'], 'openrouter'); ?> class="mr-2 api-provider-radio" id="snn-openrouter-radio">
                             OpenRouter
                         </label>
-                        <label class="block mb-4 text-gray-700">
+                        <label class="block mb-2 text-gray-700">
                             <input type="radio" name="api_provider" value="openai" <?php checked($settings['api_provider'], 'openai'); ?> class="mr-2 api-provider-radio" id="snn-openai-radio">
                             OpenAI
+                        </label>
+                        <label class="block mb-4 text-gray-700">
+                            <input type="radio" name="api_provider" value="custom" <?php checked($settings['api_provider'], 'custom'); ?> class="mr-2 api-provider-radio" id="snn-custom-api-radio">
+                            Custom API
                         </label>
                     </div>
                     
@@ -505,6 +512,30 @@ class SNN_AI_Chat {
                             <datalist id="openai_models"></datalist>
                         </div>
                         <div class="model-details text-gray-600 text-sm" id="openai-model-details"></div>
+                    </div>
+
+                    <div class="api-settings <?php echo ($settings['api_provider'] !== 'custom') ? 'hidden' : ''; ?> bg-gray-50 p-4 rounded-md border border-gray-200" id="snn-custom-api-settings">
+                        <h3 class="text-lg font-semibold mb-3 text-gray-800">Custom API Settings (OpenAI Compatible)</h3>
+                        <div class="mb-4">
+                            <label for="custom_api_endpoint" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="The base URL for your custom OpenAI-compatible API (e.g., https://your-custom-api.com/v1)">
+                                Custom API Endpoint URL
+                            </label>
+                            <input type="url" id="custom_api_endpoint" name="custom_api_endpoint" value="<?php echo esc_attr($settings['custom_api_endpoint']); ?>" class="w-full p-2 border border-gray-300 rounded-md api-endpoint-input focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="mb-4">
+                            <label for="custom_api_key" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Your API key for your custom OpenAI-compatible service">
+                                Custom API Key
+                            </label>
+                            <input type="text" id="custom_api_key" name="custom_api_key" value="<?php echo esc_attr($settings['custom_api_key']); ?>" class="w-[50%] p-2 border border-gray-300 rounded-md api-key-input focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="mb-4">
+                            <label for="custom_model" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="Select the model from your custom API to use for chat responses">
+                                Model Selection
+                            </label>
+                            <input type="text" id="custom_model" name="custom_model" value="<?php echo esc_attr($settings['custom_model']); ?>" list="custom_models" class="w-full p-2 border border-gray-300 rounded-md model-input focus:ring-blue-500 focus:border-blue-500">
+                            <datalist id="custom_models"></datalist>
+                        </div>
+                        <div class="model-details text-gray-600 text-sm" id="custom-model-details"></div>
                     </div>
                 </div>
 
@@ -575,13 +606,14 @@ class SNN_AI_Chat {
         <script>
             jQuery(document).ready(function($) {
                 // Function to fetch and display model details
-                function fetchAndDisplayModelDetails(provider, model, apiKey) {
-                    if (!model || !apiKey) {
-                        $('#' + provider + '-model-details').html('<p class="text-red-500">Please provide an API Key and select a model to see details.</p>');
+                function fetchAndDisplayModelDetails(provider, model, apiKey, endpoint = '') {
+                    const detailsContainer = $('#' + provider + '-model-details');
+                    if (!model || !apiKey || (provider === 'custom' && !endpoint)) {
+                        detailsContainer.html('<p class="text-red-500">Please provide API Key, ' + (provider === 'custom' ? 'Endpoint, ' : '') + 'and select a model to see details.</p>');
                         return;
                     }
 
-                    $('#' + provider + '-model-details').html('<p class="text-blue-500">Loading model details...</p>');
+                    detailsContainer.html('<p class="text-blue-500">Loading model details...</p>');
 
                     $.ajax({
                         url: snn_ai_chat_ajax.ajax_url,
@@ -591,7 +623,8 @@ class SNN_AI_Chat {
                             nonce: snn_ai_chat_ajax.nonce,
                             provider: provider,
                             model: model,
-                            api_key: apiKey
+                            api_key: apiKey,
+                            api_endpoint: endpoint // Pass endpoint for custom API
                         },
                         success: function(response) {
                             if (response.success) {
@@ -616,22 +649,23 @@ class SNN_AI_Chat {
                                 } else {
                                     output = '<p class="text-red-500">Model details not found or API error.</p>';
                                 }
-                                $('#' + provider + '-model-details').html(output);
+                                detailsContainer.html(output);
                             } else {
-                                $('#' + provider + '-model-details').html('<p class="text-red-500">Error: ' + (response.data || 'Could not fetch model details.') + '</p>');
+                                detailsContainer.html('<p class="text-red-500">Error: ' + (response.data || 'Could not fetch model details.') + '</p>');
                             }
                         },
                         error: function(jqXHR, textStatus, errorThrown) {
                             console.error("AJAX error fetching model details:", textStatus, errorThrown);
-                            $('#' + provider + '-model-details').html('<p class="text-red-500">Failed to fetch model details. Network error or invalid API key.</p>');
+                            detailsContainer.html('<p class="text-red-500">Failed to fetch model details. Network error or invalid API key/endpoint.</p>');
                         }
                     });
                 }
 
                 // Function to fetch models for datalist
-                function fetchModelsForDatalist(provider, apiKey) {
-                    if (!apiKey) {
-                        $('#' + provider + '_models').empty();
+                function fetchModelsForDatalist(provider, apiKey, endpoint = '') {
+                    const datalist = $('#' + provider + '_models');
+                    if (!apiKey || (provider === 'custom' && !endpoint)) {
+                        datalist.empty();
                         return;
                     }
 
@@ -642,11 +676,11 @@ class SNN_AI_Chat {
                             action: 'snn_get_models',
                             nonce: snn_ai_chat_ajax.nonce,
                             provider: provider,
-                            api_key: apiKey
+                            api_key: apiKey,
+                            api_endpoint: endpoint // Pass endpoint for custom API
                         },
                         success: function(response) {
                             if (response.success) {
-                                let datalist = $('#' + provider + '_models');
                                 datalist.empty();
                                 response.data.forEach(function(model) {
                                     datalist.append('<option value="' + model.id + '">');
@@ -669,6 +703,9 @@ class SNN_AI_Chat {
                 } else if (initialProvider === 'openai') {
                     fetchModelsForDatalist('openai', snn_ai_chat_ajax.global_openai_api_key);
                     fetchAndDisplayModelDetails('openai', snn_ai_chat_ajax.global_openai_model, snn_ai_chat_ajax.global_openai_api_key);
+                } else if (initialProvider === 'custom') {
+                    fetchModelsForDatalist('custom', snn_ai_chat_ajax.global_custom_api_key, snn_ai_chat_ajax.global_custom_api_endpoint);
+                    fetchAndDisplayModelDetails('custom', snn_ai_chat_ajax.global_custom_model, snn_ai_chat_ajax.global_custom_api_key, snn_ai_chat_ajax.global_custom_api_endpoint);
                 }
 
                 // Event listeners for API provider radio buttons
@@ -688,10 +725,16 @@ class SNN_AI_Chat {
                         const model = $('#openai_model').val();
                         fetchModelsForDatalist('openai', apiKey);
                         fetchAndDisplayModelDetails('openai', model, apiKey);
+                    } else if (selectedProvider === 'custom') {
+                        const apiKey = $('#custom_api_key').val();
+                        const endpoint = $('#custom_api_endpoint').val();
+                        const model = $('#custom_model').val();
+                        fetchModelsForDatalist('custom', apiKey, endpoint);
+                        fetchAndDisplayModelDetails('custom', model, apiKey, endpoint);
                     }
                 });
 
-                // Event listeners for API key and model input changes
+                // Event listeners for API key, endpoint, and model input changes
                 $('#openrouter_api_key').on('input', function() {
                     const apiKey = $(this).val();
                     const model = $('#openrouter_model').val();
@@ -716,6 +759,22 @@ class SNN_AI_Chat {
                     const model = $(this).val();
                     const apiKey = $('#openai_api_key').val();
                     fetchAndDisplayModelDetails('openai', model, apiKey);
+                });
+
+                // New event listeners for Custom API
+                $('#custom_api_endpoint, #custom_api_key').on('input', function() {
+                    const endpoint = $('#custom_api_endpoint').val();
+                    const apiKey = $('#custom_api_key').val();
+                    const model = $('#custom_model').val();
+                    fetchModelsForDatalist('custom', apiKey, endpoint);
+                    fetchAndDisplayModelDetails('custom', model, apiKey, endpoint);
+                });
+
+                $('#custom_model').on('change', function() {
+                    const model = $(this).val();
+                    const endpoint = $('#custom_api_endpoint').val();
+                    const apiKey = $('#custom_api_key').val();
+                    fetchAndDisplayModelDetails('custom', model, apiKey, endpoint);
                 });
             });
         </script>
@@ -1548,15 +1607,19 @@ class SNN_AI_Chat {
         
         $provider = sanitize_text_field($_POST['provider'] ?? '');
         $api_key = sanitize_text_field($_POST['api_key'] ?? '');
+        $api_endpoint = esc_url_raw($_POST['api_endpoint'] ?? ''); // New: for custom API
         
-        if (empty($provider) || empty($api_key)) {
-            wp_send_json_error('Provider or API key missing.');
+        if (empty($provider) || empty($api_key) || ($provider === 'custom' && empty($api_endpoint))) {
+            wp_send_json_error('Provider, API key, or Custom API Endpoint missing.');
         }
 
+        $models = [];
         if ($provider === 'openrouter') {
             $models = $this->fetch_openrouter_models($api_key);
         } else if ($provider === 'openai') {
             $models = $this->fetch_openai_models($api_key);
+        } else if ($provider === 'custom') { // New: Custom API
+            $models = $this->fetch_custom_api_models($api_endpoint, $api_key);
         } else {
             wp_send_json_error('Invalid provider');
         }
@@ -1571,9 +1634,10 @@ class SNN_AI_Chat {
         $provider = sanitize_text_field($_POST['provider'] ?? '');
         $model = sanitize_text_field($_POST['model'] ?? '');
         $api_key = sanitize_text_field($_POST['api_key'] ?? '');
+        $api_endpoint = esc_url_raw($_POST['api_endpoint'] ?? ''); // New: for custom API
         
-        if (empty($provider) || empty($model) || empty($api_key)) {
-            wp_send_json_error('Provider, model, or API key missing.');
+        if (empty($provider) || empty($model) || empty($api_key) || ($provider === 'custom' && empty($api_endpoint))) {
+            wp_send_json_error('Provider, model, API key, or Custom API Endpoint missing.');
         }
         
         $details = [];
@@ -1588,6 +1652,8 @@ class SNN_AI_Chat {
             }
         } else if ($provider === 'openai') {
             $details = $this->fetch_openai_model_details($model, $api_key);
+        } else if ($provider === 'custom') { // New: Custom API
+            $details = $this->fetch_custom_api_model_details($model, $api_endpoint, $api_key);
         } else {
             wp_send_json_error('Invalid provider');
         }
@@ -1635,11 +1701,24 @@ class SNN_AI_Chat {
         $api_settings = $this->get_settings();
         
         $api_provider = (string)($api_settings['api_provider'] ?? 'openrouter');
-        $model = ($api_provider === 'openai') ? (string)($api_settings['openai_model'] ?? '') : (string)($api_settings['openrouter_model'] ?? '');
-        $api_key = ($api_provider === 'openai') ? (string)($api_settings['openai_api_key'] ?? '') : (string)($api_settings['openrouter_api_key'] ?? '');
+        $model = '';
+        $api_key = '';
+        $custom_api_endpoint = ''; // New variable for custom API endpoint
 
-        if (empty($api_key)) {
-            wp_send_json_error(array('response' => 'API key is not configured.'));
+        if ($api_provider === 'openai') {
+            $model = (string)($api_settings['openai_model'] ?? '');
+            $api_key = (string)($api_settings['openai_api_key'] ?? '');
+        } elseif ($api_provider === 'openrouter') {
+            $model = (string)($api_settings['openrouter_model'] ?? '');
+            $api_key = (string)($api_settings['openrouter_api_key'] ?? '');
+        } elseif ($api_provider === 'custom') { // New: Custom API
+            $model = (string)($api_settings['custom_model'] ?? '');
+            $api_key = (string)($api_settings['custom_api_key'] ?? '');
+            $custom_api_endpoint = (string)($api_settings['custom_api_endpoint'] ?? '');
+        }
+
+        if (empty($api_key) || ($api_provider === 'custom' && empty($custom_api_endpoint))) {
+            wp_send_json_error(array('response' => 'API key or Custom API Endpoint is not configured.'));
         }
         
         // --- Conversation History Setup ---
@@ -1687,12 +1766,17 @@ class SNN_AI_Chat {
         $response_content = '';
         $tokens_used = 0;
 
-        $initial_response = ($api_provider === 'openrouter')
-            ? $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params)
-            : $this->send_to_openai($conversation_history, $model, $api_key, $api_params);
+        $initial_response = false;
+        if ($api_provider === 'openrouter') {
+            $initial_response = $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params);
+        } elseif ($api_provider === 'openai') {
+            $initial_response = $this->send_to_openai($conversation_history, $model, $api_key, $api_params);
+        } elseif ($api_provider === 'custom') { // New: Custom API call
+            $initial_response = $this->send_to_custom_api($conversation_history, $model, $custom_api_endpoint, $api_key, $api_params);
+        }
 
         if (!$initial_response || !isset($initial_response['content'])) {
-            wp_send_json_error(array('response' => 'Failed to get an initial AI response. Check API keys and model selection.'));
+            wp_send_json_error(array('response' => 'Failed to get an initial AI response. Check API keys, endpoint, and model selection.'));
             return;
         }
 
@@ -1710,9 +1794,14 @@ class SNN_AI_Chat {
             $conversation_history[] = ['role' => 'user', 'content' => "Here are the search results for '{$search_query}':\n\n{$search_results}\n\nBased on these results, please formulate your answer to my original question."];
 
             // --- AI Interaction Loop (Phase 2) ---
-            $final_response = ($api_provider === 'openrouter')
-                ? $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params)
-                : $this->send_to_openai($conversation_history, $model, $api_key, $api_params);
+            $final_response = false;
+            if ($api_provider === 'openrouter') {
+                $final_response = $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params);
+            } elseif ($api_provider === 'openai') {
+                $final_response = $this->send_to_openai($conversation_history, $model, $api_key, $api_params);
+            } elseif ($api_provider === 'custom') { // New: Custom API call for second phase
+                $final_response = $this->send_to_custom_api($conversation_history, $model, $custom_api_endpoint, $api_key, $api_params);
+            }
 
             if ($final_response && isset($final_response['content'])) {
                 $response_content = $final_response['content'];
@@ -2147,6 +2236,9 @@ class SNN_AI_Chat {
             'openrouter_model' => 'openai/gpt-4.1-mini',
             'openai_api_key' => '',
             'openai_model' => 'gpt-4.1-mini',
+            'custom_api_endpoint' => '', // New
+            'custom_api_key' => '', // New
+            'custom_model' => '', // New
             'default_system_prompt' => 'You are a helpful assistant. When you find information on the website to answer a question, you should first provide the answer directly, and then cite your source by showing the relevant page card using the tools available to you.',
             'default_initial_message' => 'Hello! How can I help you today?',
             'temperature' => 0.7,
@@ -2180,7 +2272,10 @@ class SNN_AI_Chat {
                        $new_settings[$key] = floatval($_POST[$key]);
                 } elseif ($key === 'tool_search_prompt' || $key === 'tool_display_prompt' || $key === 'default_system_prompt') {
                     $new_settings[$key] = sanitize_textarea_field(wp_unslash($_POST[$key]));
-                } else {
+                } elseif ($key === 'custom_api_endpoint') { // Sanitize URL for custom endpoint
+                    $new_settings[$key] = esc_url_raw(wp_unslash($_POST[$key]));
+                }
+                else {
                     $new_settings[$key] = sanitize_text_field(wp_unslash($_POST[$key]));
                 }
             } else {
@@ -2372,6 +2467,46 @@ class SNN_AI_Chat {
         $body = wp_remote_retrieve_body($response);
         return json_decode($body, true);
     }
+
+    private function fetch_custom_api_models($endpoint, $api_key) {
+        $url = trailingslashit($endpoint) . 'models';
+        $response = wp_remote_get($url, array(
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type' => 'application/json'
+            ),
+            'timeout' => 15,
+        ));
+        
+        if (is_wp_error($response)) {
+            error_log('SNN AI Chat Custom API Models Error: ' . $response->get_error_message());
+            return array();
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        
+        return isset($data['data']) ? $data['data'] : array();
+    }
+
+    private function fetch_custom_api_model_details($model, $endpoint, $api_key) {
+        $url = trailingslashit($endpoint) . 'models/' . (string)$model;
+        $response = wp_remote_get($url, array(
+            'headers' => array(
+                'Authorization' => 'Bearer ' . $api_key,
+                'Content-Type' => 'application/json'
+            ),
+            'timeout' => 15,
+        ));
+        
+        if (is_wp_error($response)) {
+            error_log('SNN AI Chat Custom API Model Details Error: ' . $response->get_error_message());
+            return array();
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        return json_decode($body, true);
+    }
     
     private function check_rate_limits($session_id, $chat_id) {
         global $wpdb;
@@ -2506,6 +2641,44 @@ class SNN_AI_Chat {
         }
         
         error_log('SNN AI Chat OpenAI API Response Error: ' . print_r($data, true));
+        return false;
+    }
+
+    private function send_to_custom_api($messages, $model, $endpoint, $api_key, $api_params) {
+        $url = trailingslashit($endpoint) . 'chat/completions';
+        $response = wp_remote_post($url, array(
+            'headers' => array(
+                'Authorization' => 'Bearer ' . (string)$api_key,
+                'Content-Type' => 'application/json'
+            ),
+            'body' => json_encode(array(
+                'model' => (string)$model,
+                'messages' => $messages,
+                'temperature' => floatval($api_params['temperature'] ?? 0.7),
+                'max_tokens' => intval($api_params['max_tokens'] ?? 500),
+                'top_p' => floatval($api_params['top_p'] ?? 1.0),
+                'frequency_penalty' => floatval($api_params['frequency_penalty'] ?? 0.0),
+                'presence_penalty' => floatval($api_params['presence_penalty'] ?? 0.0),
+            )),
+            'timeout' => 30,
+        ));
+        
+        if (is_wp_error($response)) {
+            error_log('SNN AI Chat Custom API Error: ' . $response->get_error_message());
+            return false;
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        
+        if (isset($data['choices'][0]['message']['content'])) {
+            return array(
+                'content' => (string)$data['choices'][0]['message']['content'],
+                'tokens' => (int)($data['usage']['total_tokens'] ?? 0)
+            );
+        }
+        
+        error_log('SNN AI Chat Custom API Response Error: ' . print_r($data, true));
         return false;
     }
     
