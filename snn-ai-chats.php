@@ -356,11 +356,11 @@ class SNN_AI_Chat {
                     <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=new')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg text-lg text-center quick-action-btn hover:bg-blue-700 transition-colors duration-200" id="snn-create-chat-btn">
                         Create New Chat
                     </a>
-                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-settings')); ?>" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-lg text-center quick-action-btn hover:bg-green-700 transition-colors duration-200" id="snn-settings-btn">
-                        Settings
-                    </a>
-                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats')); ?>" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg text-lg text-center quick-action-btn hover:bg-purple-700 transition-colors duration-200" id="snn-manage-chats-btn">
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg text-lg text-center quick-action-btn hover:bg-purple-700 transition-colors duration-200" id="snn-manage-chats-btn">
                         Manage Chats
+                    </a>
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-settings')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg text-lg text-center quick-action-btn hover:bg-green-700 transition-colors duration-200" id="snn-settings-btn">
+                        Settings
                     </a>
                 </div>
             </div>
@@ -1907,7 +1907,7 @@ class SNN_AI_Chat {
             color: var(--snn-primary-color); 
             border: 1px solid var(--snn-primary-color); 
             padding: 8px 12px; 
-            border-radius: 20px; 
+            border-radius: 10px; 
             cursor: pointer; 
             text-align: left; 
             transition: all 0.2s ease; 
