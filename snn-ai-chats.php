@@ -597,10 +597,15 @@ class SNN_AI_Chat {
                     <button type="submit" name="submit_settings" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md settings-save-btn hover:bg-blue-700 transition-colors duration-200" id="snn-save-settings-btn">
                         Save Settings
                     </button>
-                    <button type="submit" name="reset_plugin_data" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-md settings-reset-btn transition-colors duration-200" id="snn-reset-settings-btn" onclick="return confirm('Are you sure you want to delete ALL plugin data? This will remove all chats, history, and settings. This action cannot be undone.');">
-                        Reset and Delete Plugin Data
-                    </button>
                 </div>
+            </form>
+            
+            <!-- Separate form for reset button with correct nonce -->
+            <form method="post" action="" style="display: inline;">
+                <?php wp_nonce_field('snn_reset_plugin_data_nonce_action', 'snn_reset_plugin_data_nonce'); ?>
+                <button type="submit" name="reset_plugin_data" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-md settings-reset-btn transition-colors duration-200" id="snn-reset-settings-btn" onclick="return confirm('Are you sure you want to delete ALL plugin data? This will remove all chats, history, and settings. This action cannot be undone.');">
+                    Reset and Delete Plugin Data
+                </button>
             </form>
         </div>
         <script>
