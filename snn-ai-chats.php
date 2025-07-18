@@ -221,16 +221,6 @@ class SNN_AI_Chat {
             array($this, 'chat_history_page')
         );
         
-        // New Tools Submenu Page
-        add_submenu_page(
-            'snn-ai-chat',
-            'Tools',
-            'Tools',
-            'manage_options',
-            'snn-ai-chat-tools',
-            array($this, 'tools_page')
-        );
-
         add_submenu_page(
             'snn-ai-chat',
             'Settings',
@@ -783,64 +773,6 @@ class SNN_AI_Chat {
                 });
             });
         </script>
-        <?php
-    }
-
-    public function tools_page() {
-        if (isset($_GET['settings-updated'])) {
-            echo '<div class="notice notice-success is-dismissible"><p>Tool settings saved successfully!</p></div>';
-        }
-
-        $settings = $this->get_settings();
-        ?>
-        <div class="wrap">
-            <h1>AI Tools Settings</h1>
-            <p class="text-gray-600 mb-6">Enable, disable, and configure the tools your AI can use. The prompts below define how the AI understands and uses each tool.</p>
-
-            <form method="post" action="" class="snn-tools-settings-form" id="snn-tools-settings-form">
-                <?php wp_nonce_field('snn_ai_chat_settings_nonce_action', 'snn_ai_chat_settings_nonce'); ?>
-
-                <!-- Search Tool Section -->
-                <div class="bg-white p-6 rounded-lg shadow mb-6" id="snn-search-tool-section">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-semibold">Search Tool</h2>
-                        <label class="flex items-center text-gray-700 cursor-pointer">
-                            <input type="checkbox" name="tool_search_enabled" value="1" <?php checked($settings['tool_search_enabled'], 1); ?> class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                            <span class="text-sm font-medium">Enable Search</span>
-                        </label>
-                    </div>
-                    <p class="text-gray-500 mb-4">Allows the AI to search your website's content to answer user questions.</p>
-                    <div>
-                        <label for="tool_search_prompt" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="This is the instruction given to the AI on how to use the search tool.">
-                            Search Tool System Prompt
-                        </label>
-                        <textarea id="tool_search_prompt" name="tool_search_prompt" rows="5" class="w-full p-2 border border-gray-300 rounded-md system-prompt-input focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"><?php echo esc_textarea($settings['tool_search_prompt']); ?></textarea>
-                    </div>
-                </div>
-
-                <!-- Display Content Card Tool Section -->
-                <div class="bg-white p-6 rounded-lg shadow mb-6" id="snn-display-tool-section">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-semibold">Display Content Card Tool</h2>
-                        <label class="flex items-center text-gray-700 cursor-pointer">
-                            <input type="checkbox" name="tool_display_enabled" value="1" <?php checked($settings['tool_display_enabled'], 1); ?> class="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                            <span class="text-sm font-medium">Enable Display Card</span>
-                        </label>
-                    </div>
-                    <p class="text-gray-500 mb-4">Allows the AI to display a formatted "content card" as a source after finding information.</p>
-                    <div>
-                        <label for="tool_display_prompt" class="block text-sm font-medium text-gray-700 mb-2 snn-tooltip" data-tippy-content="This is the instruction given to the AI on how to display a content card.">
-                            Display Tool System Prompt
-                        </label>
-                        <textarea id="tool_display_prompt" name="tool_display_prompt" rows="6" class="w-full p-2 border border-gray-300 rounded-md system-prompt-input focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"><?php echo esc_textarea($settings['tool_display_prompt']); ?></textarea>
-                    </div>
-                </div>
-
-                <button type="submit" name="submit_tools_settings" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md settings-save-btn hover:bg-blue-700 transition-colors duration-200" id="snn-save-tools-settings-btn">
-                    Save Tool Settings
-                </button>
-            </form>
-        </div>
         <?php
     }
 
@@ -1738,13 +1670,10 @@ class SNN_AI_Chat {
         // Process dynamic tags in the main system prompt
         $processed_prompt = $this->process_dynamic_tags($chat_settings['system_prompt'], $context);
         
-        // Add the tool manifest to the system prompt, based on settings
-        $system_prompt_with_tools = $processed_prompt . "\n\n" . $this->get_tool_manifest();
-
-        if (!empty($system_prompt_with_tools)) {
+        if (!empty($processed_prompt)) {
             $conversation_history[] = [
                 'role' => 'system',
-                'content' => $system_prompt_with_tools
+                'content' => $processed_prompt
             ];
         }
 
@@ -1761,75 +1690,37 @@ class SNN_AI_Chat {
         // --- API Parameters ---
         $api_params = [
             'temperature' => floatval($api_settings['temperature'] ?? 0.7),
-            'max_tokens' => intval($api_settings['max_tokens'] ?? 1000), // Increased for tool use
+            'max_tokens' => intval($api_settings['max_tokens'] ?? 500),
             'top_p' => floatval($api_settings['top_p'] ?? 1.0),
             'frequency_penalty' => floatval($api_settings['frequency_penalty'] ?? 0.0),
             'presence_penalty' => floatval($api_settings['presence_penalty'] ?? 0.0),
         ];
 
-        // --- AI Interaction Loop (Phase 1) ---
+        // --- AI Interaction ---
         $response_content = '';
         $tokens_used = 0;
 
-        $initial_response = false;
+        $response = false;
         if ($api_provider === 'openrouter') {
-            $initial_response = $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params);
+            $response = $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params);
         } elseif ($api_provider === 'openai') {
-            $initial_response = $this->send_to_openai($conversation_history, $model, $api_key, $api_params);
-        } elseif ($api_provider === 'custom') { // New: Custom API call
-            $initial_response = $this->send_to_custom_api($conversation_history, $model, $custom_api_endpoint, $api_key, $api_params);
+            $response = $this->send_to_openai($conversation_history, $model, $api_key, $api_params);
+        } elseif ($api_provider === 'custom') {
+            $response = $this->send_to_custom_api($conversation_history, $model, $custom_api_endpoint, $api_key, $api_params);
         }
 
-        if (!$initial_response || !isset($initial_response['content'])) {
-            wp_send_json_error(array('response' => 'Failed to get an initial AI response. Check API keys, endpoint, and model selection.'));
-            return;
-        }
-
-        $ai_response_text = $initial_response['content'];
-        $tokens_used += $initial_response['tokens'];
-        
-        // --- Tool Execution Check ---
-        if ($api_settings['tool_search_enabled'] && preg_match('/\[search:\s*(.*?)\]/i', $ai_response_text, $matches)) {
-            $search_query = trim($matches[1]);
-            $search_results = $this->execute_search_tool($search_query);
-
-            $conversation_history[] = ['role' => 'assistant', 'content' => $ai_response_text];
-            // The 'tool' role is specific to some models like Claude 3. For others, we present it as system/user content.
-            // A more general approach is to frame it as new information for the assistant.
-            $conversation_history[] = ['role' => 'user', 'content' => "Here are the search results for '{$search_query}':\n\n{$search_results}\n\nBased on these results, please formulate your answer to my original question."];
-
-            // --- AI Interaction Loop (Phase 2) ---
-            $final_response = false;
-            if ($api_provider === 'openrouter') {
-                $final_response = $this->send_to_openrouter($conversation_history, $model, $api_key, $api_params);
-            } elseif ($api_provider === 'openai') {
-                $final_response = $this->send_to_openai($conversation_history, $model, $api_key, $api_params);
-            } elseif ($api_provider === 'custom') { // New: Custom API call for second phase
-                $final_response = $this->send_to_custom_api($conversation_history, $model, $custom_api_endpoint, $api_key, $api_params);
-            }
-
-            if ($final_response && isset($final_response['content'])) {
-                $response_content = $final_response['content'];
-                $tokens_used += $final_response['tokens'];
-            } else {
-                $response_content = "I found some information but had trouble processing it. Here are the raw search results:\n" . $search_results;
-            }
-        } else {
-            $response_content = $ai_response_text;
-        }
-
-        // --- Final Processing and Response ---
-        $final_processed_content = $this->process_presentation_tags($response_content);
-
-        if (isset($final_processed_content)) {
-            $this->save_chat_message($session_id, $chat_id, $message, $final_processed_content, $tokens_used, $user_name, $user_email);
+        if ($response && isset($response['content'])) {
+            $response_content = $response['content'];
+            $tokens_used = $response['tokens'];
+            
+            $this->save_chat_message($session_id, $chat_id, $message, $response_content, $tokens_used, $user_name, $user_email);
             
             wp_send_json_success([
-                'response' => $final_processed_content,
+                'response' => $response_content,
                 'tokens' => $tokens_used
             ]);
         } else {
-            wp_send_json_error(array('response' => 'Failed to get a final AI response. Please check your API settings.'));
+            wp_send_json_error(array('response' => 'Failed to get an AI response. Please check your API settings.'));
         }
     }
 
@@ -1939,7 +1830,7 @@ class SNN_AI_Chat {
         .snn-ai-chat-widget .snn-chat-toggle:hover { background-color: var(--snn-primary-color-hover); }
         .snn-ai-chat-widget .snn-chat-toggle .dashicons { color: var(--snn-text-color); font-size: 28px; width: 28px; height: 28px; line-height: 1; display: flex; align-items: center; justify-content: center; }
         .snn-ai-chat-widget .snn-chat-container { width: var(--snn-widget-width); height: var(--snn-widget-height); border-radius: var(--snn-border-radius); background-color: var(--snn-chat-widget-bg-color); box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; overflow: hidden; position: absolute; bottom: 0; right: 0; }
-        .snn-ai-chat-widget .snn-chat-header { background-color: var(--snn-primary-color); color: var(--snn-text-color); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: var(--snn-border-radius); border-top-right-radius: var(--snn-border-radius); z-index:  11; }
+        .snn-ai-chat-widget .snn-chat-header { background-color: var(--snn-primary-color); color: var(--snn-text-color); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: var(--snn-border-radius); border-top-right-radius: var(--snn-border-radius); z-index:   11; }
         .snn-ai-chat-widget .snn-header-controls { display: flex; align-items: center; }
         .snn-ai-chat-widget .snn-new-chat { background: none; border: none; color: var(--snn-text-color); cursor: pointer; padding: 3.75px; margin-right: 7.5px; border-radius: 3.75px; transition: background-color 0.3s ease; display: flex; align-items: center; justify-content: center; }
         .snn-ai-chat-widget .snn-new-chat:hover { background-color: rgba(255, 255, 255, 0.2); }
@@ -2244,18 +2135,13 @@ class SNN_AI_Chat {
             'custom_api_endpoint' => '', // New
             'custom_api_key' => '', // New
             'custom_model' => '', // New
-            'default_system_prompt' => 'You are a helpful assistant. When you find information on the website to answer a question, you should first provide the answer directly, and then cite your source by showing the relevant page card using the tools available to you.',
+            'default_system_prompt' => 'You are a helpful assistant.',
             'default_initial_message' => 'Hello! How can I help you today?',
             'temperature' => 0.7,
             'max_tokens' => 500,
             'top_p' => 1.0,
             'frequency_penalty' => 0.0,
             'presence_penalty' => 0.0,
-            // New Tool Settings
-            'tool_search_enabled' => 1,
-            'tool_display_enabled' => 1,
-            'tool_search_prompt' => "## Tool: Search ##\n- Description: Use this tool to find relevant information from the website's pages, posts, products, or any other content. It is your primary way of answering specific questions about the site's content.\n- Usage: Respond with `[search: KEYWORDS]`. Use concise keywords that best describe what you are looking for (e.g., `[search: blue nike shoe]`, `[search: contact info]`.\n- Note: Always use this tool first if the user asks a question that can be answered with the site's content.",
-            'tool_display_prompt' => "## Tool: Display Content Card ##\n- Description: After finding relevant content with the Search tool, use this tag to show a formatted link card. This is for citing your sources.\n- Usage: Respond with `[[post:ID]]`. Replace ID with the ID from the search results.\n- **Crucial Instruction:** When you find an answer on a page, first state the answer directly, and then provide the card as a source. \n- Example Flow: A user asks for the phone number. You use `[search: contact]`. The system returns 'Title: Contact Us, ID: 2, Excerpt: Our phone is 555-1234...'. Your final answer should be: 'Our phone number is 555-1234. You can find more details on our contact page: [[post:2]]'",
         );
         return get_option('snn_ai_chat_settings', $defaults);
     }
@@ -2272,10 +2158,10 @@ class SNN_AI_Chat {
         foreach ($current_settings as $key => $default_value) {
             if (isset($_POST[$key])) {
                 if (is_int($default_value)) {
-                       $new_settings[$key] = intval($_POST[$key]);
+                        $new_settings[$key] = intval($_POST[$key]);
                 } elseif (is_float($default_value)) {
-                       $new_settings[$key] = floatval($_POST[$key]);
-                } elseif ($key === 'tool_search_prompt' || $key === 'tool_display_prompt' || $key === 'default_system_prompt') {
+                        $new_settings[$key] = floatval($_POST[$key]);
+                } elseif ($key === 'default_system_prompt') {
                     $new_settings[$key] = sanitize_textarea_field(wp_unslash($_POST[$key]));
                 } elseif ($key === 'custom_api_endpoint') { // Sanitize URL for custom endpoint
                     $new_settings[$key] = esc_url_raw(wp_unslash($_POST[$key]));
@@ -2284,13 +2170,8 @@ class SNN_AI_Chat {
                     $new_settings[$key] = sanitize_text_field(wp_unslash($_POST[$key]));
                 }
             } else {
-                // Handle checkboxes that are not sent when unchecked
-                if (is_int($default_value) && ($key === 'tool_search_enabled' || $key === 'tool_display_enabled')) {
-                    $new_settings[$key] = 0;
-                } else {
-                    // If the key wasn't in the form, keep the old value
-                    $new_settings[$key] = $current_settings[$key];
-                }
+                // If the key wasn't in the form, keep the old value
+                $new_settings[$key] = $current_settings[$key];
             }
         }
         
@@ -2343,7 +2224,7 @@ class SNN_AI_Chat {
         return array(
             'initial_message' => 'Hello! How can I help you today?',
             'ready_questions' => '',
-            'system_prompt' => 'You are a helpful assistant. When you find information on the website to answer a question, you should first provide the answer directly, and then cite your source by showing the relevant page card using the tools available to you.',
+            'system_prompt' => 'You are a helpful assistant.',
             'keep_conversation_history' => 1,
             'chat_position' => 'bottom-right',
             'primary_color' => '#3b82f6',
@@ -2567,9 +2448,7 @@ class SNN_AI_Chat {
         $history = array();
         foreach ($messages as $msg) {
             $history[] = array('role' => 'user', 'content' => (string)$msg->message);
-            // We need to strip the content card HTML before adding it back to the history
-            $assistant_response = preg_replace('/<div class=[\'"]snn-content-card[\'"].*?<\/div>/s', '', (string)$msg->response);
-            $history[] = array('role' => 'assistant', 'content' => $assistant_response);
+            $history[] = array('role' => 'assistant', 'content' => (string)$msg->response);
         }
         
         return $history;
@@ -2727,7 +2606,7 @@ class SNN_AI_Chat {
     }
     public function handle_reset_action() {
         if (isset($_POST['reset_plugin_data'])) {
-            if (!isset($_POST['snn_ai_chat_settings_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['snn_ai_chat_settings_nonce'])), 'snn_ai_chat_settings_nonce_action')) {
+            if (!isset($_POST['snn_reset_plugin_data_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['snn_reset_plugin_data_nonce'])), 'snn_reset_plugin_data_nonce_action')) {
                 wp_die('Nonce verification failed.');
             }
 
@@ -2912,85 +2791,6 @@ class SNN_AI_Chat {
         return '#' . implode('', array_map(function($val) {
             return str_pad(dechex($val), 2, '0', STR_PAD_LEFT);
         }, $rgb));
-    }
-
-    private function get_tool_manifest() {
-        $settings = $this->get_settings();
-        $tools = [];
-
-        if (!empty($settings['tool_search_enabled']) && !empty($settings['tool_search_prompt'])) {
-            $tools[] = $settings['tool_search_prompt'];
-        }
-
-        if (!empty($settings['tool_display_enabled']) && !empty($settings['tool_display_prompt'])) {
-            $tools[] = $settings['tool_display_prompt'];
-        }
-
-        return implode("\n\n", $tools);
-    }
-
-    private function execute_search_tool($query) {
-        $args = [
-            's' => $query,
-            'posts_per_page' => 5,
-            'post_type' => 'any', // Search all public post types
-            'post_status' => 'publish',
-        ];
-        $search_query = new WP_Query($args);
-        $results = [];
-        if ($search_query->have_posts()) {
-            while ($search_query->have_posts()) {
-                $search_query->the_post();
-                $post_id = get_the_ID();
-                $post_title = get_the_title();
-                $excerpt = has_excerpt() ? get_the_excerpt() : wp_trim_words(get_the_content(), 25);
-                $results[] = "Title: {$post_title}, ID: {$post_id}, Excerpt: " . wp_strip_all_tags($excerpt);
-            }
-            wp_reset_postdata();
-            return "Found " . count($results) . " results:\n" . implode("\n", $results);
-        } else {
-            return "No results found for '{$query}'.";
-        }
-    }
-
-    private function process_presentation_tags($content) {
-        $settings = $this->get_settings();
-
-        // Only process the tag if the tool is enabled
-        if (empty($settings['tool_display_enabled'])) {
-            return $content;
-        }
-
-        // Looks for [[post:123]]
-        return preg_replace_callback('/\[\[post:(\d+)\]\]/i', function($matches) {
-            $post_id = intval($matches[1]);
-            $post = get_post($post_id);
-
-            if (!$post || $post->post_status !== 'publish') {
-                return ''; // If post not found or not published, remove the tag.
-            }
-
-            $post_title = esc_html(get_the_title($post));
-            $post_url = esc_url(get_permalink($post));
-            
-            $excerpt = has_excerpt($post) ? get_the_excerpt($post) : wp_trim_excerpt('', $post);
-            $post_excerpt = esc_html(strip_tags($excerpt));
-            
-            $image_url = get_the_post_thumbnail_url($post, 'thumbnail') 
-                ? esc_url(get_the_post_thumbnail_url($post, 'thumbnail')) 
-                : ''; // Leave empty if no image
-
-            // Build the universal card HTML
-            $card_html = "<div class='snn-content-card'><a href='{$post_url}' target='_blank'>";
-            
-            if ($image_url) {
-                $card_html .= "<img src='{$image_url}' alt='' />";
-            }
-
-            $card_html .= "<div><h4>{$post_title}</h4><p>{$post_excerpt}</p><span>Read More →</span></div></a></div>";
-            return $card_html;
-
-        }, $content);
     }
 }
 
