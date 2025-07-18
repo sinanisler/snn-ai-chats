@@ -77,8 +77,8 @@ class SNN_AI_Chat {
     }
 
     public function handle_delete_actions() {
-        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-history') {           return;           }
-        if (!current_user_can('manage_options')) {           return;           }
+        if (!isset($_GET['page']) || $_GET['page'] !== 'snn-ai-chat-history') {            return;            }
+        if (!current_user_can('manage_options')) {            return;            }
         global $wpdb;
         if (isset($_POST['action']) && $_POST['action'] === 'delete_session') {
             if (!isset($_POST['snn_delete_session_nonce']) || !wp_verify_nonce(sanitize_text_field((string)wp_unslash($_POST['snn_delete_session_nonce'] ?? '')), 'snn_delete_session')) {
@@ -1830,7 +1830,7 @@ class SNN_AI_Chat {
         .snn-ai-chat-widget .snn-chat-toggle:hover { background-color: var(--snn-primary-color-hover); }
         .snn-ai-chat-widget .snn-chat-toggle .dashicons { color: var(--snn-text-color); font-size: 28px; width: 28px; height: 28px; line-height: 1; display: flex; align-items: center; justify-content: center; }
         .snn-ai-chat-widget .snn-chat-container { width: var(--snn-widget-width); height: var(--snn-widget-height); border-radius: var(--snn-border-radius); background-color: var(--snn-chat-widget-bg-color); box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; overflow: hidden; position: absolute; bottom: 0; right: 0; }
-        .snn-ai-chat-widget .snn-chat-header { background-color: var(--snn-primary-color); color: var(--snn-text-color); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: var(--snn-border-radius); border-top-right-radius: var(--snn-border-radius); z-index:   11; }
+        .snn-ai-chat-widget .snn-chat-header { background-color: var(--snn-primary-color); color: var(--snn-text-color); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: var(--snn-border-radius); border-top-right-radius: var(--snn-border-radius); z-index:    11; }
         .snn-ai-chat-widget .snn-header-controls { display: flex; align-items: center; }
         .snn-ai-chat-widget .snn-new-chat { background: none; border: none; color: var(--snn-text-color); cursor: pointer; padding: 3.75px; margin-right: 7.5px; border-radius: 3.75px; transition: background-color 0.3s ease; display: flex; align-items: center; justify-content: center; }
         .snn-ai-chat-widget .snn-new-chat:hover { background-color: rgba(255, 255, 255, 0.2); }
@@ -2671,7 +2671,6 @@ class SNN_AI_Chat {
                 '{{site_name}}' => 'The name of your website.',
                 '{{site_description}}' => 'The tagline or description of your site.',
                 '{{site_url}}' => 'The root URL of your site.',
-                '{{admin_email}}' => 'The admin email address for the site.',
             ],
             'Current Page/Post' => [
                 '{{post_id}}' => 'The ID of the current page or post.',
@@ -2687,15 +2686,6 @@ class SNN_AI_Chat {
                 '{{post_content:ID}}' => 'The content of a specific post. Replace ID with the post ID.',
                 '{{post_custom_field:FIELD_NAME:ID}}' => 'Value of a custom field from a specific post. Replace FIELD_NAME and ID.',
             ],
-            'User Information' => [
-                '{{user_name}}' => 'The name provided by the user in the chat form.',
-                '{{user_email}}' => 'The email provided by the user in the chat form.',
-                '{{user_ip}}' => 'The IP address of the user.',
-            ],
-            'Date & Time' => [
-                '{{current_date}}' => 'The current server date, formatted according to your WordPress settings.',
-                '{{current_time}}' => 'The current server time, formatted according to your WordPress settings.',
-            ]
         ];
     }
 
@@ -2709,23 +2699,11 @@ class SNN_AI_Chat {
             $parts = explode(':', $tag_content);
             $tag_name = $parts[0];
     
-            // Non-post context
-            $user_name = $context['user_name'] ?? '';
-            $user_email = $context['user_email'] ?? '';
-            $user_ip = $context['user_ip'] ?? '';
-    
             switch ($tag_name) {
                 // Site-wide tags (normalized)
                 case 'sitename': return get_bloginfo('name');
                 case 'sitedescription': return get_bloginfo('description');
                 case 'siteurl': return home_url();
-                case 'adminemail': return get_option('admin_email');
-                case 'currentdate': return date_i18n(get_option('date_format'));
-                case 'currenttime': return date_i18n(get_option('time_format'));
-                // User context tags (normalized)
-                case 'username': return $user_name;
-                case 'useremail': return $user_email;
-                case 'userip': return $user_ip;
             }
     
             // Post-related tags require a post ID
