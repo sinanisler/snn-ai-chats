@@ -40,6 +40,10 @@ class SNN_AI_Chat {
         add_action('wp_ajax_snn_get_model_details', array($this, 'get_model_details'));
         add_action('wp_ajax_snn_delete_chat', array($this, 'delete_chat'));
         add_action('wp_footer', array($this, 'render_frontend_chats'));
+        // New AJAX action to fetch session messages
+        add_action('wp_ajax_snn_get_session_messages', array($this, 'get_session_messages'));
+        add_action('wp_ajax_nopriv_snn_get_session_messages', array($this, 'get_session_messages'));
+
 
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
@@ -892,19 +896,25 @@ class SNN_AI_Chat {
                                 <textarea id="system_prompt" name="system_prompt" rows="3" class="w-full p-2 border border-gray-300 rounded-md system-prompt-input focus:ring-blue-500 focus:border-blue-500"><?php echo esc_textarea($chat_settings['system_prompt']); ?></textarea>
                             </div>
 
-                            <!-- NEW DYNAMIC TAGS SECTION -->
-                            <div class="mb-4 dynamic-tags-section p-4 bg-gray-50 rounded-lg border border-gray-200" id="snn-dynamic-tags-section">
-                                <h4 class="text-md font-semibold mb-2 text-gray-700">Dynamic Tags and Variables</h4>
-                                <?php $dynamic_tags = $this->get_dynamic_tags(); ?>
-                                <?php foreach ($dynamic_tags as $group_name => $tags) : ?>
-                                    <div class="mb-3">
-                                        <div class="flex flex-wrap gap-1">
-                                            <?php foreach ($tags as $tag => $description) : ?>
-                                                <code class="dynamic-tag cursor-pointer bg-gray-200 text-gray-800 px-2 py-1 rounded text-xs snn-tooltip hover:bg-gray-300 transition-colors" data-tippy-content="<?php echo esc_attr($description); ?>"><?php echo esc_html($tag); ?></code>
-                                            <?php endforeach; ?>
+                            <!-- NEW DYNAMIC TAGS SECTION - ACCORDION -->
+                            <div class="mb-4 dynamic-tags-section p-2 bg-gray-50 rounded-lg border border-gray-200" id="snn-dynamic-tags-section">
+                                <button type="button" class="snn-accordion-header flex justify-between items-center w-full text-left py-2 px-0 bg-transparent border-none cursor-pointer text-md font-semibold text-gray-700" id="snn-dynamic-tags-accordion-toggle">
+                                    Dynamic Tags and Variables
+                                    <span class="dashicons dashicons-arrow-down snn-accordion-icon transition-transform duration-300"></span>
+                                </button>
+                                <div class="snn-accordion-content hidden" id="snn-dynamic-tags-accordion-content">
+                                    <?php $dynamic_tags = $this->get_dynamic_tags(); ?>
+                                    <?php foreach ($dynamic_tags as $group_name => $tags) : ?>
+                                        <div class="mb-3">
+                                            <h5 class="text-sm font-medium text-gray-600 mb-1"><?php echo esc_html($group_name); ?></h5>
+                                            <div class="flex flex-wrap gap-1">
+                                                <?php foreach ($tags as $tag => $description) : ?>
+                                                    <code class="dynamic-tag cursor-pointer bg-gray-200 text-gray-800 px-2 py-1 rounded text-xs snn-tooltip hover:bg-gray-300 transition-colors" data-tippy-content="<?php echo esc_attr($description); ?>"><?php echo esc_html($tag); ?></code>
+                                                <?php endforeach; ?>
+                                            </div>
                                         </div>
-                                    </div>
-                                <?php endforeach; ?>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
                             <!-- END DYNAMIC TAGS SECTION -->
                             
@@ -1137,6 +1147,21 @@ class SNN_AI_Chat {
                     promptTextarea.val(newVal).focus();
                     promptTextarea[0].selectionStart = cursorPos + tag.length + 2;
                     promptTextarea[0].selectionEnd = cursorPos + tag.length + 2;
+                });
+
+                // Accordion functionality for Dynamic Tags
+                const accordionToggle = $('#snn-dynamic-tags-accordion-toggle');
+                const accordionContent = $('#snn-dynamic-tags-accordion-content');
+                const accordionIcon = accordionToggle.find('.snn-accordion-icon');
+
+                accordionToggle.on('click', function() {
+                    accordionContent.slideToggle(300, function() {
+                        if (accordionContent.is(':visible')) {
+                            accordionIcon.removeClass('dashicons-arrow-down').addClass('dashicons-arrow-up');
+                        } else {
+                            accordionIcon.removeClass('dashicons-arrow-up').addClass('dashicons-arrow-down');
+                        }
+                    });
                 });
 
                 function adjustBrightness(hex, steps) {
@@ -1449,88 +1474,88 @@ class SNN_AI_Chat {
             wp_print_footer_scripts();
             ?>
             <script>
-                // Function to adjust brightness (replicated from PHP for client-side preview)
-                function adjustBrightness(hex, steps) {
-                    hex = hex.replace('#', '');
-                    if (hex.length === 3) {
-                        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-                    }
-                    let rgb = [];
-                    for (let i = 0; i < 6; i += 2) {
-                        rgb.push(parseInt(hex.substr(i, 2), 16));
-                    }
-
-                    for (let i = 0; i < 3; i++) {
-                        rgb[i] = Math.max(0, Math.min(255, rgb[i] + steps));
-                    }
-
-                    return '#' + rgb.map(val => ('0' + val.toString(16)).slice(-2)).join('');
+            // Function to adjust brightness (replicated from PHP for client-side preview)
+            function adjustBrightness(hex, steps) {
+                hex = hex.replace('#', '');
+                if (hex.length === 3) {
+                    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+                }
+                let rgb = [];
+                for (let i = 0; i < 6; i += 2) {
+                    rgb.push(parseInt(hex.substr(i, 2), 16));
                 }
 
-                window.updateAllChatStyles = function(settings, targetChatId) {
-                    const chatWidget = document.getElementById('snn-chat-' + targetChatId);
-                    if (!chatWidget) return;
+                for (let i = 0; i < 3; i++) {
+                    rgb[i] = Math.max(0, Math.min(255, rgb[i] + steps));
+                }
 
-                    const getSetting = (key, defaultValue) => settings[key] !== undefined && settings[key] !== '' ? settings[key] : defaultValue;
+                return '#' + rgb.map(val => ('0' + val.toString(16)).slice(-2)).join('');
+            }
 
-                    // --- Apply all styles from the settings object ---
-                    const primaryColor = getSetting('primary_color', '#3b82f6');
-                    chatWidget.style.setProperty('--snn-primary-color', primaryColor);
-                    chatWidget.style.setProperty('--snn-primary-color-hover', adjustBrightness(primaryColor, -20));
-                    
-                    chatWidget.style.setProperty('--snn-secondary-color', getSetting('secondary_color', '#e5e7eb'));
-                    chatWidget.style.setProperty('--snn-text-color', getSetting('text_color', '#ffffff'));
+            window.updateAllChatStyles = function(settings, targetChatId) {
+                const chatWidget = document.getElementById('snn-chat-' + targetChatId);
+                if (!chatWidget) return;
 
-                    const widgetBgColor = getSetting('chat_widget_bg_color', '#ffffff');
-                    chatWidget.style.setProperty('--snn-chat-widget-bg-color', widgetBgColor);
-                    chatWidget.style.setProperty('--snn-widget-border-top-color', adjustBrightness(widgetBgColor, -10));
+                const getSetting = (key, defaultValue) => settings[key] !== undefined && settings[key] !== '' ? settings[key] : defaultValue;
 
-                    chatWidget.style.setProperty('--snn-chat-text-color', getSetting('chat_text_color', '#374151'));
+                // --- Apply all styles from the settings object ---
+                const primaryColor = getSetting('primary_color', '#3b82f6');
+                chatWidget.style.setProperty('--snn-primary-color', primaryColor);
+                chatWidget.style.setProperty('--snn-primary-color-hover', adjustBrightness(primaryColor, -20));
+                
+                chatWidget.style.setProperty('--snn-secondary-color', getSetting('secondary_color', '#e5e7eb'));
+                chatWidget.style.setProperty('--snn-text-color', getSetting('text_color', '#ffffff'));
 
-                    const inputBgColor = getSetting('chat_input_bg_color', '#f9fafb');
-                    chatWidget.style.setProperty('--snn-chat-input-bg-color', inputBgColor);
-                    chatWidget.style.setProperty('--snn-input-border-color', adjustBrightness(inputBgColor, -10));
+                const widgetBgColor = getSetting('chat_widget_bg_color', '#ffffff');
+                chatWidget.style.setProperty('--snn-chat-widget-bg-color', widgetBgColor);
+                chatWidget.style.setProperty('--snn-widget-border-top-color', adjustBrightness(widgetBgColor, -10));
 
-                    const inputTextColor = getSetting('chat_input_text_color', '#1f2937');
-                    chatWidget.style.setProperty('--snn-chat-input-text-color', inputTextColor);
-                    chatWidget.style.setProperty('--snn-placeholder-color', adjustBrightness(inputTextColor, 50));
+                chatWidget.style.setProperty('--snn-chat-text-color', getSetting('chat_text_color', '#374151'));
 
-                    chatWidget.style.setProperty('--snn-chat-send-button-color', getSetting('chat_send_button_color', '#3b82f6'));
-                    chatWidget.style.setProperty('--snn-user-message-bg-color', getSetting('user_message_bg_color', '#3b82f6'));
-                    chatWidget.style.setProperty('--snn-user-message-text-color', getSetting('user_message_text_color', '#ffffff'));
-                    chatWidget.style.setProperty('--snn-ai-message-bg-color', getSetting('ai_message_bg_color', '#e5e7eb'));
-                    chatWidget.style.setProperty('--snn-ai-message-text-color', getSetting('ai_message_text_color', '#374151'));
+                const inputBgColor = getSetting('chat_input_bg_color', '#f9fafb');
+                chatWidget.style.setProperty('--snn-chat-input-bg-color', inputBgColor);
+                chatWidget.style.setProperty('--snn-input-border-color', adjustBrightness(inputBgColor, -10));
 
-                    chatWidget.style.setProperty('--snn-font-size', getSetting('font_size', 14) + 'px');
-                    chatWidget.style.setProperty('--snn-border-radius', getSetting('border_radius', 8) + 'px');
-                    chatWidget.style.setProperty('--snn-widget-width', getSetting('widget_width', 350) + 'px');
-                    chatWidget.style.setProperty('--snn-widget-height', getSetting('widget_height', 500) + 'px');
+                const inputTextColor = getSetting('chat_input_text_color', '#1f2937');
+                chatWidget.style.setProperty('--snn-chat-input-text-color', inputTextColor);
+                chatWidget.style.setProperty('--snn-placeholder-color', adjustBrightness(inputTextColor, 50));
 
-                    // --- Apply functional changes ---
-                    const position = getSetting('chat_position', 'bottom-right');
-                    chatWidget.style.removeProperty('bottom');
-                    chatWidget.style.removeProperty('right');
-                    chatWidget.style.removeProperty('left');
-                    chatWidget.style.removeProperty('top');
-                    const posParts = position.split('-');
-                    if (posParts.length === 2) {
-                        chatWidget.style[posParts[0]] = '20px';
-                        chatWidget.style[posParts[1]] = '20px';
-                    }
+                chatWidget.style.setProperty('--snn-chat-send-button-color', getSetting('chat_send_button_color', '#3b82f6'));
+                chatWidget.style.setProperty('--snn-user-message-bg-color', getSetting('user_message_bg_color', '#3b82f6'));
+                chatWidget.style.setProperty('--snn-user-message-text-color', getSetting('user_message_text_color', '#ffffff'));
+                chatWidget.style.setProperty('--snn-ai-message-bg-color', getSetting('ai_message_bg_color', '#e5e7eb'));
+                chatWidget.style.setProperty('--snn-ai-message-text-color', getSetting('ai_message_text_color', '#374151'));
 
-                    const initialMessage = getSetting('initial_message', 'Hello! How can I help you today?');
-                    chatWidget.dataset.initialMessage = initialMessage;
+                chatWidget.style.setProperty('--snn-font-size', getSetting('font_size', 14) + 'px');
+                chatWidget.style.setProperty('--snn-border-radius', getSetting('border_radius', 8) + 'px');
+                chatWidget.style.setProperty('--snn-widget-width', getSetting('widget_width', 350) + 'px');
+                chatWidget.style.setProperty('--snn-widget-height', getSetting('widget_height', 500) + 'px');
 
-                    const collectUserInfo = getSetting('collect_user_info', 0);
-                    chatWidget.dataset.collectUserInfo = collectUserInfo;
-                    
-                    const readyQuestions = getSetting('ready_questions', '');
-                    chatWidget.dataset.readyQuestions = readyQuestions;
+                // --- Apply functional changes ---
+                const position = getSetting('chat_position', 'bottom-right');
+                chatWidget.style.removeProperty('bottom');
+                chatWidget.style.removeProperty('right');
+                chatWidget.style.removeProperty('left');
+                chatWidget.style.removeProperty('top');
+                const posParts = position.split('-');
+                if (posParts.length === 2) {
+                    chatWidget.style[posParts[0]] = '20px';
+                    chatWidget.style[posParts[1]] = '20px';
+                }
 
-                    // Trigger a custom event to re-initialize the chat widget's state in the main script
-                    const event = new CustomEvent('snn-settings-updated');
-                    chatWidget.dispatchEvent(event);
-                };
+                const initialMessage = getSetting('initial_message', 'Hello! How can I help you today?');
+                chatWidget.dataset.initialMessage = initialMessage;
+
+                const collectUserInfo = getSetting('collect_user_info', 0);
+                chatWidget.dataset.collectUserInfo = collectUserInfo;
+                
+                const readyQuestions = getSetting('ready_questions', '');
+                chatWidget.dataset.readyQuestions = readyQuestions;
+
+                // Trigger a custom event to re-initialize the chat widget's state in the main script
+                const event = new CustomEvent('snn-settings-updated');
+                chatWidget.dispatchEvent(event);
+            };
             </script>
         </body>
         </html>
@@ -1741,13 +1766,13 @@ class SNN_AI_Chat {
     }
 
     private function render_chat_widget($chat, $settings) {
-        $session_id = 'snn_' . time() . '_' . bin2hex(random_bytes(8));
+        // session_id will now be managed by frontend JS using localStorage
+        // $session_id = 'snn_' . time() . '_' . bin2hex(random_bytes(8)); // Removed PHP-side generation
         $post_id = get_queried_object_id();
         ?>
         <div class="snn-ai-chat-widget" id="snn-chat-<?php echo esc_attr($chat->ID); ?>"
              data-chat-id="<?php echo esc_attr($chat->ID); ?>"
              data-post-id="<?php echo esc_attr($post_id); ?>"
-             data-session-id="<?php echo esc_attr($session_id); ?>"
              data-initial-message="<?php echo esc_attr($settings['initial_message']); ?>"
              data-collect-user-info="<?php echo esc_attr((int)$settings['collect_user_info']); ?>"
              data-ready-questions="<?php echo esc_attr($settings['ready_questions']); ?>"
@@ -1797,8 +1822,8 @@ class SNN_AI_Chat {
                 <div class="snn-user-info-form-overlay" id="snn-user-info-form-overlay-<?php echo esc_attr($chat->ID); ?>" style="display: none;">
                     <div class="snn-user-info-form" id="snn-user-info-form-<?php echo esc_attr($chat->ID); ?>">
                         <p>Please provide your information to start the chat:</p>
-                        <input type="text" placeholder="Your Name" id="snn-user-name-<?php echo esc_attr($chat->ID); ?>" required>
-                        <input type="email" placeholder="Your Email" id="snn-user-email-<?php echo esc_attr($chat->ID); ?>" required>
+                        <input type="text" placeholder="Your Name" id="snn-user-name-input-<?php echo esc_attr($chat->ID); ?>" required>
+                        <input type="email" placeholder="Your Email" id="snn-user-email-input-<?php echo esc_attr($chat->ID); ?>" required>
                         <button type="button" class="snn-start-chat-btn" id="snn-start-chat-btn-<?php echo esc_attr($chat->ID); ?>">Start Chat</button>
                         <div class="snn-chat-message-box" style="display: none; background-color: #ffe0e0; border: 1px solid #ff0000; color: #cc0000; padding: 10px; margin-top: 10px; border-radius: 5px;" id="snn-chat-error-message-box-<?php echo esc_attr($chat->ID); ?>"></div>
                     </div>
@@ -1935,35 +1960,49 @@ class SNN_AI_Chat {
                 const messagesContainer = widget.find('#snn-chat-messages-' + chatId);
                 const userInfoOverlay = widget.find('#snn-user-info-form-overlay-' + chatId);
                 const startChatBtn = widget.find('#snn-start-chat-btn-' + chatId);
+                const userNameInput = widget.find('#snn-user-name-input-' + chatId);
+                const userEmailInput = widget.find('#snn-user-email-input-' + chatId);
                 const chatInput = widget.find('#snn-chat-input-' + chatId);
                 const chatSend = widget.find('#snn-chat-send-' + chatId);
                 const errorBox = widget.find('#snn-chat-error-message-box-' + chatId);
-                const readyQuestionsContainer = widget.find('#snn-ready-questions-container-' + chatId); // New ready questions container
+                const readyQuestionsContainer = widget.find('#snn-ready-questions-container-' + chatId);
+
+                // Local Storage Keys
+                const SESSION_ID_KEY = `snn_chat_${chatId}_session_id`;
+                const USER_NAME_KEY = `snn_chat_${chatId}_user_name`;
+                const USER_EMAIL_KEY = `snn_chat_${chatId}_user_email`;
 
                 function displayError(message) {
                     errorBox.text(message).show();
-                    // messagesContainer.scrollTop(0); // This might scroll the main message area, but error is in overlay
                     setTimeout(() => errorBox.hide().text(''), 5000);
+                }
+
+                function appendMessage(role, content) {
+                    const sanitizedContent = $('<div>').html(content).html(); // Allow HTML but sanitize for safety
+                    const messageClass = role === 'user' ? 'snn-user-message' : 'snn-ai-message';
+                    const messageHTML = `<div class="snn-chat-message ${messageClass}"><div class="snn-message-content">${sanitizedContent}</div></div>`;
+                    messagesContainer.append(messageHTML);
+                    messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
                 }
 
                 function sendMessage(messageOverride) {
                     const message = messageOverride || chatInput.val().trim();
                     if (message === '') return;
 
-                    // Hide ready questions on first message
                     readyQuestionsContainer.empty(); // Clear the ready questions container
 
-                    const sanitizedMessage = $('<div>').text(message).html();
-                    const userMessageHTML = `<div class="snn-chat-message snn-user-message"><div class="snn-message-content">${sanitizedMessage}</div></div>`;
-                    messagesContainer.append(userMessageHTML);
+                    appendMessage('user', message);
                     chatInput.val('');
-                    messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
-
+                    
                     const typingIndicatorHTML = `<div class="snn-chat-message snn-ai-message snn-typing-indicator"><div class="snn-message-content"><span>.</span><span>.</span><span>.</span></div></div>`;
                     messagesContainer.append(typingIndicatorHTML);
                     messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
                     chatSend.prop('disabled', true);
                     chatInput.prop('disabled', true);
+
+                    const currentSessionId = widget.data('session-id');
+                    const currentUserName = widget.data('user-name') || '';
+                    const currentUserEmail = widget.data('user-email') || '';
 
                     $.ajax({
                         url: snn_ai_chat_ajax.ajax_url,
@@ -1972,16 +2011,15 @@ class SNN_AI_Chat {
                             action: 'snn_ai_chat_api',
                             nonce: snn_ai_chat_ajax.nonce,
                             message: message,
-                            session_id: widget.data('session-id'),
+                            session_id: currentSessionId,
                             chat_id: chatId,
-                            user_name: widget.data('user-name') || '',
-                            user_email: widget.data('user-email') || '',
+                            user_name: currentUserName,
+                            user_email: currentUserEmail,
                             post_id: contextualId || 0
                         },
                         success: function(response) {
                             if (response.success) {
-                                const aiMessageHTML = `<div class="snn-chat-message snn-ai-message"><div class="snn-message-content">${response.data.response}</div></div>`;
-                                messagesContainer.append(aiMessageHTML);
+                                appendMessage('ai', response.data.response);
                             } else {
                                 displayError(response.data.response || 'An unknown error occurred.');
                             }
@@ -1998,43 +2036,87 @@ class SNN_AI_Chat {
                     });
                 }
 
+                function loadSessionMessages(sessionId) {
+                    $.ajax({
+                        url: snn_ai_chat_ajax.ajax_url,
+                        type: 'POST',
+                        data: {
+                            action: 'snn_get_session_messages',
+                            nonce: snn_ai_chat_ajax.nonce,
+                            session_id: sessionId,
+                            chat_id: chatId
+                        },
+                        success: function(response) {
+                            if (response.success && response.data.length > 0) {
+                                messagesContainer.empty(); // Clear initial message if history exists
+                                response.data.forEach(function(msg) {
+                                    if (msg.message) {
+                                        appendMessage('user', msg.message);
+                                    }
+                                    if (msg.response) {
+                                        appendMessage('ai', msg.response);
+                                    }
+                                });
+                            } else {
+                                // If no history, show initial message and ready questions
+                                appendMessage('ai', initialMessage);
+                                renderReadyQuestions();
+                            }
+                        },
+                        error: function() {
+                            displayError('Failed to load chat history.');
+                            appendMessage('ai', initialMessage); // Fallback to initial message
+                            renderReadyQuestions();
+                        }
+                    });
+                }
+
+                function renderReadyQuestions() {
+                    readyQuestionsContainer.empty();
+                    if (readyQuestionsRaw) {
+                        const questions = readyQuestionsRaw.split('\n').filter(q => q.trim() !== '');
+                        if (questions.length > 0) {
+                            const questionsHTML = questions.map(q => `<button class="snn-ready-question-btn">${$('<div>').text(q).html()}</button>`).join('');
+                            readyQuestionsContainer.append(questionsHTML);
+                        }
+                    }
+                }
+
                 function initializeChatUI() {
-                    messagesContainer.find('.snn-chat-message').remove(); // Clear messages
-                    readyQuestionsContainer.empty(); // Clear ready questions
+                    messagesContainer.empty(); // Clear messages
                     errorBox.hide();
 
-                    if (collectUserInfo && !widget.data('user-name')) {
+                    let currentSessionId = localStorage.getItem(SESSION_ID_KEY);
+                    let currentUserName = localStorage.getItem(USER_NAME_KEY);
+                    let currentUserEmail = localStorage.getItem(USER_EMAIL_KEY);
+
+                    if (!currentSessionId) {
+                        currentSessionId = 'snn_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                        localStorage.setItem(SESSION_ID_KEY, currentSessionId);
+                    }
+                    widget.data('session-id', currentSessionId);
+
+                    if (collectUserInfo && (!currentUserName || !currentUserEmail)) {
                         userInfoOverlay.show();
                         chatInput.prop('disabled', true);
                         chatSend.prop('disabled', true);
+                        userNameInput.val(currentUserName || ''); // Pre-fill if partial info exists
+                        userEmailInput.val(currentUserEmail || '');
                     } else {
                         userInfoOverlay.hide();
                         chatInput.prop('disabled', false);
                         chatSend.prop('disabled', false);
-
-                        // Add ready questions if they exist
-                        if (readyQuestionsRaw) {
-                            const questions = readyQuestionsRaw.split('\n').filter(q => q.trim() !== '');
-                            if (questions.length > 0) {
-                                const questionsHTML = questions.map(q => `<button class="snn-ready-question-btn">${$('<div>').text(q).html()}</button>`).join('');
-                                readyQuestionsContainer.append(questionsHTML); // Append to new container
-                            }
-                        }
-
-                        const initialMessageHTML = `<div class="snn-chat-message snn-ai-message"><div class="snn-message-content">${initialMessage}</div></div>`;
-                        messagesContainer.append(initialMessageHTML);
-                        messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
+                        widget.data('user-name', currentUserName);
+                        widget.data('user-email', currentUserEmail);
+                        loadSessionMessages(currentSessionId); // Load history if session exists
                     }
                 }
 
                 function startNewSession() {
-                    const newSessionId = 'snn_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                    widget.data('session-id', newSessionId);
-                    if (!collectUserInfo) {
-                        widget.data('user-name', '');
-                        widget.data('user-email', '');
-                    }
-                    initializeChatUI();
+                    localStorage.removeItem(SESSION_ID_KEY);
+                    localStorage.removeItem(USER_NAME_KEY);
+                    localStorage.removeItem(USER_EMAIL_KEY);
+                    initializeChatUI(); // This will generate a new session ID and re-init
                 }
 
                 toggleBtn.on('click', function(e) {
@@ -2067,9 +2149,11 @@ class SNN_AI_Chat {
                 });
 
                 startChatBtn.on('click', function() {
-                    const userName = widget.find('#snn-user-name-' + chatId).val().trim();
-                    const userEmail = widget.find('#snn-user-email-' + chatId).val().trim();
+                    const userName = userNameInput.val().trim();
+                    const userEmail = userEmailInput.val().trim();
                     if (userName && userEmail) {
+                        localStorage.setItem(USER_NAME_KEY, userName);
+                        localStorage.setItem(USER_EMAIL_KEY, userEmail);
                         widget.data('user-name', userName);
                         widget.data('user-email', userEmail);
                         initializeChatUI();
@@ -2084,7 +2168,8 @@ class SNN_AI_Chat {
                     initialMessage = widget.data('initial-message');
                     collectUserInfo = widget.data('collect-user-info') == 1;
                     readyQuestionsRaw = widget.data('ready-questions');
-                    initializeChatUI();
+                    // Re-initialize UI to apply new settings, but keep session if possible
+                    initializeChatUI(); 
                 });
                 
                 // Initial setup
@@ -2209,6 +2294,30 @@ class SNN_AI_Chat {
             LIMIT 100
         ") ?: [];
     }
+
+    public function get_session_messages() {
+        check_ajax_referer('snn_ai_chat_nonce', 'nonce');
+        
+        $session_id = sanitize_text_field($_POST['session_id'] ?? '');
+        $chat_id = intval($_POST['chat_id'] ?? 0); // Not strictly needed for messages, but good for context/security
+
+        if (empty($session_id)) {
+            wp_send_json_error('Session ID missing.');
+        }
+
+        global $wpdb;
+        $messages = $wpdb->get_results($wpdb->prepare("
+            SELECT message, response, created_at FROM {$wpdb->prefix}snn_chat_messages
+            WHERE session_id = %s
+            ORDER BY created_at ASC
+        ", $session_id));
+
+        if ($messages) {
+            wp_send_json_success($messages);
+        } else {
+            wp_send_json_success([]); // Return empty array if no messages
+        }
+    }
     
     private function get_chat_stats($chat_id) {
         global $wpdb;
@@ -2223,7 +2332,7 @@ class SNN_AI_Chat {
     private function get_default_chat_settings() {
         return array(
             'initial_message' => 'Hello! How can I help you today?',
-            'ready_questions' => '',
+            'ready_questions' => "Contact info?\nWhat services you provide?", // Added default questions
             'system_prompt' => 'You are a helpful assistant.',
             'keep_conversation_history' => 1,
             'chat_position' => 'bottom-right',
