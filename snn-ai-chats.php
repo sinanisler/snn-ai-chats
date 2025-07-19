@@ -40,9 +40,9 @@ class SNN_AI_Chat {
         add_action('wp_ajax_snn_get_model_details', array($this, 'get_model_details'));
         add_action('wp_ajax_snn_delete_chat', array($this, 'delete_chat'));
         add_action('wp_footer', array($this, 'render_frontend_chats'));
-        // New AJAX action to fetch session messages
-        add_action('wp_ajax_snn_get_session_messages', array($this, 'get_session_messages'));
-        add_action('wp_ajax_nopriv_snn_get_session_messages', array($this, 'get_session_messages'));
+        // New AJAX action to fetch session messages and details
+        add_action('wp_ajax_snn_get_session_details_and_messages', array($this, 'get_session_details_and_messages'));
+        add_action('wp_ajax_nopriv_snn_get_session_details_and_messages', array($this, 'get_session_details_and_messages'));
 
 
         register_activation_hook(__FILE__, array($this, 'activate'));
@@ -350,13 +350,13 @@ class SNN_AI_Chat {
             <div class="bg-white p-6 rounded-lg shadow mb-4" id="snn-dashboard-quick-actions-section">
                 <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=new')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg text-lg text-center quick-action-btn hover:bg-blue-700 transition-colors duration-200" id="snn-create-chat-btn">
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=new')); ?>" class="bg-black text-white px-6 py-3 rounded-lg text-lg text-center quick-action-btn hover:bg-[#1b1b1b] transition-colors duration-200" id="snn-create-chat-btn">
                         Create New Chat
                     </a>
-                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg text-lg text-center quick-action-btn hover:bg-purple-700 transition-colors duration-200" id="snn-manage-chats-btn">
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats')); ?>" class="bg-black text-white px-6 py-3 rounded-lg text-lg text-center quick-action-btn hover:bg-[#1b1b1b] transition-colors duration-200" id="snn-manage-chats-btn">
                         Manage Chats
                     </a>
-                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-settings')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg text-lg text-center quick-action-btn hover:bg-green-700 transition-colors duration-200" id="snn-settings-btn">
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-settings')); ?>" class="bg-black text-white px-6 py-3 rounded-lg text-lg text-center quick-action-btn hover:bg-[#1b1b1b] transition-colors duration-200" id="snn-settings-btn">
                         Settings
                     </a>
                 </div>
@@ -432,7 +432,7 @@ class SNN_AI_Chat {
                     </table>
                 </div>
                 <div class="text-center mt-4">
-                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-center quick-action-btn hover:bg-blue-700 transition-colors duration-200" id="snn-view-all-history-btn">
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" class="bg-black text-white px-4 py-2 rounded-lg text-center quick-action-btn hover:bg-[#1b1b1b] transition-colors duration-200" id="snn-view-all-history-btn">
                         View All Chat History
                     </a>
                 </div>
@@ -587,19 +587,18 @@ class SNN_AI_Chat {
                     </div>
                 </div>
                 
-                <div class="flex items-center space-x-4 justify-between">
-                    <button type="submit" name="submit_settings" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md settings-save-btn hover:bg-blue-700 transition-colors duration-200" id="snn-save-settings-btn">
+                <div class="flex items-center justify-between">
+                    <button type="submit" name="submit_settings" class="bg-black text-white px-6 py-2 rounded-md settings-save-btn hover:bg-[#1b1b1b] transition-colors duration-200" id="snn-save-settings-btn">
                         Save Settings
                     </button>
+                    <!-- Separate form for reset button with correct nonce, moved to the right -->
+                    <form method="post" action="" style="display: inline;">
+                        <?php wp_nonce_field('snn_reset_plugin_data_nonce_action', 'snn_reset_plugin_data_nonce'); ?>
+                        <button type="submit" name="reset_plugin_data" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-md settings-reset-btn transition-colors duration-200" id="snn-reset-settings-btn" onclick="return confirm('Are you sure you want to delete ALL plugin data? This will remove all chats, history, and settings. This action cannot be undone.');">
+                            Reset and Delete Plugin Data
+                        </button>
+                    </form>
                 </div>
-            </form>
-            
-            <!-- Separate form for reset button with correct nonce -->
-            <form method="post" action="" style="display: inline;">
-                <?php wp_nonce_field('snn_reset_plugin_data_nonce_action', 'snn_reset_plugin_data_nonce'); ?>
-                <button type="submit" name="reset_plugin_data" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-md settings-reset-btn transition-colors duration-200" id="snn-reset-settings-btn" onclick="return confirm('Are you sure you want to delete ALL plugin data? This will remove all chats, history, and settings. This action cannot be undone.');">
-                    Reset and Delete Plugin Data
-                </button>
             </form>
         </div>
         <script>
@@ -806,7 +805,7 @@ class SNN_AI_Chat {
             <h1>Manage Chats</h1>
             
             <div class="mb-4">
-                <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=new')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md add-chat-btn hover:bg-blue-700 transition-colors duration-200" id="snn-add-new-chat-btn">
+                <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=new')); ?>" class="bg-black text-white px-4 py-2 rounded-md add-chat-btn hover:bg-[#1b1b1b] transition-colors duration-200" id="snn-add-new-chat-btn">
                     Add New Chat
                 </a>
             </div>
@@ -826,7 +825,7 @@ class SNN_AI_Chat {
                                 <?php echo $this->get_chat_stats($chat->ID); ?>
                             </div>
                             <div class="space-x-2" id="snn-chat-actions-<?php echo esc_attr($chat->ID); ?>">
-                                <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $chat->ID)); ?>" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-blue-500 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 edit-chat-btn transition-colors duration-200" id="snn-edit-chat-btn-<?php echo esc_attr($chat->ID); ?>">
+                                <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-chats&action=edit&id=' . $chat->ID)); ?>" class="inline-flex items-center px-10 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-black hover:bg-[#1b1b1b] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 edit-chat-btn transition-colors duration-200" id="snn-edit-chat-btn-<?php echo esc_attr($chat->ID); ?>">
                                     Edit
                                 </a>
                                 <button class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 delete-chat-btn transition-colors duration-200" data-chat-id="<?php echo esc_attr($chat->ID); ?>" id="snn-delete-chat-btn-<?php echo esc_attr($chat->ID); ?>">
@@ -1110,7 +1109,7 @@ class SNN_AI_Chat {
                         </div>
                         
                         <div class="flex space-x-4">
-                            <button type="submit" name="submit_chat_settings" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md save-chat-btn hover:bg-blue-700 transition-colors duration-200" id="snn-save-chat-btn">
+                            <button type="submit" name="submit_chat_settings" class="bg-black text-white px-6 py-2 rounded-md save-chat-btn hover:bg-[#1b1b1b] transition-colors duration-200" id="snn-save-chat-btn">
                                 Save Chat
                             </button>
                         </div>
@@ -1293,7 +1292,7 @@ class SNN_AI_Chat {
                 <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" onsubmit="return confirm('Are you sure you want to delete ALL chat sessions? This action cannot be undone.');">
                     <?php wp_nonce_field('snn_delete_all_sessions', 'snn_delete_all_sessions_nonce'); ?>
                     <input type="hidden" name="action" value="delete_all_sessions">
-                    <button type="submit" class="button button-danger bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition-colors duration-200" id="snn-delete-all-chats-btn">
+                    <button type="submit" class=" bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition-colors duration-200" id="snn-delete-all-chats-btn">
                         Delete All Chats
                     </button>
                 </form>
@@ -1339,7 +1338,7 @@ class SNN_AI_Chat {
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html(number_format($history->total_tokens)); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html(date('M j, Y H:i', strtotime($history->created_at))); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-session-history&session_id=' . $history->session_id)); ?>" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 view-history-btn transition-colors duration-200" id="snn-view-session-details-btn-<?php echo esc_attr($history->session_id); ?>">
+                                        <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-session-history&session_id=' . $history->session_id)); ?>" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-black hover:bg-[#1b1b1b] focus:outline-none focus:ring-2 focus:ring-offset-2  view-history-btn transition-colors duration-200" id="snn-view-session-details-btn-<?php echo esc_attr($history->session_id); ?>">
                                             View Details
                                         </a>
                                         <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" style="display: inline-block; margin-left: 8px;" onsubmit="return confirm('Are you sure you want to delete this chat session? This action cannot be undone.');">
@@ -1368,53 +1367,82 @@ class SNN_AI_Chat {
             wp_die(esc_html__('Sorry, you are not allowed to access this page.'));
         }
 
-        $session_id = sanitize_text_field($_GET['session_id'] ?? '');
-
-        if (empty($session_id)) {
-            wp_die(esc_html__('No session ID provided.'));
-        }
-
-        global $wpdb;
-        $session_info = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}snn_chat_sessions WHERE session_id = %s", $session_id));
-        $session_messages = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}snn_chat_messages WHERE session_id = %s ORDER BY created_at ASC", $session_id));
-
-        if (!$session_info) {
-            wp_die(esc_html__('Session not found.'));
-        }
+        $current_session_id = sanitize_text_field($_GET['session_id'] ?? '');
+        $all_sessions = $this->get_chat_history_sessions_for_sidebar(); // Get all sessions for the sidebar
         ?>
         <div class="wrap">
-            <h1>Chat Session Details: <?php echo esc_html(substr($session_id, 0, 12)); ?>...</h1>
-            <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-center quick-action-btn hover:bg-blue-700 transition-colors duration-200 mb-4 inline-block" id="snn-back-to-history-btn">← Back to Chat History</a>
+            <h1>Chat Session Details</h1>
+            <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" class="bg-black text-white px-4 py-2 rounded-lg text-center quick-action-btn hover:bg-[#1b1b1b] transition-colors duration-200 mb-4 inline-block" id="snn-back-to-history-btn">← Back to Chat History</a>
 
-            <div class="bg-white p-6 rounded-lg shadow mb-4" id="snn-session-info-block">
-                <h2 class="text-xl font-semibold mb-4">Session Information</h2>
-                <p><strong>Chat Name:</strong> <?php echo esc_html(get_the_title($session_info->chat_id) ?: 'N/A'); ?></p>
-                <p><strong>User Name:</strong> <?php echo esc_html($session_info->user_name ?: 'Anonymous'); ?></p>
-                <p><strong>User Email:</strong> <?php echo esc_html($session_info->user_email ?: 'N/A'); ?></p>
-                <p><strong>IP Address:</strong> <?php echo esc_html($session_info->ip_address ?: 'N/A'); ?></p>
-                <p><strong>Started At:</strong> <?php echo esc_html(date('M j, Y H:i:s', strtotime($session_info->created_at))); ?></p>
-                <p><strong>Last Updated:</strong> <?php echo esc_html(date('M j, Y H:i:s', strtotime($session_info->updated_at))); ?></p>
-            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-4">
+                <!-- Left Sidebar: List of Sessions -->
+                <div class="lg:col-span-1 bg-white p-4 rounded-lg shadow overflow-y-auto max-h-[calc(100vh-180px)]" id="snn-session-sidebar">
+                    <h2 class="text-lg font-semibold mb-3">All Sessions</h2>
+                    <ul class="space-y-2">
+                        <?php if (!empty($all_sessions)) : ?>
+                            <?php foreach ($all_sessions as $session_item) : ?>
+                                <li class="snn-session-history-item cursor-pointer p-2 rounded-md transition-colors duration-150 <?php echo ($session_item->session_id === $current_session_id) ? 'bg-blue-100 text-blue-800 font-semibold' : 'hover:bg-gray-100 text-gray-700'; ?>"
+                                    data-session-id="<?php echo esc_attr($session_item->session_id); ?>"
+                                    id="snn-session-item-<?php echo esc_attr($session_item->session_id); ?>">
+                                    <span class="block text-sm"><?php echo esc_html(substr($session_item->session_id, 0, 8)); ?>...</span>
+                                    <span class="block text-xs text-gray-500"><?php echo esc_html(date('M j, Y H:i', strtotime($session_item->created_at))); ?></span>
+                                    <span class="block text-xs text-gray-500">User: <?php echo esc_html($session_item->user_name ?: 'Anonymous'); ?></span>
+                                </li>
+                            <?php endforeach; ?>
+                        <?php else : ?>
+                            <li class="text-gray-600 text-sm">No chat sessions found.</li>
+                        <?php endif; ?>
+                    </ul>
+                </div>
 
-            <div class="bg-white p-6 rounded-lg shadow" id="snn-session-messages-block">
-                <h2 class="text-xl font-semibold mb-4">Messages</h2>
-                <div class="space-y-4" id="snn-session-messages-list">
-                    <?php if (!empty($session_messages)) : ?>
-                        <?php foreach ($session_messages as $index => $msg) : ?>
-                            <div class="snn-chat-message-detail <?php echo !empty($msg->message) ? 'snn-user-message-detail' : 'snn-ai-message-detail'; ?> p-3 rounded-lg shadow-sm" id="snn-session-message-<?php echo esc_attr($index); ?>">
-                                <?php if (!empty($msg->message)) : ?>
-                                    <p class="font-semibold text-blue-700">You:</p>
-                                    <p class="text-gray-800"><?php echo nl2br(esc_html($msg->message)); ?></p>
-                                <?php endif; ?>
-                                <?php if (!empty($msg->response)) : ?>
-                                    <p class="font-semibold text-green-700 mt-2">AI:</p>
-                                    <div class="text-gray-800"><?php echo wp_kses_post($msg->response); // Use wp_kses_post to allow the HTML of content cards ?></div>
-                                <?php endif; ?>
-                                <p class="text-xs text-gray-500 mt-1">Tokens: <?php echo esc_html($msg->tokens_used); ?> | Time: <?php echo esc_html(date('H:i:s', strtotime($msg->created_at))); ?></p>
+                <!-- Right Content: Session Details and Messages -->
+                <div class="lg:col-span-3 bg-white p-6 rounded-lg shadow" id="snn-session-details-panel">
+                    <?php if (!empty($current_session_id)) : ?>
+                        <?php
+                        // Initial load of the current session's details
+                        global $wpdb;
+                        $session_info = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}snn_chat_sessions WHERE session_id = %s", $current_session_id));
+                        $session_messages = $wpdb->get_results($wpdb->prepare("SELECT message, response, created_at, tokens_used FROM {$wpdb->prefix}snn_chat_messages WHERE session_id = %s ORDER BY created_at ASC", $current_session_id));
+
+                        if ($session_info) {
+                            ?>
+                            <h2 class="text-xl font-semibold mb-4">Session Information: <?php echo esc_html(substr($current_session_id, 0, 12)); ?>...</h2>
+                            <div class="mb-4" id="snn-session-info-block">
+                                <p><strong>Chat Name:</strong> <?php echo esc_html(get_the_title($session_info->chat_id) ?: 'N/A'); ?></p>
+                                <p><strong>User Name:</strong> <?php echo esc_html($session_info->user_name ?: 'Anonymous'); ?></p>
+                                <p><strong>User Email:</strong> <?php echo esc_html($session_info->user_email ?: 'N/A'); ?></p>
+                                <p><strong>IP Address:</strong> <?php echo esc_html($session_info->ip_address ?: 'N/A'); ?></p>
+                                <p><strong>Started At:</strong> <?php echo esc_html(date('M j, Y H:i:s', strtotime($session_info->created_at))); ?></p>
+                                <p><strong>Last Updated:</strong> <?php echo esc_html(date('M j, Y H:i:s', strtotime($session_info->updated_at))); ?></p>
                             </div>
-                        <?php endforeach; ?>
+
+                            <h2 class="text-xl font-semibold mb-4">Messages</h2>
+                            <div class="space-y-4" id="snn-session-messages-list">
+                                <?php if (!empty($session_messages)) : ?>
+                                    <?php foreach ($session_messages as $index => $msg) : ?>
+                                        <div class="snn-chat-message-detail <?php echo !empty($msg->message) ? 'snn-user-message-detail' : 'snn-ai-message-detail'; ?> p-3 rounded-lg shadow-sm" id="snn-session-message-<?php echo esc_attr($index); ?>">
+                                            <?php if (!empty($msg->message)) : ?>
+                                                <p class="font-semibold text-blue-700">You:</p>
+                                                <p class="text-gray-800"><?php echo nl2br(esc_html($msg->message)); ?></p>
+                                            <?php endif; ?>
+                                            <?php if (!empty($msg->response)) : ?>
+                                                <p class="font-semibold text-green-700 mt-2">AI:</p>
+                                                <div class="text-gray-800"><?php echo wp_kses_post($msg->response); // Use wp_kses_post to allow the HTML of content cards ?></div>
+                                            <?php endif; ?>
+                                            <p class="text-xs text-gray-500 mt-1">Tokens: <?php echo esc_html($msg->tokens_used); ?> | Time: <?php echo esc_html(date('H:i:s', strtotime($msg->created_at))); ?></p>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else : ?>
+                                    <p class="text-gray-600">No messages found for this session.</p>
+                                <?php endif; ?>
+                            </div>
+                            <?php
+                        } else {
+                            echo '<p class="text-gray-600">Session details not found.</p>';
+                        }
+                        ?>
                     <?php else : ?>
-                        <p class="text-gray-600">No messages found for this session.</p>
+                        <p class="text-gray-600 text-center py-10">Select a session from the left sidebar to view its details.</p>
                     <?php endif; ?>
                 </div>
             </div>
@@ -1431,7 +1459,107 @@ class SNN_AI_Chat {
             .view-history-btn:hover {
                 color: #ffffff !important;
             }
+            /* Style for active session in sidebar */
+            .snn-session-history-item.bg-blue-100 {
+                border-left: 4px solid #3b82f6;
+            }
         </style>
+        <script>
+            jQuery(document).ready(function($) {
+                const sessionDetailsPanel = $('#snn-session-details-panel');
+                const adminUrl = '<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-session-history')); ?>';
+
+                function fetchAndRenderSessionDetails(sessionId) {
+                    sessionDetailsPanel.html('<p class="text-center py-10 text-blue-500">Loading session details...</p>');
+                    
+                    $.ajax({
+                        url: snn_ai_chat_ajax.ajax_url,
+                        type: 'POST',
+                        data: {
+                            action: 'snn_get_session_details_and_messages',
+                            nonce: snn_ai_chat_ajax.nonce,
+                            session_id: sessionId
+                        },
+                        success: function(response) {
+                            if (response.success && response.data) {
+                                const sessionInfo = response.data.session_info;
+                                const messages = response.data.messages;
+                                let htmlContent = '';
+
+                                if (sessionInfo) {
+                                    htmlContent += `
+                                        <h2 class="text-xl font-semibold mb-4">Session Information: ${sessionInfo.session_id.substring(0, 12)}...</h2>
+                                        <div class="mb-4" id="snn-session-info-block">
+                                            <p><strong>Chat Name:</strong> ${sessionInfo.chat_name || 'N/A'}</p>
+                                            <p><strong>User Name:</strong> ${sessionInfo.user_name || 'Anonymous'}</p>
+                                            <p><strong>User Email:</strong> ${sessionInfo.user_email || 'N/A'}</p>
+                                            <p><strong>IP Address:</strong> ${sessionInfo.ip_address || 'N/A'}</p>
+                                            <p><strong>Started At:</strong> ${new Date(sessionInfo.created_at).toLocaleString()}</p>
+                                            <p><strong>Last Updated:</strong> ${new Date(sessionInfo.updated_at).toLocaleString()}</p>
+                                        </div>
+                                        <h2 class="text-xl font-semibold mb-4">Messages</h2>
+                                        <div class="space-y-4" id="snn-session-messages-list">
+                                    `;
+
+                                    if (messages && messages.length > 0) {
+                                        messages.forEach((msg, index) => {
+                                            const messageClass = msg.message ? 'snn-user-message-detail' : 'snn-ai-message-detail';
+                                            htmlContent += `
+                                                <div class="snn-chat-message-detail ${messageClass} p-3 rounded-lg shadow-sm" id="snn-session-message-${index}">
+                                                    ${msg.message ? `<p class="font-semibold text-blue-700">You:</p><p class="text-gray-800">${msg.message.replace(/\n/g, '<br>')}</p>` : ''}
+                                                    ${msg.response ? `<p class="font-semibold text-green-700 mt-2">AI:</p><div class="text-gray-800">${msg.response}</div>` : ''}
+                                                    <p class="text-xs text-gray-500 mt-1">Tokens: ${msg.tokens_used} | Time: ${new Date(msg.created_at).toLocaleTimeString()}</p>
+                                                </div>
+                                            `;
+                                        });
+                                    } else {
+                                        htmlContent += '<p class="text-gray-600">No messages found for this session.</p>';
+                                    }
+                                    htmlContent += '</div>'; // Close snn-session-messages-list
+                                } else {
+                                    htmlContent = '<p class="text-gray-600">Session details not found.</p>';
+                                }
+                                sessionDetailsPanel.html(htmlContent);
+                            } else {
+                                sessionDetailsPanel.html('<p class="text-red-500">Error: Could not fetch session details.</p>');
+                            }
+                        },
+                        error: function() {
+                            sessionDetailsPanel.html('<p class="text-red-500">Failed to load session details. Network error.</p>');
+                        }
+                    });
+                }
+
+                // Handle click on sidebar session items
+                $('#snn-session-sidebar').on('click', '.snn-session-history-item', function(e) {
+                    e.preventDefault();
+                    const newSessionId = $(this).data('session-id');
+
+                    // Update URL without full reload
+                    history.pushState(null, '', adminUrl + '&session_id=' + newSessionId);
+
+                    // Update active class
+                    $('.snn-session-history-item').removeClass('bg-blue-100 text-blue-800 font-semibold').addClass('hover:bg-gray-100 text-gray-700');
+                    $(this).addClass('bg-blue-100 text-blue-800 font-semibold').removeClass('hover:bg-gray-100 text-gray-700');
+
+                    fetchAndRenderSessionDetails(newSessionId);
+                });
+
+                // Initial load: Check if a session_id is in the URL and load it
+                const initialSessionId = new URLSearchParams(window.location.search).get('session_id');
+                if (initialSessionId) {
+                    fetchAndRenderSessionDetails(initialSessionId);
+                    // Highlight the initial session in the sidebar
+                    $('#snn-session-item-' + initialSessionId).addClass('bg-blue-100 text-blue-800 font-semibold').removeClass('hover:bg-gray-100 text-gray-700');
+                } else if ($('.snn-session-history-item').length > 0) {
+                    // If no session ID in URL, but there are sessions, select the first one
+                    const firstSessionId = $('.snn-session-history-item').first().data('session-id');
+                    history.replaceState(null, '', adminUrl + '&session_id=' + firstSessionId); // Use replaceState to not add to history
+                    fetchAndRenderSessionDetails(firstSessionId);
+                    $('.snn-session-history-item').first().addClass('bg-blue-100 text-blue-800 font-semibold').removeClass('hover:bg-gray-100 text-gray-700');
+                }
+            });
+        </script>
         <?php
     }
     
@@ -2042,15 +2170,15 @@ class SNN_AI_Chat {
                         url: snn_ai_chat_ajax.ajax_url,
                         type: 'POST',
                         data: {
-                            action: 'snn_get_session_messages',
+                            action: 'snn_get_session_details_and_messages', // Use the new endpoint
                             nonce: snn_ai_chat_ajax.nonce,
                             session_id: sessionId,
                             chat_id: chatId
                         },
                         success: function(response) {
-                            if (response.success && response.data.length > 0) {
+                            if (response.success && response.data && response.data.messages.length > 0) {
                                 messagesContainer.empty(); // Clear initial message if history exists
-                                response.data.forEach(function(msg) {
+                                response.data.messages.forEach(function(msg) {
                                     if (msg.message) {
                                         appendMessage('user', msg.message);
                                     }
@@ -2296,27 +2424,48 @@ class SNN_AI_Chat {
         ") ?: [];
     }
 
-    public function get_session_messages() {
+    private function get_chat_history_sessions_for_sidebar() {
+        global $wpdb;
+        return $wpdb->get_results("
+            SELECT session_id, user_name, created_at
+            FROM {$wpdb->prefix}snn_chat_sessions
+            ORDER BY created_at DESC
+            LIMIT 200
+        ") ?: [];
+    }
+
+    public function get_session_details_and_messages() {
         check_ajax_referer('snn_ai_chat_nonce', 'nonce');
         
         $session_id = sanitize_text_field($_POST['session_id'] ?? '');
-        $chat_id = intval($_POST['chat_id'] ?? 0); // Not strictly needed for messages, but good for context/security
 
         if (empty($session_id)) {
             wp_send_json_error('Session ID missing.');
         }
 
         global $wpdb;
+        // Fetch session info
+        $session_info = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}snn_chat_sessions WHERE session_id = %s", $session_id));
+        
+        // Fetch messages
         $messages = $wpdb->get_results($wpdb->prepare("
-            SELECT message, response, created_at FROM {$wpdb->prefix}snn_chat_messages
+            SELECT message, response, created_at, tokens_used FROM {$wpdb->prefix}snn_chat_messages
             WHERE session_id = %s
             ORDER BY created_at ASC
         ", $session_id));
 
-        if ($messages) {
-            wp_send_json_success($messages);
+        // Add chat name to session info
+        if ($session_info) {
+            $session_info->chat_name = get_the_title($session_info->chat_id) ?: 'N/A';
+        }
+
+        if ($session_info || $messages) {
+            wp_send_json_success([
+                'session_info' => $session_info,
+                'messages' => $messages
+            ]);
         } else {
-            wp_send_json_success([]); // Return empty array if no messages
+            wp_send_json_success(['session_info' => null, 'messages' => []]); // Return empty if nothing found
         }
     }
     
