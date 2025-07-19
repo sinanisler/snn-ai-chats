@@ -1,4 +1,4 @@
-<?php
+<?php 
 /**
  * Plugin Name: SNN AI Chat
  * Plugin URI: https://sinanisler.com
