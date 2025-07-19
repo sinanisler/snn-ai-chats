@@ -1207,7 +1207,7 @@ class SNN_AI_Chat {
                 }
 
                 // Listen for changes on all relevant input fields
-                chatSettingsForm.find('input[type="color"], input[type="number"], input[type="text"], textarea, select').on('input change', applyAllStylesToPreview);
+                chatSettingsForm.find('input[type="color"], input[type="number"], input[type="text"], textarea, select').on('change', applyAllStylesToPreview);
                 chatSettingsForm.find('input[type="checkbox"]').on('change', applyAllStylesToPreview);
 
                 // Also apply styles when the iframe has finished loading to sync it with the form's initial state.
@@ -1860,7 +1860,7 @@ class SNN_AI_Chat {
         .snn-ai-chat-widget .snn-new-chat { background: none; border: none; color: var(--snn-text-color); cursor: pointer; padding: 3.75px; margin-right: 7.5px; border-radius: 3.75px; transition: background-color 0.3s ease; display: flex; align-items: center; justify-content: center; }
         .snn-ai-chat-widget .snn-new-chat:hover { background-color: rgba(255, 255, 255, 0.2); }
         .snn-ai-chat-widget .snn-new-chat .dashicons { font-size: 20px; width: 20px; height: 20px; line-height: 1; }
-        .snn-ai-chat-widget .snn-chat-header h3 { margin: 0; font-size: 16.875px; font-weight: 600; color: var(--snn-text-color);  }
+        .snn-ai-chat-widget .snn-chat-header h3 { margin: 0; font-size: 16.875px; font-weight: 600; color: var(--snn-text-color); }
         .snn-ai-chat-widget .snn-chat-close { background: none; border: none; color: var(--snn-text-color); cursor: pointer; font-size: 18.75px; line-height: 1; padding: 3.75px; border-radius: 3.75px; transition: background-color 0.3s ease; }
         .snn-ai-chat-widget .snn-chat-close:hover { background-color: rgba(255, 255, 255, 0.2); }
         .snn-ai-chat-widget .snn-chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; font-size: var(--snn-font-size); color: var(--snn-chat-text-color); position: relative; }
@@ -1928,6 +1928,7 @@ class SNN_AI_Chat {
         
         .snn-ai-chat-widget .snn-chat-input-container { display: flex; padding: 15px; border-top: 1px solid var(--snn-widget-border-top-color); background-color: var(--snn-chat-widget-bg-color); border-bottom-left-radius: var(--snn-border-radius); border-bottom-right-radius: var(--snn-border-radius); }
         .snn-ai-chat-widget .snn-chat-input { flex-grow: 1; padding: 11.25px 15px; border: 1px solid var(--snn-input-border-color); border-radius: 7.5px; outline: none; background-color: var(--snn-chat-input-bg-color); color: var(--snn-chat-input-text-color); margin-right: 7.5px; }
+        .snn-ai-chat-widget .snn-chat-input:focus { border-color: var(--snn-primary-color); box-shadow: 0 0 0 2px rgba(var(--snn-primary-color-rgb), 0.5); }
         .snn-ai-chat-widget .snn-chat-input::placeholder { color: var(--snn-placeholder-color); }
         .snn-ai-chat-widget .snn-chat-send { background: none; border: none; color: var(--snn-chat-send-button-color); cursor: pointer; padding: 7.5px; border-radius: 7.5px; transition: background-color 0.3s ease; }
         .snn-ai-chat-widget .snn-chat-send:hover { background-color: rgba(0, 0, 0, 0.05); }
