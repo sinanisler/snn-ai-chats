@@ -43,6 +43,9 @@ class SNN_AI_Chat {
         // New AJAX action to fetch session messages and details
         add_action('wp_ajax_snn_get_session_details_and_messages', array($this, 'get_session_details_and_messages'));
         add_action('wp_ajax_nopriv_snn_get_session_details_and_messages', array($this, 'get_session_details_and_messages'));
+        // New AJAX action to fetch all public posts/pages for datalist
+        add_action('wp_ajax_snn_get_public_posts', array($this, 'get_all_public_posts_for_datalist'));
+        add_action('wp_ajax_nopriv_snn_get_public_posts', array($this, 'get_all_public_posts_for_datalist'));
 
 
         register_activation_hook(__FILE__, array($this, 'activate'));
@@ -1117,10 +1120,17 @@ class SNN_AI_Chat {
                 </div>
                 
                 <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow chat-preview-section lg:sticky lg:top-4 lg:self-start" id="snn-chat-preview-section">
-                    <h3 class="text-lg font-semibold mb-4">Live Preview</h3>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold m-0">Live Preview</h3>
+                        <div class="flex items-center">
+                            <label for="preview_post_id" class="text-sm font-medium text-gray-700 mr-2">Post ID:</label>
+                            <input type="text" id="preview_post_id_input" list="snn_post_datalist" class="w-[100px] p-1 border border-gray-300 rounded-md text-sm" value="<?php echo esc_attr(get_queried_object_id()); ?>">
+                            <datalist id="snn_post_datalist"></datalist>
+                        </div>
+                    </div>
                     <?php if ($chat_id > 0) : ?>
                         <div class="border border-gray-300 rounded-lg overflow-hidden preview-container relative" id="snn-preview-container" style="min-height: 660px; max-height: calc(100vh - 80px);">
-                            <iframe id="chat-preview-iframe" src="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-preview&chat_id=' . $chat_id)); ?>" width="100%" height="100%" frameborder="0" class="preview-iframe absolute inset-0"></iframe>
+                            <iframe id="chat-preview-iframe" src="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-preview&chat_id=' . $chat_id . '&post_id=' . get_queried_object_id())); ?>" width="100%" height="100%" frameborder="0" class="preview-iframe absolute inset-0"></iframe>
                         </div>
                     <?php else : ?>
                         <div class="text-center p-4 border-2 border-dashed rounded-lg text-gray-600" id="snn-preview-placeholder">
@@ -1135,6 +1145,47 @@ class SNN_AI_Chat {
                 const chatSettingsForm = $('#chat-settings-form');
                 const chatPreviewIframe = $('#chat-preview-iframe');
                 const chatId = chatSettingsForm.find('input[name="chat_id"]').val();
+                const previewPostIdInput = $('#preview_post_id_input');
+                const postDatalist = $('#snn_post_datalist');
+
+                // Function to fetch posts for datalist
+                function fetchPostsForDatalist() {
+                    $.ajax({
+                        url: snn_ai_chat_ajax.ajax_url,
+                        type: 'POST',
+                        data: {
+                            action: 'snn_get_public_posts',
+                            nonce: snn_ai_chat_ajax.nonce,
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                postDatalist.empty();
+                                response.data.forEach(function(post) {
+                                    postDatalist.append('<option value="' + post.id + '">' + post.title + '</option>');
+                                });
+                            } else {
+                                console.error('Error fetching posts:', response.data);
+                            }
+                        },
+                        error: function(jqXHR, textStatus, errorThrown) {
+                            console.error("AJAX error fetching posts:", textStatus, errorThrown);
+                        }
+                    });
+                }
+
+                // Initial fetch of posts for datalist
+                fetchPostsForDatalist();
+
+                // Update iframe src when preview_post_id_input changes
+                previewPostIdInput.on('change', function() {
+                    const selectedPostId = $(this).val();
+                    if (chatId > 0 && chatPreviewIframe.length) {
+                        const currentSrc = chatPreviewIframe.attr('src');
+                        const url = new URL(currentSrc);
+                        url.searchParams.set('post_id', selectedPostId);
+                        chatPreviewIframe.attr('src', url.toString());
+                    }
+                });
 
                 // Dynamic Tag insertion logic
                 $('#snn-dynamic-tags-section').on('click', '.dynamic-tag', function() {
@@ -1202,12 +1253,16 @@ class SNN_AI_Chat {
                         }
                     });
                     
+                    // Add the selected preview_post_id to the settings object
+                    settings['preview_post_id'] = previewPostIdInput.val();
+
                     chatPreviewIframe[0].contentWindow.updateAllChatStyles(settings, chatId);
                 }
 
                 // Listen for changes on all relevant input fields
                 chatSettingsForm.find('input[type="color"], input[type="number"], input[type="text"], textarea, select').on('change', applyAllStylesToPreview);
                 chatSettingsForm.find('input[type="checkbox"]').on('change', applyAllStylesToPreview);
+                previewPostIdInput.on('change', applyAllStylesToPreview); // Also trigger on post ID change
 
                 // Also apply styles when the iframe has finished loading to sync it with the form's initial state.
                 chatPreviewIframe.on('load', function() {
@@ -1338,7 +1393,7 @@ class SNN_AI_Chat {
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html(number_format($history->total_tokens)); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo esc_html(date('M j, Y H:i', strtotime($history->created_at))); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-session-history&session_id=' . $history->session_id)); ?>" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-black hover:bg-[#1b1b1b] focus:outline-none focus:ring-2 focus:ring-offset-2  view-history-btn transition-colors duration-200" id="snn-view-session-details-btn-<?php echo esc_attr($history->session_id); ?>">
+                                        <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-session-history&session_id=' . $history->session_id)); ?>" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white hover:text-white bg-black hover:bg-[#1b1b1b] focus:outline-none focus:ring-2 focus:ring-offset-2 view-history-btn transition-colors duration-200" id="snn-view-session-details-btn-<?php echo esc_attr($history->session_id); ?>">
                                             View Details
                                         </a>
                                         <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" style="display: inline-block; margin-left: 8px;" onsubmit="return confirm('Are you sure you want to delete this chat session? This action cannot be undone.');">
@@ -1476,7 +1531,7 @@ class SNN_AI_Chat {
                         url: snn_ai_chat_ajax.ajax_url,
                         type: 'POST',
                         data: {
-                            action: 'snn_get_session_details_and_messages',
+                            action: 'snn_get_session_details_and_messages', // Use the new endpoint
                             nonce: snn_ai_chat_ajax.nonce,
                             session_id: sessionId
                         },
@@ -1582,6 +1637,9 @@ class SNN_AI_Chat {
         $defaults = $this->get_default_chat_settings();
         $chat_settings = wp_parse_args(is_array($chat_settings_raw) ? $chat_settings_raw : [], $defaults);
         
+        // Get post_id from URL for preview context, default to 0 if not set
+        $post_id_for_preview = isset($_GET['post_id']) ? intval($_GET['post_id']) : 0;
+
         ?>
         <!DOCTYPE html>
         <html <?php language_attributes(); ?>>
@@ -1597,7 +1655,7 @@ class SNN_AI_Chat {
         </head>
         <body class="snn-ai-chat-preview-body">
             <?php
-            $this->render_chat_widget($chat, $chat_settings);
+            $this->render_chat_widget($chat, $chat_settings, $post_id_for_preview);
             
             wp_print_footer_scripts();
             ?>
@@ -1679,6 +1737,10 @@ class SNN_AI_Chat {
                 
                 const readyQuestions = getSetting('ready_questions', '');
                 chatWidget.dataset.readyQuestions = readyQuestions;
+
+                // Update the post_id for dynamic tags in preview
+                chatWidget.dataset.postId = settings['preview_post_id'] || 0;
+
 
                 // Trigger a custom event to re-initialize the chat widget's state in the main script
                 const event = new CustomEvent('snn-settings-updated');
@@ -1893,10 +1955,10 @@ class SNN_AI_Chat {
         }
     }
 
-    private function render_chat_widget($chat, $settings) {
+    private function render_chat_widget($chat, $settings, $post_id_override = null) {
         // session_id will now be managed by frontend JS using localStorage
         // $session_id = 'snn_' . time() . '_' . bin2hex(random_bytes(8)); // Removed PHP-side generation
-        $post_id = get_queried_object_id();
+        $post_id = ($post_id_override !== null) ? $post_id_override : get_queried_object_id();
         ?>
         <div class="snn-ai-chat-widget" id="snn-chat-<?php echo esc_attr($chat->ID); ?>"
              data-chat-id="<?php echo esc_attr($chat->ID); ?>"
@@ -2077,7 +2139,7 @@ class SNN_AI_Chat {
                 if (!widget.length) return;
 
                 const chatId = widget.data('chat-id');
-                const contextualId = widget.data('post-id');
+                let contextualId = widget.data('post-id'); // Use 'let' as it can be updated
                 let initialMessage = widget.data('initial-message');
                 let collectUserInfo = widget.data('collect-user-info') == 1;
                 let readyQuestionsRaw = widget.data('ready-questions');
@@ -2293,10 +2355,12 @@ class SNN_AI_Chat {
                 });
 
                 // For live preview updates
-                widget.on('snn-settings-updated', function() {
+                widget.on('snn-settings-updated', function(event, newSettings) {
                     initialMessage = widget.data('initial-message');
                     collectUserInfo = widget.data('collect-user-info') == 1;
                     readyQuestionsRaw = widget.data('ready-questions');
+                    contextualId = widget.data('post-id'); // Update contextualId from data attribute
+
                     // Re-initialize UI to apply new settings, but keep session if possible
                     initializeChatUI(); 
                 });
@@ -3028,6 +3092,30 @@ class SNN_AI_Chat {
         return '#' . implode('', array_map(function($val) {
             return str_pad(dechex($val), 2, '0', STR_PAD_LEFT);
         }, $rgb));
+    }
+
+    // New function to get all public posts and pages for the datalist
+    public function get_all_public_posts_for_datalist() {
+        check_ajax_referer('snn_ai_chat_nonce', 'nonce');
+
+        $args = array(
+            'post_type'      => array('post', 'page'), // Include posts and pages
+            'post_status'    => 'publish',
+            'posts_per_page' => -1, // Get all posts
+            'fields'         => 'ids', // Only get IDs for efficiency
+        );
+
+        $posts = get_posts($args);
+        $post_data = [];
+
+        foreach ($posts as $post_id) {
+            $post_data[] = [
+                'id'    => $post_id,
+                'title' => get_the_title($post_id)
+            ];
+        }
+
+        wp_send_json_success($post_data);
     }
 }
 
