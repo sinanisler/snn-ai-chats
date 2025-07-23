@@ -51,14 +51,26 @@ class SNN_AI_Chat {
         add_action('wp_ajax_snn_upload_document', array($this, 'handle_document_upload'));
         add_action('wp_ajax_snn_delete_document', array($this, 'handle_document_delete'));
         add_action('wp_ajax_snn_get_documents', array($this, 'get_documents_list'));
-        add_action('wp_ajax_snn_check_processing_status', array($this, 'check_processing_status'));
+        add_action('wp_ajax_snn_get_document_console', array($this, 'get_document_console'));
+    }
 
-
-        register_activation_hook(__FILE__, array($this, 'activate'));
-        register_deactivation_hook(__FILE__, array($this, 'deactivate'));
-
-        add_action('load-admin_page_snn-ai-chat-preview', array($this, 'set_preview_page_title'));
-        add_action('load-admin_page_snn-ai-chat-session-history', array($this, 'set_session_history_page_title'));
+    /**
+     * AJAX: Get document console log
+     */
+    public function get_document_console() {
+        check_ajax_referer('snn_ai_chat_nonce', 'nonce');
+        $doc_id = isset($_POST['document_id']) ? intval($_POST['document_id']) : 0;
+        if (!$doc_id) {
+            wp_send_json_error('Invalid document ID');
+        }
+        global $wpdb;
+        $table = $wpdb->prefix . 'snn_rag_documents';
+        $row = $wpdb->get_row($wpdb->prepare("SELECT progress_log FROM $table WHERE id = %d", $doc_id));
+        if ($row) {
+            wp_send_json_success(['progress_log' => $row->progress_log]);
+        } else {
+            wp_send_json_error('No log found');
+        }
     }
 
     public function init() {
@@ -375,7 +387,7 @@ class SNN_AI_Chat {
     public function dashboard_page() {
         $stats = $this->get_dashboard_stats();
         ?>
-        <div class="wrap">
+        <div class="container">
             <h1>SNN AI Chat Dashboard</h1>
             
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4" id="snn-dashboard-stats-section">
@@ -698,9 +710,9 @@ class SNN_AI_Chat {
                             Embedding Model
                         </label>
                         <select id="embedding_model" name="embedding_model" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                            <option value="text-embedding-ada-002" <?php selected($settings['embedding_model'], 'text-embedding-ada-002'); ?>>text-embedding-ada-002</option>
-                            <option value="text-embedding-3-small" <?php selected($settings['embedding_model'], 'text-embedding-3-small'); ?>>text-embedding-3-small</option>
                             <option value="text-embedding-3-large" <?php selected($settings['embedding_model'], 'text-embedding-3-large'); ?>>text-embedding-3-large</option>
+                            <option value="text-embedding-3-small" <?php selected($settings['embedding_model'], 'text-embedding-3-small'); ?>>text-embedding-3-small</option>
+                            <option value="text-embedding-ada-002" <?php selected($settings['embedding_model'], 'text-embedding-ada-002'); ?>>text-embedding-ada-002</option>
                         </select>
                     </div>
 
@@ -1959,12 +1971,16 @@ class SNN_AI_Chat {
         $current_post_id = intval($_POST['post_id'] ?? 0);
         
         if (empty($message) || empty($session_id) || empty($chat_id)) {
+            snn_ai_chats_log('chat_error', 'Missing required data: message=' . $message . ', session_id=' . $session_id . ', chat_id=' . $chat_id);
             wp_send_json_error('Missing required data.');
         }
 
         if (!$this->check_rate_limits($session_id, $chat_id)) {
+            snn_ai_chats_log('chat_error', 'Rate limit exceeded for session_id=' . $session_id . ', chat_id=' . $chat_id);
             wp_send_json_error(array('response' => 'Rate limit exceeded. Please try again later.'));
         }
+        // Log chat request
+        snn_ai_chats_log('chat_request', 'Chat request: message=' . $message . ', session_id=' . $session_id . ', chat_id=' . $chat_id . ', user_name=' . $user_name . ', user_email=' . $user_email . ', post_id=' . $current_post_id);
         
         $chat_settings_raw = get_post_meta($chat_id, '_snn_chat_settings', true);
         $chat_settings = wp_parse_args(is_array($chat_settings_raw) ? $chat_settings_raw : [], $this->get_default_chat_settings());
@@ -2000,9 +2016,14 @@ class SNN_AI_Chat {
             'user_ip'    => (string)$_SERVER['REMOTE_ADDR'],
         ];
 
+        // Debug: Log all relevant settings and context
+        snn_ai_chats_log('rag_debug', 'Settings: rag_enabled=' . var_export($api_settings['rag_enabled'], true) . ', use_rag=' . var_export($chat_settings['use_rag'], true) . ', keep_conversation_history=' . var_export($chat_settings['keep_conversation_history'], true) . ', session_id=' . $session_id . ', chat_id=' . $chat_id . ', post_id=' . $current_post_id);
+        snn_ai_chats_log('rag_debug', 'User: name=' . $user_name . ', email=' . $user_email . ', ip=' . $context['user_ip']);
+
         // Process dynamic tags in the main system prompt
         $processed_prompt = $this->process_dynamic_tags($chat_settings['system_prompt'], $context);
-        
+        snn_ai_chats_log('rag_debug', 'System prompt after dynamic tags: ' . $processed_prompt);
+
         if (!empty($processed_prompt)) {
             $conversation_history[] = [
                 'role' => 'system',
@@ -2012,21 +2033,30 @@ class SNN_AI_Chat {
 
         if (!empty($chat_settings['keep_conversation_history'])) {
             $previous_messages = $this->get_conversation_history($session_id);
+            snn_ai_chats_log('rag_debug', 'Previous messages count: ' . count($previous_messages));
             $conversation_history = array_merge($conversation_history, $previous_messages);
         }
-        
-        // RAG: Add relevant document context if enabled
-        if (!empty($api_settings['rag_enabled']) && !empty($chat_settings['use_rag'])) {
+
+        // RAG: Add relevant document context if enabled (force for all chats if global rag_enabled is set)
+        if (!empty($api_settings['rag_enabled'])) {
+            snn_ai_chats_log('rag_debug', 'RAG block entered for session_id=' . $session_id . ', chat_id=' . $chat_id . ' (forced by global rag_enabled)');
             $rag_context = $this->get_rag_context($message, $api_settings);
+            $rag_chunks_count = is_array($rag_context) ? count($rag_context) : (is_string($rag_context) ? substr_count($rag_context, "\n") : 0);
+            snn_ai_chats_log('rag_retrieval', 'RAG retrieval: session_id=' . $session_id . ', chat_id=' . $chat_id . ', user_query=' . $message . ', retrieved_context=' . substr($rag_context, 0, 1000) . ', chunk_count=' . $rag_chunks_count);
             if (!empty($rag_context)) {
                 $rag_prompt = "Based on the following relevant information from the knowledge base:\n\n" . $rag_context . "\n\nPlease answer the user's question using this information when relevant.";
+                snn_ai_chats_log('rag_prompt', 'RAG prompt: session_id=' . $session_id . ', chat_id=' . $chat_id . ', prompt=' . substr($rag_prompt, 0, 1000));
                 $conversation_history[] = [
                     'role' => 'system',
                     'content' => $rag_prompt
                 ];
+            } else {
+                snn_ai_chats_log('rag_empty', 'RAG enabled but no context retrieved: session_id=' . $session_id . ', chat_id=' . $chat_id . ', user_query=' . $message);
             }
+        } else {
+            snn_ai_chats_log('rag_debug', 'RAG block skipped: rag_enabled=' . var_export($api_settings['rag_enabled'], true) . ', use_rag=' . var_export($chat_settings['use_rag'], true));
         }
-        
+
         $conversation_history[] = [
             'role' => 'user',
             'content' => (string)$message
@@ -2057,14 +2087,16 @@ class SNN_AI_Chat {
         if ($response && isset($response['content'])) {
             $response_content = $response['content'];
             $tokens_used = $response['tokens'];
-            
+            // Log the final prompt sent to the model
+            snn_ai_chats_log('final_prompt', 'Final prompt: session_id=' . $session_id . ', chat_id=' . $chat_id . ', prompt=' . json_encode($conversation_history));
+            snn_ai_chats_log('chat_response', 'Chat response: session_id=' . $session_id . ', chat_id=' . $chat_id . ', tokens=' . $tokens_used . ', response=' . $response_content);
             $this->save_chat_message($session_id, $chat_id, $message, $response_content, $tokens_used, $user_name, $user_email);
-            
             wp_send_json_success([
                 'response' => $response_content,
                 'tokens' => $tokens_used
             ]);
         } else {
+            snn_ai_chats_log('chat_error', 'Failed to get AI response for session_id=' . $session_id . ', chat_id=' . $chat_id);
             wp_send_json_error(array('response' => 'Failed to get an AI response. Please check your API settings.'));
         }
     }
@@ -2552,12 +2584,12 @@ class SNN_AI_Chat {
             'presence_penalty' => 0.0,
             // RAG settings
             'rag_enabled' => false,
-            'rag_chunk_size' => 1000,
-            'rag_chunk_overlap' => 200,
-            'rag_max_results' => 5,
-            'rag_similarity_threshold' => 0.7,
+            'rag_chunk_size' => 1024,
+            'rag_chunk_overlap' => 256,
+            'rag_max_results' => 8,
+            'rag_similarity_threshold' => 0.6,
             'embedding_api_provider' => 'openai',
-            'embedding_model' => 'text-embedding-ada-002',
+            'embedding_model' => 'text-embedding-3-large',
         );
         return get_option('snn_ai_chat_settings', $defaults);
     }
@@ -3270,8 +3302,8 @@ class SNN_AI_Chat {
                 </div>
             <?php endif; ?>
 
-            <div class="snn-rag-upload-section" style="background: #fff; padding: 20px; margin: 20px 0; border: 1px solid #ccd0d4; border-radius: 4px;">
-                <h2><?php esc_html_e('Upload Document', 'snn-ai-chat'); ?></h2>
+            <details class="snn-rag-upload-section" style="background: #fff; padding: 20px; margin: 20px 0; border: 1px solid #ccd0d4; border-radius: 4px;">
+                <summary style="font-size:1.3em; font-weight:bold; cursor:pointer;"><?php esc_html_e('Upload Document', 'snn-ai-chat'); ?></summary>
                 <form id="snn-rag-upload-form" enctype="multipart/form-data">
                     <?php wp_nonce_field('snn_rag_upload_nonce', 'snn_rag_upload_nonce'); ?>
                     <table class="form-table">
@@ -3280,6 +3312,52 @@ class SNN_AI_Chat {
                             <td>
                                 <input type="file" id="rag_document" name="rag_document" accept=".txt,.pdf,.doc,.docx" required />
                                 <p class="description"><?php esc_html_e('Supported formats: TXT, PDF, DOC, DOCX (Max: 10MB)', 'snn-ai-chat'); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Chunk Size', 'snn-ai-chat'); ?></th>
+                            <td>
+                                <input type="number" id="rag_chunk_size" name="rag_chunk_size" min="100" max="4000" value="<?php echo esc_attr($settings['rag_chunk_size'] ?? 500); ?>" />
+                                <p class="description">The number of characters in each chunk. Smaller chunks may improve relevance but lose context; larger chunks keep more context but may reduce specificity.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Chunk Overlap', 'snn-ai-chat'); ?></th>
+                            <td>
+                                <input type="number" id="rag_chunk_overlap" name="rag_chunk_overlap" min="0" max="500" value="<?php echo esc_attr($settings['rag_chunk_overlap'] ?? 50); ?>" />
+                                <p class="description">How many characters overlap between consecutive chunks. More overlap helps preserve context across chunk boundaries, but increases processing time and storage.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Embedding Model', 'snn-ai-chat'); ?></th>
+                            <td>
+                                <select id="embedding_model" name="embedding_model">
+                                    <option value="text-embedding-ada-002" <?php selected($settings['embedding_model'] ?? '', 'text-embedding-ada-002'); ?>>text-embedding-ada-002</option>
+                                    <option value="text-embedding-3-small" <?php selected($settings['embedding_model'] ?? '', 'text-embedding-3-small'); ?>>text-embedding-3-small</option>
+                                    <option value="text-embedding-3-large" <?php selected($settings['embedding_model'] ?? '', 'text-embedding-3-large'); ?>>text-embedding-3-large</option>
+                                </select>
+                                <p class="description">Choose the AI model used to convert text chunks into semantic vectors. More advanced models may improve matching accuracy but can be slower or cost more.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Similarity Threshold', 'snn-ai-chat'); ?></th>
+                            <td>
+                                <input type="number" step="0.01" min="0.0" max="1.0" id="rag_similarity_threshold" name="rag_similarity_threshold" value="<?php echo esc_attr($settings['rag_similarity_threshold'] ?? 0.7); ?>" />
+                                <p class="description">Only chunks with a similarity score above this value will be included in the context. Higher values mean stricter matching, which may improve relevance but exclude useful information if set too high.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Max Results', 'snn-ai-chat'); ?></th>
+                            <td>
+                                <input type="number" min="1" max="20" id="rag_max_results" name="rag_max_results" value="<?php echo esc_attr($settings['rag_max_results'] ?? 5); ?>" />
+                                <p class="description">Limits the number of top-matching chunks added to the AI's context. Fewer chunks may improve focus and speed, while more chunks provide broader context but may dilute relevance.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php esc_html_e('Preprocess Text', 'snn-ai-chat'); ?></th>
+                            <td>
+                                <input type="checkbox" id="rag_preprocess_text" name="rag_preprocess_text" value="1" <?php checked($settings['rag_preprocess_text'] ?? false, true); ?> />
+                                <label for="rag_preprocess_text">Clean and normalize text before chunking. This removes extra spaces, special characters, and formatting issues, which can improve chunking and embedding quality.</label>
                             </td>
                         </tr>
                     </table>
@@ -3292,6 +3370,8 @@ class SNN_AI_Chat {
                 <div id="upload-progress" style="display: none;">
                     <div style="background: #f1f1f1; border-radius: 4px; overflow: hidden; margin: 10px 0;">
                         <div id="progress-bar" style="background: #0073aa; height: 20px; width: 0%; transition: width 0.3s;"></div>
+                </div>
+            </details>
                     </div>
                     <p id="upload-status"><?php esc_html_e('Processing...', 'snn-ai-chat'); ?></p>
                     <div id="processing-console" style="display: none; background: #1e1e1e; color: #00ff00; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 300px; overflow-y: auto; white-space: pre-wrap;"></div>
@@ -3301,7 +3381,7 @@ class SNN_AI_Chat {
             <div class="snn-rag-documents-list">
                 <h2><?php esc_html_e('Uploaded Documents', 'snn-ai-chat'); ?></h2>
                 <div id="documents-list-container">
-                    <table class="wp-list-table widefat fixed striped">
+                    <table class="wp-list-table widefat striped">
                         <thead>
                             <tr>
                                 <th><?php esc_html_e('Filename', 'snn-ai-chat'); ?></th>
@@ -3488,7 +3568,10 @@ class SNN_AI_Chat {
                                         '<td>' + doc.total_chunks + '</td>' +
                                         '<td><span class="status-' + statusClass + '">' + doc.status + '</span></td>' +
                                         '<td>' + doc.upload_date + '</td>' +
-                                        '<td><button class="button button-small delete-doc" data-id="' + doc.id + '">Delete</button></td>' +
+                                        '<td>' +
+                                            '<button class="button button-small console-doc" data-id="' + doc.id + '" style="margin-right:6px;background:#222;color:#fff;">Console</button>' +
+                                            '<button class="button button-small delete-doc" data-id="' + doc.id + '">Delete</button>' +
+                                        '</td>' +
                                         '</tr>';
                                     tbody.append(row);
                                 });
@@ -3501,7 +3584,6 @@ class SNN_AI_Chat {
             // Handle document deletion
             $(document).on('click', '.delete-doc', function() {
                 if (!confirm('Are you sure you want to delete this document?')) return;
-                
                 var docId = $(this).data('id');
                 $.ajax({
                     url: snn_ai_chat_ajax.ajax_url,
@@ -3521,6 +3603,46 @@ class SNN_AI_Chat {
                     }
                 });
             });
+
+            // Handle Console button click
+            $(document).on('click', '.console-doc', function() {
+                var docId = $(this).data('id');
+                $.ajax({
+                    url: snn_ai_chat_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'snn_get_document_console',
+                        nonce: snn_ai_chat_ajax.nonce,
+                        document_id: docId
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            showConsoleModal(response.data.progress_log || 'No logs available.');
+                        } else {
+                            showConsoleModal('No logs found for this document.');
+                        }
+                    },
+                    error: function() {
+                        showConsoleModal('Error fetching logs.');
+                    }
+                });
+            });
+
+            // Modal for console logs
+            function showConsoleModal(logs) {
+                var modal = $('#console-modal');
+                if (modal.length === 0) {
+                    modal = $('<div id="console-modal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:1px solid #ccc;padding:20px;z-index:9999;max-width:600px;max-height:70vh;overflow:auto;"></div>');
+                    modal.append('<h3>Document Console</h3>');
+                    modal.append('<pre id="console-logs" style="max-height:400px;overflow:auto;background:#222;color:#0f0;padding:10px;border-radius:4px;"></pre>');
+                    modal.append('<button id="close-console-modal" style="margin-top:10px;">Close</button>');
+                    $('body').append(modal);
+                    $('#close-console-modal').on('click', function() {
+                        modal.remove();
+                    });
+                }
+                $('#console-logs').text(logs);
+            }
 
             function formatFileSize(bytes) {
                 if (bytes === 0) return '0 Bytes';
@@ -3960,3 +4082,86 @@ class SNN_AI_Chat {
 }
 
 new SNN_AI_Chat();
+
+// --- Logging Functions and Logs Table ---
+function snn_ai_chats_create_logs_table() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'snn_ai_chats_logs';
+    $charset_collate = $wpdb->get_charset_collate();
+    $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+        id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+        timestamp DATETIME NOT NULL,
+        user_id BIGINT(20) UNSIGNED,
+        action VARCHAR(255),
+        message TEXT,
+        PRIMARY KEY (id)
+    ) $charset_collate;";
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+}
+
+register_activation_hook(__FILE__, 'snn_ai_chats_create_logs_table');
+
+function snn_ai_chats_log($action, $message) {
+    if (!get_option('snn_ai_chats_logging_enabled', true)) return;
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'snn_ai_chats_logs';
+    $wpdb->insert($table_name, array(
+        'timestamp' => current_time('mysql'),
+        'user_id' => get_current_user_id(),
+        'action' => $action,
+        'message' => $message
+    ));
+}
+
+function snn_ai_chats_clear_logs() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'snn_ai_chats_logs';
+    $wpdb->query("TRUNCATE TABLE $table_name");
+}
+
+// --- Logs Admin Page ---
+add_action('admin_menu', function() {
+    add_submenu_page(
+        'snn-ai-chat', // Parent slug
+        'AI Chat Logs', // Page title
+        'Logs', // Menu title
+        'manage_options', // Capability
+        'snn-ai-chats-logs', // Menu slug
+        'snn_ai_chats_logs_admin_page' // Function
+    );
+});
+
+function snn_ai_chats_logs_admin_page() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'snn_ai_chats_logs';
+    // Handle clear logs
+    if (isset($_POST['snn_ai_chats_clear_logs']) && check_admin_referer('snn_ai_chats_clear_logs')) {
+        snn_ai_chats_clear_logs();
+        echo '<div class="updated"><p>Logs cleared.</p></div>';
+    }
+    // Handle enable/disable logging
+    if (isset($_POST['snn_ai_chats_logging_enabled'])) {
+        update_option('snn_ai_chats_logging_enabled', $_POST['snn_ai_chats_logging_enabled'] === '1');
+    }
+    $logging_enabled = get_option('snn_ai_chats_logging_enabled', true);
+    echo '<div class="wrap"><h1>AI Chat Logs</h1>';
+    echo '<form method="post">';
+    wp_nonce_field('snn_ai_chats_clear_logs');
+    echo '<label><input type="checkbox" name="snn_ai_chats_logging_enabled" value="1"' . ($logging_enabled ? ' checked' : '') . '> Enable Logging</label> ';
+    echo '<input type="submit" value="Save" class="button button-primary">';
+    echo '</form>';
+    echo '<form method="post" style="margin-top:10px;">';
+    wp_nonce_field('snn_ai_chats_clear_logs');
+    echo '<input type="hidden" name="snn_ai_chats_clear_logs" value="1">';
+    echo '<input type="submit" value="Clear Logs" class="button">';
+    echo '</form>';
+    // Show logs
+    $logs = $wpdb->get_results("SELECT * FROM $table_name ORDER BY timestamp DESC LIMIT 100");
+    echo '<table class="widefat" style="margin-top:20px;"><thead><tr><th>ID</th><th>Time</th><th>User</th><th>Action</th><th>Message</th></tr></thead><tbody>';
+    foreach ($logs as $log) {
+        $user = $log->user_id ? get_userdata($log->user_id)->user_login : '';
+        echo '<tr><td>' . esc_html($log->id) . '</td><td>' . esc_html($log->timestamp) . '</td><td>' . esc_html($user) . '</td><td>' . esc_html($log->action) . '</td><td>' . esc_html($log->message) . '</td></tr>';
+    }
+    echo '</tbody></table></div>';
+}
