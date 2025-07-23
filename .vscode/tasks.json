@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Show PHP syntax check",
+			"type": "shell",
+			"command": "php -l snn-ai-chats.php",
+			"group": "build",
+			"isBackground": false
+		}
+	]
+}
