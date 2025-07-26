@@ -1,4 +1,4 @@
-<?php  
+<?php
 /**
  * Plugin Name: SNN AI Chat
  * Plugin URI: https://sinanisler.com
@@ -291,8 +291,6 @@ class SNN_AI_Chat {
             'global_openai_api_key' => $global_settings['openai_api_key'],
             'global_custom_api_endpoint' => $global_settings['custom_api_endpoint'], // New
             'global_custom_api_key' => $global_settings['custom_api_key'], // New
-            'global_openrouter_model' => $global_settings['openrouter_model'],
-            'global_openai_model' => $global_settings['openai_model'],
             'global_custom_model' => $global_settings['custom_model'], // New
             'global_temperature' => $global_settings['temperature'] ?? 0.7,
             'global_max_tokens' => $global_settings['max_tokens'] ?? 500,
@@ -312,6 +310,9 @@ class SNN_AI_Chat {
         wp_enqueue_style('dashicons');
 
         wp_enqueue_script('jquery');
+        // Enqueue markdown.min.js for frontend rendering
+        wp_enqueue_script('markdown-js', SNN_AI_CHAT_PLUGIN_URL . 'js/markdown.min.js', array(), SNN_AI_CHAT_VERSION, true);
+
 
         wp_localize_script('jquery', 'snn_ai_chat_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
@@ -2163,9 +2164,23 @@ class SNN_AI_Chat {
                 }
 
                 function appendMessage(role, content) {
-                    const sanitizedContent = $('<div>').html(content).html(); // Allow HTML but sanitize for safety
+                    let processedContent = content;
+                    // Check if markdown.toHTML is available and if it's an AI message
+                    if (role === 'ai' && typeof markdown !== 'undefined' && typeof markdown.toHTML === 'function') {
+                        try {
+                            processedContent = markdown.toHTML(content);
+                        } catch (e) {
+                            console.error("Markdown parsing error:", e);
+                            // Fallback to plain text if parsing fails
+                            processedContent = $('<div>').text(content).html();
+                        }
+                    } else {
+                        // For user messages or if markdown parser is not available, sanitize as plain text
+                        processedContent = $('<div>').text(content).html();
+                    }
+
                     const messageClass = role === 'user' ? 'snn-user-message' : 'snn-ai-message';
-                    const messageHTML = `<div class="snn-chat-message ${messageClass}"><div class="snn-message-content">${sanitizedContent}</div></div>`;
+                    const messageHTML = `<div class="snn-chat-message ${messageClass}"><div class="snn-message-content">${processedContent}</div></div>`;
                     messagesContainer.append(messageHTML);
                     messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
                 }
@@ -2507,7 +2522,7 @@ class SNN_AI_Chat {
         
         // Fetch messages
         $messages = $wpdb->get_results($wpdb->prepare("
-            SELECT message, response, created_at, tokens_used FROM {$wpdb->prefix}snn_chat_messages
+            SELECT message, response FROM {$wpdb->prefix}snn_chat_messages
             WHERE session_id = %s
             ORDER BY created_at ASC
         ", $session_id));
