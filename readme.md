@@ -8,17 +8,15 @@ A feature-rich WordPress plugin that integrates advanced AI chat capabilities in
 ## Screenshots
 
 
-<img src="https://github.com/user-attachments/assets/6836ad4d-f3c2-41b7-84ba-7fde5ff75834"  width="48%">
-<img src="https://github.com/user-attachments/assets/374aa3f5-56c5-4f47-8e7a-253aea89044d"  width="48%">
+<img width="48%" height="auto" alt="image" src="https://github.com/user-attachments/assets/03686b4b-fe56-4993-a9d1-5be5f9cd58d5" />
 
-<img width="48%"  src="https://github.com/user-attachments/assets/e75d20ac-76e3-4c8c-8b70-1d71e6b1b618">
+<img width="48%" height="auto" alt="image" src="https://github.com/user-attachments/assets/2a44422c-61db-4e5a-9aac-2db77c1b8679" />
 
-<img width="48%" src="https://github.com/user-attachments/assets/04765699-be3e-430f-84ff-3fcb67c6f394" >
+<img width="48%" height="auto" alt="image" src="https://github.com/user-attachments/assets/c52804dd-97e2-4e31-9d41-0dabe0cd7ccc" />
+
+<img width="48%" height="auto" alt="image" src="https://github.com/user-attachments/assets/a437dcb0-67e2-494a-8404-c97561c2be1c" />
 
 
-
-<img src="https://github.com/user-attachments/assets/7980da32-4470-43af-a883-13da605b8c6b"  width="48%">
-<img src="https://github.com/user-attachments/assets/37fae6be-c3a3-4753-ad0b-9c97a0842fe6"  width="48%">
 
 
 
