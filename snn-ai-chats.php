@@ -1,5 +1,15 @@
 <?php  
-
+/**
+ * Plugin Name: SNN AI Chat
+ * Plugin URI: https://sinanisler.com
+ * Description: Advanced AI Chat Plugin with OpenRouter, OpenAI, and Custom API support
+ * Version: 0.4.1
+ * Requires at least: 6.0
+ * Requires PHP:      8.0
+ * Author: sinanisler
+ * Author URI: https://sinanisler.com
+ * License: GPL v3
+ */
 
 
 if (!defined('ABSPATH')) { exit; }
