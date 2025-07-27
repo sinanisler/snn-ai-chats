@@ -1106,9 +1106,17 @@ class SNN_AI_Chat {
                             </div>
                         </div>
                         
-                        <!-- CONTEXTUAL LINK CARDS REPEATER -->
-                        <div class="mb-4" id="snn-context-links-section">
+                        <!-- CONTEXTUAL LINK CARDS FEATURE -->
+                        <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200" id="snn-context-links-feature-section">
                             <h3 class="text-lg font-semibold mb-2">Contextual Link Cards</h3>
+                            <label class="flex items-center mb-2">
+                                <input type="checkbox" name="enable_context_link_cards" id="enable_context_link_cards" value="1" <?php checked($chat_settings['enable_context_link_cards'] ?? 0, 1); ?> />
+                                <span class="ml-2 text-sm">Enable Contextual Link Cards (AI will show link cards when relevant)</span>
+                            </label>
+                            <div class="mb-2">
+                                <label for="context_link_cards_system_prompt" class="block text-sm font-medium text-gray-700 mb-1">Tool Card System Prompt</label>
+                                <textarea name="context_link_cards_system_prompt" id="context_link_cards_system_prompt" rows="3" class="w-full p-2 border border-gray-300 rounded-md" placeholder="Instructions for the AI about how to use link cards. Example: If the user's question matches a context, include [LINK_CARD:N] in your response. Provide helpful info and insert the card when relevant."><?php echo esc_textarea($chat_settings['context_link_cards_system_prompt'] ?? ''); ?></textarea>
+                            </div>
                             <p class="text-sm text-gray-600 mb-2">Add context keywords/phrases and link info. The AI will use these to show link cards when relevant.</p>
                             <?php 
                             $context_links = get_post_meta($chat_id, 'snn_ai_chats_context_links', true);
@@ -1327,11 +1335,16 @@ class SNN_AI_Chat {
         foreach ($defaults as $key => $default_value) {
             $value = $_POST[$key] ?? null;
 
-            if ($key === 'keep_conversation_history' || $key === 'show_on_all_pages' || substr($key, 0, 8) === 'show_on_' || $key === 'collect_user_info') {
+            if ($key === 'keep_conversation_history' || $key === 'show_on_all_pages' || substr($key, 0, 8) === 'show_on_' || $key === 'collect_user_info' || $key === 'enable_context_link_cards') {
                 $settings[$key] = isset($_POST[$key]) ? 1 : 0;
                 continue;
             }
-        
+
+            if ($key === 'context_link_cards_system_prompt') {
+                $settings[$key] = sanitize_textarea_field($value ?? '');
+                continue;
+            }
+
             if (is_int($default_value)) {
                 $settings[$key] = intval($value ?? 0);
             } elseif (is_float($default_value)) {
@@ -1935,13 +1948,37 @@ class SNN_AI_Chat {
             'user_ip'    => (string)$_SERVER['REMOTE_ADDR'],
         ];
 
-        // Process dynamic tags in the main system prompt
+        // Build system prompt with tool card logic if enabled
+        $final_system_prompt = '';
+        if (!empty($chat_settings['enable_context_link_cards'])) {
+            // Add tool card system prompt from settings
+            $tool_card_prompt = trim($chat_settings['context_link_cards_system_prompt'] ?? '');
+            if (!empty($tool_card_prompt)) {
+                $final_system_prompt .= $tool_card_prompt . "\n\n";
+            }
+            // Add context links info
+            $context_links = get_post_meta($chat_id, 'snn_ai_chats_context_links', true);
+            if (is_array($context_links) && count($context_links) > 0) {
+                $final_system_prompt .= "Contextual Link Cards:\n";
+                foreach ($context_links as $i => $link) {
+                    $final_system_prompt .= "Link $i: Context: " . ($link['context'] ?? '') . "\n";
+                    $final_system_prompt .= "Title: " . ($link['title'] ?? '') . "\n";
+                    $final_system_prompt .= "Description: " . ($link['desc'] ?? '') . "\n";
+                    $final_system_prompt .= "URL: " . ($link['url'] ?? '') . "\n";
+                    if (!empty($link['img'])) {
+                        $final_system_prompt .= "Image: " . $link['img'] . "\n";
+                    }
+                    $final_system_prompt .= "\n";
+                }
+            }
+        }
+        // Always add the main system prompt (with dynamic tags)
         $processed_prompt = $this->process_dynamic_tags($chat_settings['system_prompt'], $context);
-        
-        if (!empty($processed_prompt)) {
+        $final_system_prompt .= $processed_prompt;
+        if (!empty($final_system_prompt)) {
             $conversation_history[] = [
                 'role' => 'system',
-                'content' => $processed_prompt
+                'content' => $final_system_prompt
             ];
         }
 
