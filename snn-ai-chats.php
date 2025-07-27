@@ -893,7 +893,6 @@ class SNN_AI_Chat {
                                 <textarea id="system_prompt" name="system_prompt" rows="3" class="w-full p-2 border border-gray-300 rounded-md system-prompt-input focus:ring-blue-500 focus:border-blue-500"><?php echo esc_textarea($chat_settings['system_prompt']); ?></textarea>
                             </div>
 
-                            <!-- NEW DYNAMIC TAGS SECTION - ACCORDION -->
                             <div class="mb-4 dynamic-tags-section p-2 bg-gray-50 rounded-lg border border-gray-200" id="snn-dynamic-tags-section">
                                 <button type="button" class="snn-accordion-header flex justify-between items-center w-full text-left py-2 px-0 bg-transparent border-none cursor-pointer text-md font-semibold text-gray-700" id="snn-dynamic-tags-accordion-toggle">
                                     Dynamic Tags and Variables
@@ -913,8 +912,6 @@ class SNN_AI_Chat {
                                     <?php endforeach; ?>
                                 </div>
                             </div>
-                            <!-- END DYNAMIC TAGS SECTION -->
-                            
                             <div class="mb-4">
                                 <label class="flex items-center text-gray-700">
                                     <input type="checkbox" name="keep_conversation_history" value="1" <?php checked($chat_settings['keep_conversation_history'], 1); ?> class="mr-2 conversation-history-checkbox" id="snn-keep-conversation-history-checkbox">
@@ -1106,7 +1103,6 @@ class SNN_AI_Chat {
                             </div>
                         </div>
                         
-                        <!-- CONTEXTUAL LINK CARDS FEATURE -->
                         <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200" id="snn-context-links-feature-section">
                             <h3 class="text-lg font-semibold mb-2">Contextual Link Cards</h3>
                             <label class="flex items-center mb-2">
@@ -1140,13 +1136,13 @@ class SNN_AI_Chat {
                         jQuery(document).ready(function($){
                             $('#snn-add-link').click(function(){
                                 var i = $('#snn-context-links-repeater .snn-context-link-item').length;
-                                var html = `<div class=\"snn-context-link-item border p-2 mb-2 rounded bg-gray-50\">`
-                                    + `<textarea name=\"snn_ai_chats_context_links[${i}][context]\" placeholder=\"Context keywords/phrases\" rows=\"2\" class=\"w-full mb-1\"></textarea>`
-                                    + `<input type=\"text\" name=\"snn_ai_chats_context_links[${i}][url]\" placeholder=\"Link URL\" class=\"w-full mb-1\" />`
-                                    + `<input type=\"text\" name=\"snn_ai_chats_context_links[${i}][title]\" placeholder=\"Title\" class=\"w-full mb-1\" />`
-                                    + `<input type=\"text\" name=\"snn_ai_chats_context_links[${i}][desc]\" placeholder=\"Description\" class=\"w-full mb-1\" />`
-                                    + `<input type=\"text\" name=\"snn_ai_chats_context_links[${i}][img]\" placeholder=\"Image URL (optional)\" class=\"w-full mb-1\" />`
-                                    + `<button type=\"button\" class=\"snn-remove-link bg-red-100 text-red-700 px-2 py-1 rounded\">Remove</button>`
+                                var html = `<div class="snn-context-link-item border p-2 mb-2 rounded bg-gray-50">`
+                                    + `<textarea name="snn_ai_chats_context_links[${i}][context]" placeholder="Context keywords/phrases" rows="2" class="w-full mb-1"></textarea>`
+                                    + `<input type="text" name="snn_ai_chats_context_links[${i}][url]" placeholder="Link URL" class="w-full mb-1" />`
+                                    + `<input type="text" name="snn_ai_chats_context_links[${i}][title]" placeholder="Title" class="w-full mb-1" />`
+                                    + `<input type="text" name="snn_ai_chats_context_links[${i}][desc]" placeholder="Description" class="w-full mb-1" />`
+                                    + `<input type="text" name="snn_ai_chats_context_links[${i}][img]" placeholder="Image URL (optional)" class="w-full mb-1" />`
+                                    + `<button type="button" class="snn-remove-link bg-red-100 text-red-700 px-2 py-1 rounded">Remove</button>`
                                     + `</div>`;
                                 $('#snn-context-links-repeater').append(html);
                             });
@@ -1300,6 +1296,7 @@ class SNN_AI_Chat {
                     // Add the selected preview_post_id to the settings object
                     settings['preview_post_id'] = previewPostIdInput.val();
 
+
                     chatPreviewIframe[0].contentWindow.updateAllChatStyles(settings, chatId);
                 }
 
@@ -1307,7 +1304,7 @@ class SNN_AI_Chat {
                 chatSettingsForm.find('input[type="color"], input[type="number"], input[type="text"], textarea, select').on('change', applyAllStylesToPreview);
                 chatSettingsForm.find('input[type="checkbox"]').on('change', applyAllStylesToPreview);
                 previewPostIdInput.on('change', applyAllStylesToPreview); // Also trigger on post ID change
-
+                
                 // Also apply styles when the iframe has finished loading to sync it with the form's initial state.
                 chatPreviewIframe.on('load', function() {
                     applyAllStylesToPreview();
@@ -1496,7 +1493,6 @@ class SNN_AI_Chat {
             <a href="<?php echo esc_url(admin_url('admin.php?page=snn-ai-chat-history')); ?>" class="bg-black text-white px-4 py-2 rounded-lg text-center quick-action-btn hover:bg-[#1b1b1b] transition-colors duration-200 mb-4 inline-block" id="snn-back-to-history-btn">← Back to Chat History</a>
 
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-4">
-                <!-- Left Sidebar: List of Sessions -->
                 <div class="lg:col-span-1 bg-white p-4 rounded-lg shadow overflow-y-auto max-h-[calc(100vh-180px)]" id="snn-session-sidebar">
                     <h2 class="text-lg font-semibold mb-3">All Sessions</h2>
                     <ul class="space-y-2">
@@ -1516,7 +1512,6 @@ class SNN_AI_Chat {
                     </ul>
                 </div>
 
-                <!-- Right Content: Session Details and Messages -->
                 <div class="lg:col-span-3 bg-white p-6 rounded-lg shadow" id="snn-session-details-panel">
                     <?php if (!empty($current_session_id)) : ?>
                         <?php
@@ -1895,8 +1890,46 @@ class SNN_AI_Chat {
             wp_send_json_error('Invalid chat ID');
         }
     }
+    
 
-    public function handle_chat_api() {
+
+
+private function process_link_cards($content, $chat_id) {
+        $context_links = get_post_meta($chat_id, 'snn_ai_chats_context_links', true);
+
+        // If no links are defined or the tag isn't in the response, do nothing.
+        if (!is_array($context_links) || empty($context_links) || strpos($content, '[LINK_CARD:') === false) {
+            return $content;
+        }
+
+        $processed_content = preg_replace_callback('/\[LINK_CARD:(\d+)\]/i', function($matches) use ($context_links) {
+            $index = intval($matches[1]);
+
+            // Check if the link card index from the AI exists in your settings
+            if (isset($context_links[$index])) {
+                $link = $context_links[$index];
+                $url = esc_url($link['url'] ?? '#');
+                $title = esc_html($link['title'] ?? 'Learn More');
+                $desc = esc_html($link['desc'] ?? '');
+                $img_html = !empty($link['img']) ? '<img src="' . esc_url($link['img']) . '" alt="' . esc_attr($title) . '">' : '';
+                $link_text = !empty($link['title']) ? 'View ' . esc_html($link['title']) : 'Learn More';
+
+                // Return the clean, safe HTML for the card
+                return '<div class="snn-content-card"><a href="' . $url . '" target="_blank" rel="noopener noreferrer">' . $img_html . '<div><h4>' . $title . '</h4><p>' . $desc . '</p><span>' . $link_text . ' &rarr;</span></div></a></div>';
+            }
+            
+            // If the AI mentioned a card that doesn't exist, remove the tag
+            return '';
+        }, $content);
+
+        return $processed_content;
+    }
+
+
+
+
+
+public function handle_chat_api() {
         check_ajax_referer('snn_ai_chat_nonce', 'nonce');
         
         $message = sanitize_text_field($_POST['message'] ?? '');
@@ -1950,31 +1983,29 @@ class SNN_AI_Chat {
 
         // Build system prompt with tool card logic if enabled
         $final_system_prompt = '';
+
+        // Always add the main system prompt (with dynamic tags) first
+        $processed_prompt = $this->process_dynamic_tags($chat_settings['system_prompt'], $context);
+        $final_system_prompt .= $processed_prompt;
+
+        // Append tool card system prompt and context links if enabled
         if (!empty($chat_settings['enable_context_link_cards'])) {
-            // Add tool card system prompt from settings
             $tool_card_prompt = trim($chat_settings['context_link_cards_system_prompt'] ?? '');
             if (!empty($tool_card_prompt)) {
-                $final_system_prompt .= $tool_card_prompt . "\n\n";
+                $final_system_prompt .= "\n\n" . $tool_card_prompt;
             }
             // Add context links info
             $context_links = get_post_meta($chat_id, 'snn_ai_chats_context_links', true);
             if (is_array($context_links) && count($context_links) > 0) {
-                $final_system_prompt .= "Contextual Link Cards:\n";
+                $final_system_prompt .= "\n\nAvailable Contextual Link Cards:\n";
                 foreach ($context_links as $i => $link) {
-                    $final_system_prompt .= "Link $i: Context: " . ($link['context'] ?? '') . "\n";
-                    $final_system_prompt .= "Title: " . ($link['title'] ?? '') . "\n";
-                    $final_system_prompt .= "Description: " . ($link['desc'] ?? '') . "\n";
-                    $final_system_prompt .= "URL: " . ($link['url'] ?? '') . "\n";
-                    if (!empty($link['img'])) {
-                        $final_system_prompt .= "Image: " . $link['img'] . "\n";
-                    }
-                    $final_system_prompt .= "\n";
+                    $final_system_prompt .= "--- Link Card " . $i . " ---\n";
+                    $final_system_prompt .= "Instruction: To show this card, you MUST include the exact string [LINK_CARD:" . $i . "] in your response.\n";
+                    $final_system_prompt .= "Context Keywords: " . ($link['context'] ?? '') . "\n";
                 }
             }
         }
-        // Always add the main system prompt (with dynamic tags)
-        $processed_prompt = $this->process_dynamic_tags($chat_settings['system_prompt'], $context);
-        $final_system_prompt .= $processed_prompt;
+        
         if (!empty($final_system_prompt)) {
             $conversation_history[] = [
                 'role' => 'system',
@@ -2015,19 +2046,35 @@ class SNN_AI_Chat {
         }
 
         if ($response && isset($response['content'])) {
-            $response_content = $response['content'];
+            // This is the raw response from the AI, e.g., "[LINK_CARD:0] Some text."
+            $raw_ai_response = $response['content']; 
             $tokens_used = $response['tokens'];
-            
-            $this->save_chat_message($session_id, $chat_id, $message, $response_content, $tokens_used, $user_name, $user_email);
-            
+
+            // Process the response to convert [LINK_CARD:N] to HTML for database storage ONLY.
+            // This ensures the admin chat history looks correct.
+            $processed_for_db = $this->process_link_cards($raw_ai_response, $chat_id);
+
+            // Save the PROCESSED HTML to the database.
+            $this->save_chat_message($session_id, $chat_id, $message, $processed_for_db, $tokens_used, $user_name, $user_email);
+
+            // Send the RAW AI response to the frontend JavaScript.
+            // The JavaScript is already set up to handle the [LINK_CARD:N] tag correctly.
             wp_send_json_success([
-                'response' => $response_content,
+                'response' => $raw_ai_response, 
                 'tokens' => $tokens_used
             ]);
         } else {
             wp_send_json_error(array('response' => 'Failed to get an AI response. Please check your API settings.'));
         }
     }
+
+
+
+
+    
+
+
+
 
     public function render_frontend_chats() {
         $chats = $this->get_active_chats();
@@ -2045,7 +2092,7 @@ class SNN_AI_Chat {
         }
     }
 
-    private function render_chat_widget($chat, $settings, $post_id_override = null) {
+private function render_chat_widget($chat, $settings, $post_id_override = null) {
         // session_id will now be managed by frontend JS using localStorage
         // $session_id = 'snn_' . time() . '_' . bin2hex(random_bytes(8)); // Removed PHP-side generation
         $post_id = ($post_id_override !== null) ? $post_id_override : get_queried_object_id();
@@ -2098,7 +2145,6 @@ class SNN_AI_Chat {
                     </div>
                 </div>
                 
-                <!-- User Info Form Overlay - Now covers the entire chat body -->
                 <div class="snn-user-info-form-overlay" id="snn-user-info-form-overlay-<?php echo esc_attr($chat->ID); ?>" style="display: none;">
                     <div class="snn-user-info-form" id="snn-user-info-form-<?php echo esc_attr($chat->ID); ?>">
                         <p>Please provide your information to start the chat:</p>
@@ -2110,12 +2156,9 @@ class SNN_AI_Chat {
                 </div>
 
                 <div class="snn-chat-messages" id="snn-chat-messages-<?php echo esc_attr($chat->ID); ?>">
-                    <!-- Chat messages will be appended here -->
                 </div>
                 
-                <!-- Ready Questions Section - Now above the input field -->
                 <div class="snn-ready-questions-container" id="snn-ready-questions-container-<?php echo esc_attr($chat->ID); ?>">
-                    <!-- Ready questions will be appended here by JS -->
                 </div>
 
                 <div class="snn-chat-input-container" id="snn-chat-input-container-<?php echo esc_attr($chat->ID); ?>">
@@ -2258,24 +2301,48 @@ class SNN_AI_Chat {
                     setTimeout(() => errorBox.hide().text(''), 5000);
                 }
 
+                // *** NEW and IMPROVED appendMessage function ***
                 function appendMessage(role, content) {
-                    let processedContent = content;
-                    // Check if markdown.toHTML is available and if it's an AI message
-                    if (role === 'ai' && typeof markdown !== 'undefined' && typeof markdown.toHTML === 'function') {
-                        try {
-                            processedContent = markdown.toHTML(content);
-                        } catch (e) {
-                            console.error("Markdown parsing error:", e);
-                            // Fallback to plain text if parsing fails
-                            processedContent = $('<div>').text(content).html();
+                    const messageClass = role === 'user' ? 'snn-user-message' : 'snn-ai-message';
+                    let finalContentHTML = '';
+
+                    if (role === 'ai') {
+                        // Regex to find the HTML for our content card(s)
+                        const cardRegex = /(<div class="snn-content-card">[\s\S]*?<\/div>)/g;
+                        
+                        // Extract all card HTML blocks
+                        const cardsHTML = (content.match(cardRegex) || []).join('');
+                        
+                        // Get the text part by removing the card HTML
+                        const markdownText = content.replace(cardRegex, '').trim();
+
+                        let markdownHTML = '';
+                        if (markdownText) {
+                            // Check if the markdown library is loaded
+                            if (typeof markdown !== 'undefined' && typeof markdown.toHTML === 'function') {
+                                try {
+                                    // Convert ONLY the text part to HTML
+                                    markdownHTML = markdown.toHTML(markdownText);
+                                } catch (e) {
+                                    console.error("Markdown parsing error:", e);
+                                    // Fallback for the text part if markdown fails
+                                    markdownHTML = `<p>${$('<div>').text(markdownText).html().replace(/\n/g, '<br>')}</p>`;
+                                }
+                            } else {
+                                 // Fallback if markdown library is not available
+                                 markdownHTML = `<p>${$('<div>').text(markdownText).html().replace(/\n/g, '<br>')}</p>`;
+                            }
                         }
-                    } else {
-                        // For user messages or if markdown parser is not available, sanitize as plain text
-                        processedContent = $('<div>').text(content).html();
+                        
+                        // Combine the rendered markdown text and the raw HTML of the cards
+                        finalContentHTML = markdownHTML + cardsHTML;
+
+                    } else { // For user messages, just safely escape the text
+                        finalContentHTML = $('<div>').text(content).html();
                     }
 
-                    const messageClass = role === 'user' ? 'snn-user-message' : 'snn-ai-message';
-                    const messageHTML = `<div class="snn-chat-message ${messageClass}"><div class="snn-message-content">${processedContent}</div></div>`;
+                    // Append the final combined content to the chat
+                    const messageHTML = `<div class="snn-chat-message ${messageClass}"><div class="snn-message-content">${finalContentHTML}</div></div>`;
                     messagesContainer.append(messageHTML);
                     messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
                 }
@@ -2409,8 +2476,9 @@ class SNN_AI_Chat {
 
                 function startNewSession() {
                     localStorage.removeItem(SESSION_ID_KEY);
-                    localStorage.removeItem(USER_NAME_KEY);
-                    localStorage.removeItem(USER_EMAIL_KEY);
+                    // Keep user info for convenience
+                    // localStorage.removeItem(USER_NAME_KEY);
+                    // localStorage.removeItem(USER_EMAIL_KEY);
                     initializeChatUI(); // This will generate a new session ID and re-init
                 }
 
@@ -2689,6 +2757,8 @@ class SNN_AI_Chat {
             'top_p' => 1.0,
             'frequency_penalty' => 0.0,
             'presence_penalty' => 0.0,
+            'enable_context_link_cards' => 0, // Added default for the new setting
+            'context_link_cards_system_prompt' => '', // Added default for the new setting
         );
     }
     
@@ -3221,6 +3291,43 @@ class SNN_AI_Chat {
 
         wp_send_json_success($post_data);
     }
+
+
+
+
+    private function extract_and_build_cards_from_response($content, $chat_id) {
+        $cards = [];
+        $context_links = get_post_meta($chat_id, 'snn_ai_chats_context_links', true);
+
+        if (!is_array($context_links) || empty($context_links)) {
+            return $cards;
+        }
+
+        preg_match_all('/\[LINK_CARD:(\d+)\]/i', $content, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as $match) {
+            $index = intval($match[1]);
+            if (isset($context_links[$index])) {
+                $link = $context_links[$index];
+                $url = esc_url($link['url'] ?? '#');
+                $title = esc_html($link['title'] ?? 'Learn More');
+                $desc = esc_html($link['desc'] ?? '');
+                $img_html = !empty($link['img']) ? '<img src="' . esc_url($link['img']) . '" alt="' . esc_attr($title) . '">' : '';
+                $link_text = !empty($link['title']) ? 'View ' . esc_html($link['title']) : 'Learn More';
+                
+                // Build the card HTML and add it to our array, keyed by the index
+                $cards[$index] = '<div class="snn-content-card"><a href="' . $url . '" target="_blank" rel="noopener noreferrer">' . $img_html . '<div><h4>' . $title . '</h4><p>' . $desc . '</p><span>' . $link_text . ' &rarr;</span></div></a></div>';
+            }
+        }
+        
+        return $cards;
+    }
+
+
+
+
+
+
 }
 
 new SNN_AI_Chat();
