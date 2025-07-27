@@ -1106,6 +1106,47 @@ class SNN_AI_Chat {
                             </div>
                         </div>
                         
+                        <!-- CONTEXTUAL LINK CARDS REPEATER -->
+                        <div class="mb-4" id="snn-context-links-section">
+                            <h3 class="text-lg font-semibold mb-2">Contextual Link Cards</h3>
+                            <p class="text-sm text-gray-600 mb-2">Add context keywords/phrases and link info. The AI will use these to show link cards when relevant.</p>
+                            <?php 
+                            $context_links = get_post_meta($chat_id, 'snn_ai_chats_context_links', true);
+                            if (!is_array($context_links)) $context_links = array();
+                            ?>
+                            <div id="snn-context-links-repeater">
+                                <?php foreach ($context_links as $i => $link) : ?>
+                                <div class="snn-context-link-item border p-2 mb-2 rounded bg-gray-50">
+                                    <textarea name="snn_ai_chats_context_links[<?php echo $i; ?>][context]" placeholder="Context keywords/phrases" rows="2" class="w-full mb-1"><?php echo esc_textarea($link['context'] ?? ''); ?></textarea>
+                                    <input type="text" name="snn_ai_chats_context_links[<?php echo $i; ?>][url]" placeholder="Link URL" value="<?php echo esc_attr($link['url'] ?? ''); ?>" class="w-full mb-1" />
+                                    <input type="text" name="snn_ai_chats_context_links[<?php echo $i; ?>][title]" placeholder="Title" value="<?php echo esc_attr($link['title'] ?? ''); ?>" class="w-full mb-1" />
+                                    <input type="text" name="snn_ai_chats_context_links[<?php echo $i; ?>][desc]" placeholder="Description" value="<?php echo esc_attr($link['desc'] ?? ''); ?>" class="w-full mb-1" />
+                                    <input type="text" name="snn_ai_chats_context_links[<?php echo $i; ?>][img]" placeholder="Image URL (optional)" value="<?php echo esc_attr($link['img'] ?? ''); ?>" class="w-full mb-1" />
+                                    <button type="button" class="snn-remove-link bg-red-100 text-red-700 px-2 py-1 rounded">Remove</button>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <button type="button" id="snn-add-link" class="bg-blue-100 text-blue-700 px-3 py-1 rounded">Add Link Card</button>
+                        </div>
+                        <script>
+                        jQuery(document).ready(function($){
+                            $('#snn-add-link').click(function(){
+                                var i = $('#snn-context-links-repeater .snn-context-link-item').length;
+                                var html = `<div class=\"snn-context-link-item border p-2 mb-2 rounded bg-gray-50\">`
+                                    + `<textarea name=\"snn_ai_chats_context_links[${i}][context]\" placeholder=\"Context keywords/phrases\" rows=\"2\" class=\"w-full mb-1\"></textarea>`
+                                    + `<input type=\"text\" name=\"snn_ai_chats_context_links[${i}][url]\" placeholder=\"Link URL\" class=\"w-full mb-1\" />`
+                                    + `<input type=\"text\" name=\"snn_ai_chats_context_links[${i}][title]\" placeholder=\"Title\" class=\"w-full mb-1\" />`
+                                    + `<input type=\"text\" name=\"snn_ai_chats_context_links[${i}][desc]\" placeholder=\"Description\" class=\"w-full mb-1\" />`
+                                    + `<input type=\"text\" name=\"snn_ai_chats_context_links[${i}][img]\" placeholder=\"Image URL (optional)\" class=\"w-full mb-1\" />`
+                                    + `<button type=\"button\" class=\"snn-remove-link bg-red-100 text-red-700 px-2 py-1 rounded\">Remove</button>`
+                                    + `</div>`;
+                                $('#snn-context-links-repeater').append(html);
+                            });
+                            $(document).on('click', '.snn-remove-link', function(){
+                                $(this).parent().remove();
+                            });
+                        });
+                        </script>
                         <div class="flex space-x-4">
                             <button type="submit" name="submit_chat_settings" class="bg-black text-white px-6 py-2 rounded-md save-chat-btn hover:bg-[#1b1b1b] transition-colors duration-200" id="snn-save-chat-btn">
                                 Save Chat
@@ -1327,10 +1368,27 @@ class SNN_AI_Chat {
         
         if ($chat_id && !is_wp_error($chat_id)) {
             update_post_meta($chat_id, '_snn_chat_settings', $settings);
+            // Save Contextual Link Cards
+            if (isset($_POST['snn_ai_chats_context_links']) && is_array($_POST['snn_ai_chats_context_links'])) {
+                $links = array();
+                foreach ($_POST['snn_ai_chats_context_links'] as $link) {
+                    if (empty($link['context']) || empty($link['url'])) continue;
+                    $links[] = array(
+                        'context' => sanitize_text_field($link['context']),
+                        'url' => esc_url_raw($link['url']),
+                        'title' => sanitize_text_field($link['title']),
+                        'desc' => sanitize_text_field($link['desc']),
+                        'img' => esc_url_raw($link['img'])
+                    );
+                }
+                update_post_meta($chat_id, 'snn_ai_chats_context_links', $links);
+            } else {
+                delete_post_meta($chat_id, 'snn_ai_chats_context_links');
+            }
         } else {
             return 0; // Return a value that indicates failure
         }
-        
+
         return $chat_id;
     }
 
