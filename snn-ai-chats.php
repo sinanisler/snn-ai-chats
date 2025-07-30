@@ -19,6 +19,32 @@ define('SNN_AI_CHAT_PLUGIN_DIR', plugin_dir_path((string)__FILE__));
 define('SNN_AI_CHAT_PLUGIN_URL', plugin_dir_url((string)__FILE__));
 
 class SNN_AI_Chat {
+    /**
+     * AJAX: Update user_name and user_email for an existing session
+     */
+    public function update_user_info_ajax() {
+        check_ajax_referer('snn_ai_chat_nonce', 'nonce');
+        $session_id = sanitize_text_field($_POST['session_id'] ?? '');
+        $user_name = sanitize_text_field($_POST['user_name'] ?? '');
+        $user_email = sanitize_email($_POST['user_email'] ?? '');
+        if (empty($session_id) || (empty($user_name) && empty($user_email))) {
+            wp_send_json_error('Missing data.');
+        }
+        global $wpdb;
+        $data = array();
+        if (!empty($user_name)) $data['user_name'] = $user_name;
+        if (!empty($user_email)) $data['user_email'] = $user_email;
+        if ($data) {
+            $wpdb->update(
+                $wpdb->prefix . 'snn_chat_sessions',
+                $data,
+                array('session_id' => $session_id),
+                array_fill(0, count($data), '%s'),
+                array('%s')
+            );
+        }
+        wp_send_json_success();
+    }
 
     public function __construct() {
         add_action('init', array($this, 'init'));
@@ -47,6 +73,10 @@ class SNN_AI_Chat {
         // New AJAX action to fetch all public posts/pages for datalist
         add_action('wp_ajax_snn_get_public_posts', array($this, 'get_all_public_posts_for_datalist'));
         add_action('wp_ajax_nopriv_snn_get_public_posts', array($this, 'get_all_public_posts_for_datalist'));
+
+        // AJAX: Update user info for session
+        add_action('wp_ajax_snn_update_user_info', array($this, 'update_user_info_ajax'));
+        add_action('wp_ajax_nopriv_snn_update_user_info', array($this, 'update_user_info_ajax'));
 
 
         register_activation_hook(__FILE__, array($this, 'activate'));
@@ -2519,6 +2549,22 @@ private function render_chat_widget($chat, $settings, $post_id_override = null) 
                         localStorage.setItem(USER_EMAIL_KEY, userEmail);
                         widget.data('user-name', userName);
                         widget.data('user-email', userEmail);
+
+                        // Update user info in session if session already exists
+                        const sessionId = localStorage.getItem(SESSION_ID_KEY);
+                        if (sessionId) {
+                            $.post({
+                                url: snn_ai_chat_ajax.ajax_url,
+                                data: {
+                                    action: 'snn_update_user_info',
+                                    nonce: snn_ai_chat_ajax.nonce,
+                                    session_id: sessionId,
+                                    user_name: userName,
+                                    user_email: userEmail
+                                }
+                            });
+                        }
+
                         initializeChatUI();
                         chatInput.focus();
                     } else {
